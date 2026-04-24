@@ -1,36 +1,33 @@
-CXX        := c++
-# CXXFLAGS   := -std=c++20 -Wall -Wextra -Werror
-CXXFLAGS   := -std=c++20
+# Program name
+NAME      = webserv
 
-NAME       := server
+# Compiler and flags
+CXX       = c++
+CXXFLAGS  = -Wall -Wextra -Werror -std=c++20
 
-SRC_DIR    := src
-INC_DIR    := include
-OBJ_DIR    := obj
+# Files
+SRC       = main.cpp 
+OBJ       = $(SRC:.cpp=.o)
 
-SRC        := $(wildcard $(SRC_DIR)/*.cpp)
-OBJ        := $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-
-INCLUDES   := -I$(INC_DIR)
-
+# Default
 all: $(NAME)
 
+# Linking
 $(NAME): $(OBJ)
-	$(CXX) $(CXXFLAGS) $(OBJ) -o $@
-	@echo "Build $(NAME) successfully!"
+	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+# Compile
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
-
+# Cleanup
 clean:
-	rm -rf $(OBJ_DIR)
+	rm -f $(OBJ)
 
 fclean: clean
-	rm -rf $(NAME)
+	rm -f $(NAME)
 
+# Rebuild
 re: fclean all
 
 .PHONY: all clean fclean re
