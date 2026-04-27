@@ -7,6 +7,8 @@
 #include <unistd.h>     // For close(), read(), write()
 #include <cstring>      // For memset()
 #include <fstream>      //For ile manipulation
+#include <HttpParser.hpp> // For parsing
+#include <Client.hpp>
 
 #define PORT 8080
 #define MAX_CLIENTS 100
@@ -79,6 +81,9 @@ int main() {
 
     std::cout << "Server listening on port " << PORT << "..." << std::endl;
 
+    std::map<int, Client> clients;
+    HttpParser httpParser; // create one http parser for the server
+
     // Main event loop
     while (true) {
         // poll() waits here, timeout -1 means that it waits infinitely that somethin happpens
@@ -124,9 +129,10 @@ int main() {
                     {
                         fds[j].fd = new_client_fd;
                         fds[j].events = POLLIN; //  activate pollin
+                        clients.insert(std::make_pair(new_client_fd, Client(new_client_fd))); // add the client to the map
                         added = true;
                         
-                        std::cout << "New client connected!" << std::endl;
+                        std::cout << "New client connected on FD: "<< new_client_fd << std::endl;
                         break;
                     }
                 }
@@ -138,24 +144,31 @@ int main() {
             } 
             // Already existing client woke up and sent us data
             else {
+
+                int currentFd = fds[i].fd; // take the fd who called, this is our key
+                Client& activeClient = clients[currentFd]; // get the activeclient
+
                 // 8Kb is standardized  size for single read 
                 char shovelBuffer[8192] = {0}; //intializing buffer with zeros
-                
-                //UPDATE THIS. We need a Client object, and place it in a map
-                // std::map<int, Client> and append and store the string inside a client, and search for \r\n\r\n as a mark for end of the body
 
                 // read data to the buffer 
-                int valread = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
+                int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
 
-                if (valread <= 0)
+                if (valRead <= 0)
                 {
                     close(fds[i].fd);
                     fds[i].fd = -1;
+                    clients.erase(currentFd);
                     std::cerr << "Connection dropped out or unidentified error occured." << std::endl;
                     continue;
                 }
+                else
+                {
+                    activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
+                    httpParser.parse(activeClient);
+                }
                 // Print the buffuer to the output stream
-                std::cout << shovelBuffer << std::endl;
+                //std::cout << shovelBuffer << std::endl;
 
                 // Hardcoded mock response
                 std::string mock_response = 

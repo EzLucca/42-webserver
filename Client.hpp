@@ -26,11 +26,14 @@ class Client
             int         _fd; // Client socker
             ClientState _state; // Store the client state
             
-            std::string requestBuffer; //where we append the request
+            std::string _requestBuffer; //where we append the request
 
     public:
             Client(int fd); // constructor sets state = Reading headears on default
-
+            ~Client();
+            void appendToBuffer(const char* data, ssize_t size);
+            std::string getBuffer();
+            
 
 
 };
