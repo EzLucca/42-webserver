@@ -20,6 +20,11 @@ class HttpRequest
     public:
             HttpRequest();
             ~HttpRequest();
+            void setMethod(std::string method);
+            void setUri(std::string uri);
+            void setVersion(std::string version);
+            void setPath(std::string path);
+            void setQueryString(std::string queryString);
 
 };
 

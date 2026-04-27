@@ -27,7 +27,7 @@ void Client::appendToBuffer(const char* data, ssize_t size)
     _requestBuffer.append(data, size);
 }         
 
-std::string Client::getBuffer()
+const std::string Client::getBuffer() const
 {
     return (_requestBuffer);
 }

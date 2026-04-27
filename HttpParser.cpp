@@ -2,7 +2,20 @@
 
 void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 {
-
+    //we got the line with all of the information
+    size_t firstSpace = line.find(" ");
+    size_t secondSpace = line.find(" ", firstSpace + 1);
+    if (firstSpace != std::string::npos && secondSpace != std::string::npos)
+    {
+        // now we parse
+        request.setMethod(line.substr(0, firstSpace)); // DOUBLE CHECK
+        request.setUri(line.substr(firstSpace + 1, secondSpace));
+        request.setVersion(line.substr(secondSpace +1)); // DOUBLE CHECK THIS TOO
+    }
+    else 
+    {
+        //ERROR HANDLING HERE !!!
+    }
 }
 
 void HttpParser::parseHeaders(std::string& rawHeaders, HttpRequest& request)
@@ -35,13 +48,23 @@ void HttpParser::parse(Client& client)
         //From here we get method, URI, and http version to our http request object
     if (client.getState() == READING_REQUESTLINE)
     {
-        std::string workBuffer = client.getBuffer();
+        const std::string& workBuffer = client.getBuffer(); //lets have a reference, for optimization reasons
         size_t pos = workBuffer.find("\r\n");
         if (pos != std::string::npos)
         {
             //we found the \r\n, so our request line is fully in received.
             std::string line = workBuffer.substr(0, pos);
             parseRequestLine(line, client.getRequest());
+            // then we need to erase the requestline part from the client buffer and change state
+            client.eraseFromBuffer(pos + 2); // +2 because we are infront of \r\n
+            client.setState(READING_HEADERS); // set state to the next thing, so reading headers.
+
+        }
+        else
+        {
+            // we land here if we didnt find the word, so if for example have small buffersize, and have a partial requestline.
+            // here we just return and do nothing.
+            return ;
         }
         //if parsing is done change the state!
     }
@@ -50,12 +73,22 @@ void HttpParser::parse(Client& client)
         //From here we parse all the headers, to our map
     if (client.getState() == READING_HEADERS)
     {
-
-        //if parsing is done change the state!
+        const std::string& workBuffer = client.getBuffer();
+        size_t pos = workBuffer.find("\r\n\r\n"); //checking for the end of the headers 
+        if (pos != std::string::npos)
+        {
+            //we found the \r\n\r\n, so our hearders are fully in received.
+            std::string line = workBuffer.substr(0, pos);
+            parseHeaders(line, client.getRequest());
+            // erase headers from the buffer and change state!
+            client.eraseFromBuffer(pos + 4); // +4 because we are infront of \r\n\r\n
+            client.setState(READING_BODY); // set state to the next thing, so reading headers.
+        }
+        return ;
     }
     // 3. we parse the body, here we are comparing the content length number to the actual size of the vector. when the size == to the content length, we know thats end of the body
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
-    if (client.getState() == READING_BODY)
+    if (client.getState() == READING_BODY) //OPTIONAL HOW WE CHECK THIS? 
     {
 
         //if parsing is done change the state!

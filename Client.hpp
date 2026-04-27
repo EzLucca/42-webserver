@@ -38,7 +38,7 @@ class Client
             ClientState getState() const;
             void setState(ClientState state);
             void appendToBuffer(const char* data, ssize_t size);
-            std::string getBuffer();
+            const std::string getBuffer() const;
             void eraseFromBuffer(size_t length);
             HttpRequest& getRequest();
             
