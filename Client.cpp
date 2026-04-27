@@ -2,7 +2,7 @@
 
 Client::Client(int fd) :
 _fd(fd),
-_state(READING_HEADERS)
+_state(READING_REQUESTLINE)
 {
     std::cout << "Client object created." << std::endl; 
 }
