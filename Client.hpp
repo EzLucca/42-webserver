@@ -32,8 +32,11 @@ class Client
     public:
             Client(int fd); // constructor sets state = Reading headears on default
             ~Client();
+            ClientState getState() const;
+            void setState(ClientState state);
             void appendToBuffer(const char* data, ssize_t size);
             std::string getBuffer();
+            void eraseFromBuffer(size_t length);
             
 
 

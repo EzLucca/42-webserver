@@ -10,7 +10,7 @@
 class HttpRequest
 {
     private:
-            std::string _method;       
+            std::string _method;
             std::string _rawUri;       
             std::string _path;         
             std::string _queryString;  
