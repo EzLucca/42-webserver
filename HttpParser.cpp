@@ -35,7 +35,15 @@ void HttpParser::parse(Client& client)
         //From here we get method, URI, and http version to our http request object
     if (client.getState() == READING_REQUESTLINE)
     {
-
+        std::string workBuffer = client.getBuffer();
+        size_t pos = workBuffer.find("\r\n");
+        if (pos != std::string::npos)
+        {
+            //we found the \r\n, so our request line is fully in received.
+            std::string line = workBuffer.substr(0, pos);
+            parseRequestLine(line, client.getRequest());
+        }
+        //if parsing is done change the state!
     }
     
     // 2. we parse the headers, now we are searching for \r\n\r\n to know we have read the headers.
@@ -43,12 +51,14 @@ void HttpParser::parse(Client& client)
     if (client.getState() == READING_HEADERS)
     {
 
+        //if parsing is done change the state!
     }
     // 3. we parse the body, here we are comparing the content length number to the actual size of the vector. when the size == to the content length, we know thats end of the body
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
     if (client.getState() == READING_BODY)
     {
-        
+
+        //if parsing is done change the state!
     }
 
     // REMEMBER TO CHANGE THE STATE in EVERYSTEP

@@ -24,10 +24,13 @@ class Client
 {
     // What do we need to store in client object? 
     private:
-            int         _fd; // Client socker
-            ClientState _state; // Store the client state
+            int             _fd; // Client socker
+            ClientState     _state; // Store the client state
             
-            std::string _requestBuffer; //where we append the request
+            std::string     _requestBuffer; //where we append the request
+
+            HttpRequest     _request;
+            HttpResponse    _response;
 
     public:
             Client(int fd); // constructor sets state = Reading headears on default
@@ -37,6 +40,7 @@ class Client
             void appendToBuffer(const char* data, ssize_t size);
             std::string getBuffer();
             void eraseFromBuffer(size_t length);
+            HttpRequest& getRequest();
             
 
 

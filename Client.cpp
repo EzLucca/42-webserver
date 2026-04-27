@@ -37,3 +37,8 @@ void Client::eraseFromBuffer(size_t len)
     _requestBuffer.erase(len, 0);
     return ;
 }
+
+HttpRequest& Client::getRequest()
+{
+    return (_request);
+}
