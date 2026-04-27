@@ -10,13 +10,15 @@ class HttpParser
 {
     private:
             void parseRequestLine(std::string& line, HttpRequest& request);
-            void parseHeaders(std::string& rawHeaders, HttpRequest& request);
+            void parseAllHeaders(std::string& rawHeaders, HttpRequest& request);
+            void parseSingleHeader(std::string& line, HttpRequest& request);
             void parseChunkedBody(std::string& rawBody, HttpRequest& request);
 
     public:
             HttpParser();
             ~HttpParser();
             void parse(Client& client);
+            std::string trimSpaces(std::string& value);
 
 
 

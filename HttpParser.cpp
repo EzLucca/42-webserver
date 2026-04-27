@@ -3,24 +3,75 @@
 void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 {
     //we got the line with all of the information
-    size_t firstSpace = line.find(" ");
-    size_t secondSpace = line.find(" ", firstSpace + 1);
+    size_t firstSpace = line.find(' ');
+    size_t secondSpace = line.find(' ', firstSpace + 1);
     if (firstSpace != std::string::npos && secondSpace != std::string::npos)
     {
         // now we parse
         request.setMethod(line.substr(0, firstSpace)); // DOUBLE CHECK
-        request.setUri(line.substr(firstSpace + 1, secondSpace));
+        request.setUri(line.substr(firstSpace + 1, secondSpace - firstSpace - 1)); // CHECK THAT THIS WORKS
         request.setVersion(line.substr(secondSpace +1)); // DOUBLE CHECK THIS TOO
+
+        //TODO! VALIDATE METHOD URI AND VERSION BEFORE GOING FORWARD!
     }
     else 
     {
-        //ERROR HANDLING HERE !!!
+        //ERROR HANDLING HERE !!! if not all variables found, also we need to validate
     }
 }
 
-void HttpParser::parseHeaders(std::string& rawHeaders, HttpRequest& request)
+void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
 {
+    // main logic here is that we parse line by line calli singleheader parse function, and after the parse, we erase that part from rawHeaders
+    while (rawHeaders.length() > 0)
+    {   
+        size_t singleHeaderLength = rawHeaders.find("\r\n");
+        if (singleHeaderLength == std::string::npos)
+        {
+            //abort mission
+            break;
+        }
+        if (singleHeaderLength == 0) //if we hit the \r\n in the index 0, we know we are in the end of headers so \r\n\r\n
+        {
+            rawHeaders.erase(0,2); // delete last \r\n
+            break;
+        }
+        std::string singleHeader = rawHeaders.substr(0, singleHeaderLength);
+        parseSingleHeader(singleHeader, request); //lets parse it
+        rawHeaders.erase(0, singleHeaderLength + 2); //erase the parsed header 
+    }
+}
 
+std::string HttpParser::trimSpaces(std::string& value)
+{
+    //we can have 0-2 spaces before our value, according to http protocol
+    size_t startPos = value.find_first_not_of(' ');
+    if (startPos == std::string::npos) //if all values are whitespaces
+        return ("");
+    size_t endPos = value.find_last_not_of(' ');
+    return (value.substr(startPos, endPos - startPos + 1));
+}   
+
+
+void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
+{
+    size_t colonPos = line.find(':');
+
+    if (colonPos != std::string::npos)
+    {
+        std::string key = line.substr(0, colonPos);
+        std::string value = line.substr(colonPos + 1);
+        //HTTP standard has OWS ( optional whitespace), so after parsing value we need to check if there is space before the value!
+        value = trimSpaces(value);
+        // do we want to lowercase the key and value ???
+        //if key == Content-length, we need to check the value is valid, (maybe with stoi in a try catch? )
+        request.setHeader(key, value); // add to the headers.
+
+    }
+    else if (colonPos == std::string::npos)
+    {
+        // ERROR HANDLING, if we cant find :, that means its a bad request
+    }
 }
 
 void HttpParser::parseChunkedBody(std::string& rawBody, HttpRequest& request)
@@ -79,9 +130,13 @@ void HttpParser::parse(Client& client)
         {
             //we found the \r\n\r\n, so our hearders are fully in received.
             std::string line = workBuffer.substr(0, pos);
-            parseHeaders(line, client.getRequest());
+
+            parseAllHeaders(line, client.getRequest());
+
             // erase headers from the buffer and change state!
             client.eraseFromBuffer(pos + 4); // +4 because we are infront of \r\n\r\n
+
+            // WE ARE SETTING THE STATE OF READIING BODY ONLY if we have headers like "Content length" and or "Transfer-Encoding chunked."
             client.setState(READING_BODY); // set state to the next thing, so reading headers.
         }
         return ;

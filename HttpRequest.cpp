@@ -35,3 +35,13 @@ void HttpRequest::setQueryString(std::string queryString)
 {
     _queryString = queryString;
 }
+
+std::map<std::string, std::string> HttpRequest::getHeaders() const
+{
+    return (_headers);
+}
+
+void HttpRequest::setHeader(std::string key, std::string value)
+{
+    _headers[key] = value;
+}

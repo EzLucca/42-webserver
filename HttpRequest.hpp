@@ -25,6 +25,9 @@ class HttpRequest
             void setVersion(std::string version);
             void setPath(std::string path);
             void setQueryString(std::string queryString);
+            void setHeader(std::string key, std::string value);
+            std::map<std::string, std::string> getHeaders() const; // Check that this works
+        
 
 };
 
