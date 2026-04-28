@@ -16,6 +16,8 @@ class HttpRequest
             std::string _queryString;  
             std::string _version;
             std::map<std::string, std::string> _headers;
+            bool        _isChunked;
+            size_t      _contentLength;
             std::vector<char> _body;
     public:
             HttpRequest();

@@ -50,8 +50,15 @@ std::string HttpParser::trimSpaces(std::string& value)
         return ("");
     size_t endPos = value.find_last_not_of(' ');
     return (value.substr(startPos, endPos - startPos + 1));
-}   
+}
 
+std::string HttpParser::stringToLower(std::string value)
+{
+    std::string s = value;
+    for (auto& x : s)
+        x = std::tolower(x);
+    return (s);
+}
 
 void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
 {
@@ -59,12 +66,21 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
 
     if (colonPos != std::string::npos)
     {
-        std::string key = line.substr(0, colonPos);
+        std::string key = line.substr(0, colonPos); 
         std::string value = line.substr(colonPos + 1);
         //HTTP standard has OWS ( optional whitespace), so after parsing value we need to check if there is space before the value!
         value = trimSpaces(value);
-        // do we want to lowercase the key and value ???
-        //if key == Content-length, we need to check the value is valid, (maybe with stoi in a try catch? )
+        //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
+        value = stringToLower(value);
+        if (key == "content-length")
+        {
+            //flag here 
+            // extract the key and value (value into number) and save to request object
+        }
+        if (key == "transfer-encoding")
+        {
+            //flag here
+        }
         request.setHeader(key, value); // add to the headers.
 
     }
