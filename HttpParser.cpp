@@ -74,12 +74,12 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         value = stringToLower(value);
         if (key == "content-length")
         {
-            //flag here 
             // extract the key and value (value into number) and save to request object
+            request.setContentLength(value); // Maybe we should try catch this, need somekind of validation check
         }
         if (key == "transfer-encoding")
         {
-            //flag here
+            request.setIsChunked();
         }
         request.setHeader(key, value); // add to the headers.
 
@@ -90,12 +90,18 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     }
 }
 
+
 void HttpParser::parseChunkedBody(std::string& rawBody, HttpRequest& request)
 {
 
 }
 
-HttpParser::HttpParser()
+void HttpParser::parseBody(std::string& rawBody, HttpRequest& request)
+{
+
+}
+
+HttpParser::HttpParser() // MAKE INITIALIZATION LIST
 {
     std::cout << "HttParser constructor called." << std::endl;
 }
@@ -153,18 +159,55 @@ void HttpParser::parse(Client& client)
             client.eraseFromBuffer(pos + 4); // +4 because we are infront of \r\n\r\n
 
             // WE ARE SETTING THE STATE OF READIING BODY ONLY if we have headers like "Content length" and or "Transfer-Encoding chunked."
-            client.setState(READING_BODY); // set state to the next thing, so reading headers.
+            HttpRequest request = client.getRequest();
+
+            if (request.getIsChunked())                 //Priority 1
+                client.setState(READING_BODY_CHUNKED);
+            else if (request.getContentLength() > 0)    //Priority 2
+                client.setState(READING_BODY);
+            else                                        //Priority 3 (NO BODY)
+                client.setState(PROCESSING);
         }
+        else
+        {
         return ;
+        }
     }
-    // 3. we parse the body, here we are comparing the content length number to the actual size of the vector. when the size == to the content length, we know thats end of the body
+    // 3. we parse the body, here we are comparing the content length number to the actual size of the string. when the size == to the content length, we know thats end of the body
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
-    if (client.getState() == READING_BODY) //OPTIONAL HOW WE CHECK THIS? 
+    if (client.getState() == READING_BODY_CHUNKED)
     {
 
         //if parsing is done change the state!
     }
+    else 
+    {
+        return ;
+    }
 
-    // REMEMBER TO CHANGE THE STATE in EVERYSTEP
+    if (client.getState() == READING_BODY)
+    {
+        const std::string& bodyBuffer = client.getBuffer();
+        size_t expectedBodySize = client.getRequest().getContentLength();
+
+        // we check if there is all the body data inside the buffer again
+        if (bodyBuffer.size() >= expectedBodySize)
+        {
+            // we parse the body 
+            std::string bodyData = bodyBuffer.substr(0, expectedBodySize);
+            // we save the body in the request object
+            client.getRequest().setBody(bodyData);
+            //erase it from the buffer
+            client.eraseFromBuffer(expectedBodySize);
+            client.setState(PROCESSING);
+
+        }
+
+    }
+    else 
+    {
+        return ;
+    }
+    
 }
 

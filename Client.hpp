@@ -9,7 +9,8 @@
 enum ClientState {
     READING_REQUESTLINE,
     READING_HEADERS,        // POST Master is waiting for \r\n\r\n
-    READING_BODY,           // POST Master is reading chunks/data
+    READING_BODY,
+    READING_BODY_CHUNKED,           // POST Master is reading chunks/data
     PARSING_REQUEST_LINE,   // Parsing request line
     PARSING_HEADERS,        // Parsing headers
     PARSING_BODY,           // Parsing body

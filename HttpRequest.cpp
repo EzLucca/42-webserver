@@ -1,7 +1,7 @@
 #include <HttpRequest.hpp>
 
 
-HttpRequest::HttpRequest()
+HttpRequest::HttpRequest() // SET INTIALIZATION LIST
 {
 
 }
@@ -44,4 +44,29 @@ std::map<std::string, std::string> HttpRequest::getHeaders() const
 void HttpRequest::setHeader(std::string key, std::string value)
 {
     _headers[key] = value;
+}
+
+void HttpRequest::setContentLength(std::string& value)
+{
+    _contentLength = std::stoi(value);
+}
+
+void HttpRequest::setIsChunked()
+{
+    _isChunked = true;
+}
+
+size_t HttpRequest::getContentLength()
+{
+    return (_contentLength);
+}
+
+bool   HttpRequest::getIsChunked()
+{
+    return (_isChunked);
+}
+
+void    HttpRequest::setBody(std::string body)
+{
+    _body = body;
 }

@@ -14,6 +14,7 @@ class HttpParser
             void parseAllHeaders(std::string& rawHeaders, HttpRequest& request);
             void parseSingleHeader(std::string& line, HttpRequest& request);
             void parseChunkedBody(std::string& rawBody, HttpRequest& request);
+            void parseBody(std::string& rawBody, HttpRequest& request);
 
     public:
             HttpParser();
