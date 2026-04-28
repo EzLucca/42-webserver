@@ -86,3 +86,18 @@ void HttpRequest::appendToBody(std::string bodydata)
 {
     _body.append(bodydata);
 }
+
+std::string HttpRequest::getMethod()
+{
+    return (_method);
+}
+
+std::string HttpRequest::getUri()
+{
+    return (_rawUri);
+}
+std::string HttpRequest::getVersion()
+{
+    return (_version);
+}
+        

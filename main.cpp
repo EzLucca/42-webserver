@@ -166,7 +166,9 @@ int main() {
                 }
                 else
                 {
+                    std::cout << shovelBuffer << std::endl;
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
+                    std::cout << "hello" << std::endl;
                     httpParser.parse(activeClient);
                 }
                 // Print the buffuer to the output stream

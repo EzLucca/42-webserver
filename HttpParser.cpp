@@ -12,6 +12,11 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
         request.setUri(line.substr(firstSpace + 1, secondSpace - firstSpace - 1)); // CHECK THAT THIS WORKS
         request.setVersion(line.substr(secondSpace +1)); // DOUBLE CHECK THIS TOO
 
+        //DEBUGGING!!
+        std::cout << "Parsed method: " << request.getMethod() << "\n"
+                    << "Parsed Uri :" << request.getUri() << "\n"
+                    << "Parsed version : " << request.getVersion() << std::endl;
+
         //TODO! VALIDATE METHOD URI AND VERSION BEFORE GOING FORWARD!
     }
     else 
@@ -90,12 +95,12 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     }
 }
 
-
+/*
 void HttpParser::parseChunkedBody(std::string& rawBody, HttpRequest& request)
 {
 
 }
-
+*/
 
 HttpParser::HttpParser() // MAKE INITIALIZATION LIST
 {
@@ -203,7 +208,7 @@ void HttpParser::parse(Client& client)
 
             // otherwise we read the chunksize amount of data, remove it from the buffer, and then return our flag back to -1
             //we need to also check ofc that there is enough data in the buffer to read.
-            if (workBuffer.size() >= chunkSize + 2) //+2 because of the hanging \r\n
+            if (workBuffer.size() >= ((size_t)chunkSize + 2)) //+2 because of the hanging \r\n
             {
                 std::string line = workBuffer.substr(0, chunkSize);
                 client.getRequest().appendToBody(line);
