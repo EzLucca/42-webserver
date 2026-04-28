@@ -1,6 +1,7 @@
 #include <Client.hpp>
 
-Client::Client()
+Client::Client() :
+_fd(-1)
 {
     std::cout << "Client default constructor called." << std::endl;
 }
