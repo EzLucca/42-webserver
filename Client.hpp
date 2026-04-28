@@ -34,6 +34,7 @@ class Client
             HttpResponse    _response;
 
     public:
+            Client();
             Client(int fd); // constructor sets state = Reading headears on default
             ~Client();
             ClientState getState() const;
