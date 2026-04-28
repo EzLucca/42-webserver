@@ -42,3 +42,4 @@ HttpRequest& Client::getRequest()
 {
     return (_request);
 }
+

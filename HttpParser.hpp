@@ -14,7 +14,6 @@ class HttpParser
             void parseAllHeaders(std::string& rawHeaders, HttpRequest& request);
             void parseSingleHeader(std::string& line, HttpRequest& request);
             void parseChunkedBody(std::string& rawBody, HttpRequest& request);
-            void parseBody(std::string& rawBody, HttpRequest& request);
 
     public:
             HttpParser();
@@ -22,6 +21,7 @@ class HttpParser
             void parse(Client& client);
             std::string trimSpaces(std::string& value);
             std::string stringToLower(std::string value);
+            
 
 
 

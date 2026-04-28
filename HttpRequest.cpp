@@ -1,7 +1,8 @@
 #include <HttpRequest.hpp>
 
 
-HttpRequest::HttpRequest() // SET INTIALIZATION LIST
+HttpRequest::HttpRequest() :
+_currentChunkSize(-1)
 {
 
 }
@@ -66,7 +67,22 @@ bool   HttpRequest::getIsChunked()
     return (_isChunked);
 }
 
+long    HttpRequest::getCurrentChunkSize()
+{
+    return (_currentChunkSize);
+}
+
 void    HttpRequest::setBody(std::string body)
 {
     _body = body;
+}
+
+void    HttpRequest::setCurrentChunkSize(std::string chunkLine)
+{
+    _currentChunkSize = std::stoi(chunkLine, 0, 16);
+}
+
+void HttpRequest::appendToBody(std::string bodydata)
+{
+    _body.append(bodydata);
 }

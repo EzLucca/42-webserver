@@ -20,6 +20,7 @@ class HttpRequest
             bool                                _isChunked;
             size_t                              _contentLength;
             std::string                         _body;
+            long                                _currentChunkSize;
     public:
             HttpRequest();
             ~HttpRequest();
@@ -34,11 +35,14 @@ class HttpRequest
             void setContentLength(std::string& value);
             void setIsChunked();
             void setBody(std::string body);
+            void setCurrentChunkSize(std::string chunkLine);
+            void appendToBody(std::string bodydata);
 
             //getters
-            std::map<std::string, std::string> getHeaders() const; // Check that this works
-            size_t getContentLength();
-            bool   getIsChunked();
+            std::map<std::string, std::string>  getHeaders() const; // Check that this works
+            size_t                              getContentLength();
+            bool                                getIsChunked();
+            long                                getCurrentChunkSize();
         
 
 };

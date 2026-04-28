@@ -77,7 +77,7 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
             // extract the key and value (value into number) and save to request object
             request.setContentLength(value); // Maybe we should try catch this, need somekind of validation check
         }
-        if (key == "transfer-encoding")
+        if (key == "transfer-encoding" && value == "chunked")
         {
             request.setIsChunked();
         }
@@ -96,10 +96,6 @@ void HttpParser::parseChunkedBody(std::string& rawBody, HttpRequest& request)
 
 }
 
-void HttpParser::parseBody(std::string& rawBody, HttpRequest& request)
-{
-
-}
 
 HttpParser::HttpParser() // MAKE INITIALIZATION LIST
 {
@@ -177,8 +173,45 @@ void HttpParser::parse(Client& client)
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
     if (client.getState() == READING_BODY_CHUNKED)
     {
+        //in chunking we have phases Reading the size, and readint the data
+        //our chunksize is initialized to -1, thats how we know we must read so:
+        //PHASE 1
+        const std::string& workBuffer = client.getBuffer();
+        long chunkSize = client.getRequest().getCurrentChunkSize();
 
-        //if parsing is done change the state!
+        if (chunkSize == -1)
+        {
+            size_t pos = workBuffer.find("\r\n"); //find the first chunksize value
+            if (pos != std::string::npos)
+            {
+
+            std::string line = workBuffer.substr(0, pos); // now we have the hex value as string
+            client.getRequest().setCurrentChunkSize(line);
+            client.eraseFromBuffer(pos + 2);
+            }
+        }
+        //Then we have the PHASE 2 where we read the actual data
+        else
+        {
+            //This is when we know we are in the end of the body
+            if (chunkSize == 0)
+            {
+                client.setState(PROCESSING);
+                client.eraseFromBuffer(2); // we remove the last \r\n
+                return ;
+            }
+
+            // otherwise we read the chunksize amount of data, remove it from the buffer, and then return our flag back to -1
+            //we need to also check ofc that there is enough data in the buffer to read.
+            if (workBuffer.size() >= chunkSize + 2) //+2 because of the hanging \r\n
+            {
+                std::string line = workBuffer.substr(0, chunkSize);
+                client.getRequest().appendToBody(line);
+                client.eraseFromBuffer(chunkSize + 2);
+                client.getRequest().setCurrentChunkSize("-0x1");
+            }
+        }
+        
     }
     else 
     {
