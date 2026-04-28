@@ -2,8 +2,8 @@
 # define CLIENT_HPP
 
 #include <iostream>
-#include <HttpRequest.hpp>
-#include <HttpResponse.hpp>
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 
 //these are possible states (these can change still)
 enum ClientState {

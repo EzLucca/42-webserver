@@ -7,8 +7,10 @@
 #include <unistd.h>     // For close(), read(), write()
 #include <cstring>      // For memset()
 #include <fstream>      //For ile manipulation
-#include <HttpParser.hpp> // For parsing
-#include <Client.hpp>
+
+#include "HttpParser.hpp" // For parsing
+#include "Client.hpp"
+#include "HttpRequest.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100

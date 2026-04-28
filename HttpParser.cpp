@@ -1,4 +1,4 @@
-#include <HttpParser.hpp>
+#include "HttpParser.hpp"
 
 void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 {
@@ -31,7 +31,7 @@ void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
             //abort mission
             break;
         }
-        if (singleHeaderLength == 0) //if we hit the \r\n in the index 0, we know we are in the end of headers so \r\n\r\n
+        if (singleHeaderLength == 0) // if we hit the \r\n in the index 0, we know we are in the end of headers so \r\n\r\n
         {
             rawHeaders.erase(0,2); // delete last \r\n
             break;

@@ -2,8 +2,8 @@
 # define HTTPPARSER_HPP
 
 #include <iostream>
-#include <HttpRequest.hpp>
-#include <Client.hpp>
+#include "HttpRequest.hpp"
+#include "Client.hpp"
 #include <ctype.h>
 
 // takes the raw string from client, parses it , and creates HttpRequest object
