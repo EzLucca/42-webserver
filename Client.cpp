@@ -41,7 +41,7 @@ const std::string Client::getBuffer() const
 
 void Client::eraseFromBuffer(size_t len)
 {
-    _requestBuffer.erase(len, 0);
+    _requestBuffer.erase(0, len);
     return ;
 }
 
