@@ -6,9 +6,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#define GET 0
-#define POST 1
-#define DELETE 2
 
 // takes the httprequest object, sets up pipes, forks the process, executes the script
 class CgiHandler
@@ -17,55 +14,19 @@ class CgiHandler
 		int				_fd[2];
 		pid_t				_pid;
 		int				_status;
-		ssize_t				_ret;
+		size_t				_ret;
 		std::vector<char>		_buf;
 		std::string			_method;
 		std::string			_path;
 		std::string			_args;
-		std::string			_content;
+		std::string			_body;
+		std::string			_queryString;
+		size_t				_contentLength;
 		std::vector<std::string>	_envp;
-		int				cgiProcess(){
-			if (pipe(_fd) == -1)
-				exit(1);
-			_pid = fork();
-			if (_pid == -1)
-			{
-				close(fd[0]);
-				close(fd[1]);
-				exit(1);
-			}
-			else if (pid == 0)
-			{
-				close(fd[0]);
-				dup2(fd[1], STDOUT_FILENO);
-				close(fd[1]);
-				execve(_path, _args, _envp);
-				_exit(1);
-			}
-			else
-			{
-				close(fd[1]);
-				dup2(fd[0], STDIN_FILENO);
-				while (_ret > 0)
-				{
-					_ret = read(fd[0], _buf.data(), CONTENT_LENGTH);
-					if (_ret == -1)
-					{
-						close(fd[0]);
-						exit(1);
-					}
-					std::cout.write(buf.data(), _ret); // change to write to client later
-				}
-				close(fd[0]);
-				waitpid(pid, &status, 0);
-				if (WIFEXITED(status))
-					return(WEXISTATUS(status));
-				return(1);
-			}
-		};
+		int				cgiProcess();
 	public:
 		CgiHandler();
-		CgiHandler(std::string  method, std::string path, std::string queryString, std::string content) : _method(method), _path(path), _queryString(queryString), _content(content);
+		CgiHandler(std::string  method, std::string path, std::string queryString, std::string body, size_t contentLength);
 		~CgiHandler();
 
 
