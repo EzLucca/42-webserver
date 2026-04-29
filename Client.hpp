@@ -2,13 +2,15 @@
 # define CLIENT_HPP
 
 #include <iostream>
-#include <HttpRequest.hpp>
-#include <HttpResponse.hpp>
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 
 //these are possible states (these can change still)
 enum ClientState {
+    READING_REQUESTLINE,
     READING_HEADERS,        // POST Master is waiting for \r\n\r\n
-    READING_BODY,           // POST Master is reading chunks/data
+    READING_BODY,
+    READING_BODY_CHUNKED,           // POST Master is reading chunks/data
     PARSING_REQUEST_LINE,   // Parsing request line
     PARSING_HEADERS,        // Parsing headers
     PARSING_BODY,           // Parsing body
@@ -23,14 +25,25 @@ class Client
 {
     // What do we need to store in client object? 
     private:
-            int         _fd; // Client socker
-            ClientState _state; // Store the client state
+            int             _fd; // Client socker
+            ClientState     _state; // Store the client state
             
-            std::string requestBuffer; //where we append the request
+            std::string     _requestBuffer; //where we append the request
+
+            HttpRequest     _request;
+            HttpResponse    _response;
 
     public:
+            Client();
             Client(int fd); // constructor sets state = Reading headears on default
-
+            ~Client();
+            ClientState getState() const;
+            void setState(ClientState state);
+            void appendToBuffer(const char* data, ssize_t size);
+            const std::string getBuffer() const;
+            void eraseFromBuffer(size_t length);
+            HttpRequest& getRequest();
+            
 
 
 };

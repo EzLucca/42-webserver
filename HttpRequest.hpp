@@ -2,25 +2,52 @@
 # define HTTPREQUEST_HPP
 
 #include <iostream>
+#include <map>
+#include <string>
 
 //HttpRequest consist of request line, headers (body and query optional)
 // Class holds the parsed URI, Method and headers
 class HttpRequest
 {
-    // A request line consists of method, request target and HTTP version (ALL MANDATORY)
-    //For example: GET /api/users HTTP/1.1
+    private:
+            std::string                         _method;
+            std::string                         _rawUri;       
+            std::string                         _path;         
+            std::string                         _queryString;  
+            std::string                         _version;
+            std::map<std::string, std::string>  _headers;
+            bool                                _isChunked;
+            size_t                              _contentLength;
+            std::string                         _body;
+            long                                _currentChunkSize;
+    public:
+            HttpRequest();
+            ~HttpRequest();
 
-    // Methods need to be implemented GET, POST or DELETE
+            //setters
+            void setMethod(std::string method);
+            void setUri(std::string uri);
+            void setVersion(std::string version);
+            void setPath(std::string path);
+            void setQueryString(std::string queryString);
+            void setHeader(std::string key, std::string value);
+            void setContentLength(std::string& value);
+            void setIsChunked();
+            void setBody(std::string body);
+            void setCurrentChunkSize(std::string chunkLine);
+            void appendToBody(std::string bodydata);
+            void printHeaders();
+            void printBody();
 
-    //HEADERS. Common request headers include:
-    // Host, Content-Type, Authorization, User-Agent, Accept, Connection, Accept-Language
-
-
-    //BODY contains data sent to the server
-
-    //QUERY PARAMETERS, are key-value pairs appended to the url to filter or sort data
-
-
+            //getters
+            std::map<std::string, std::string>  getHeaders() const; // Check that this works
+            size_t                              getContentLength();
+            bool                                getIsChunked();
+            long                                getCurrentChunkSize();
+            std::string                         getMethod();
+            std::string                         getUri();
+            std::string                         getVersion();
+        
 
 };
 
