@@ -191,6 +191,7 @@ int main() {
                     std::cerr << "Failed to send response" << std::endl;
                 }
                 //close the connections, and set the fd back to -1
+                clients.erase(currentFd); // DUNNO IF THIS WORKS
                 close(fds[i].fd);
                 fds[i].fd = -1;
             }
