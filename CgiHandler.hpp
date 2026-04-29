@@ -22,7 +22,7 @@ class CgiHandler
 		std::string			_body;
 		std::string			_queryString;
 		size_t				_contentLength;
-		std::vector<std::string>	_envp;
+		std::vector<std::string>	_envp; // query string, request method, http headers *, gateway interface, content *, server/client metadata
 		int				cgiProcess();
 	public:
 		CgiHandler();
