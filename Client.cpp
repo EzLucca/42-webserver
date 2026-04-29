@@ -1,7 +1,8 @@
 #include "Client.hpp"
 
 Client::Client() :
-_fd(-1)
+_fd(-1),
+_state(READING_REQUESTLINE)
 {
     std::cout << "Client default constructor called." << std::endl;
 }

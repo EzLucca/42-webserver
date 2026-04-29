@@ -2,14 +2,16 @@
 
 
 HttpRequest::HttpRequest() :
+_isChunked(false),
+_contentLength(0),
 _currentChunkSize(-1)
 {
-
+    std::cout << "HttpRequest default constructor called" << std::endl;
 }
 
 HttpRequest::~HttpRequest()
 {
-
+    std::cout << "HttpRequest destructor called" << std::endl;
 }
 
 void HttpRequest::setMethod(std::string method)
