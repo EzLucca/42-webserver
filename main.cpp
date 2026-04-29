@@ -9,12 +9,14 @@
 #include <fstream>      //For ile manipulation
 
 #include "HttpParser.hpp" // For parsing
+#include "ConfigParser.hpp" // For parsing
 #include "Client.hpp"
 #include "HttpRequest.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100
 
+// int main(int argc, char **argv) {
 int main() {
 
     //Lets start parsing the configFile
@@ -25,8 +27,23 @@ int main() {
     //    std::cout << readConf;
     //MyReadFile.close(); //Close the file
 
-    
+#if 0
+    // Arguments check
+    if (argc > 2)
+    {
+        std::cout << "Usage:\n\t./webserv [configuration_file]" << std::endl;
+        return (1);
+    }
 
+    // Start parsing the config file
+    std::string configFile;
+    ConfigParser config;
+
+    configFile = argv[1];
+
+    if (config.configure(configFile))
+        return (1);
+#endif
 
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
@@ -67,11 +84,11 @@ int main() {
         std::cerr << "Listen failed" << std::endl;
         return (1);
     }
-    
+
 
     //prepare poll struct
     struct pollfd fds[MAX_CLIENTS];
-    
+
     // Initialize, -1 means untouched
     for (int i = 0; i < MAX_CLIENTS; ++i) {
         fds[i].fd = -1; 
@@ -90,7 +107,7 @@ int main() {
     while (true) {
         // poll() waits here, timeout -1 means that it waits infinitely that somethin happpens
         int poll_count = poll(fds, MAX_CLIENTS, -1);
-        
+
         if (poll_count < 0) {
             std::cerr << "Poll error" << std::endl;
             break;
@@ -122,7 +139,7 @@ int main() {
 
                 fcntl(new_client_fd, F_SETFL, O_NONBLOCK); //set file status flags to nonblocking
                 bool added = false; //flag if adding client succesfull
-                
+
 
                 // Save the client fd, and insert into our array
                 for (int j = 0; j < MAX_CLIENTS; j++)
@@ -133,7 +150,7 @@ int main() {
                         fds[j].events = POLLIN; //  activate pollin
                         clients.insert(std::make_pair(new_client_fd, Client(new_client_fd))); // add the client to the map
                         added = true;
-                        
+
                         std::cout << "New client connected on FD: "<< new_client_fd << std::endl;
                         break;
                     }
@@ -181,16 +198,17 @@ int main() {
                     "Content-Length: 13\r\n"
                     "\r\n"
                     "Hello, World!";
-                
-                
+
+
                 //lets use write or send to send the mock response to the client
                 int bytesSent = write(fds[i].fd, mock_response.c_str(), mock_response.length());
-                
+
                 if (bytesSent < 0)
                 {
                     std::cerr << "Failed to send response" << std::endl;
                 }
                 //close the connections, and set the fd back to -1
+                clients.erase(currentFd);
                 close(fds[i].fd);
                 fds[i].fd = -1;
             }

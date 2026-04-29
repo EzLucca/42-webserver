@@ -1,9 +1,9 @@
 #include "Client.hpp"
 
-Client::Client() :
-_fd(-1),
-_state(READING_REQUESTLINE)
+Client::Client()
 {
+    _fd = -1;
+    _state = READING_REQUESTLINE;
     std::cout << "Client default constructor called." << std::endl;
 }
 
@@ -41,7 +41,7 @@ const std::string Client::getBuffer() const
 
 void Client::eraseFromBuffer(size_t len)
 {
-    _requestBuffer.erase(len, 0);
+    _requestBuffer.erase(0, len);
     return ;
 }
 

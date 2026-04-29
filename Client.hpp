@@ -10,7 +10,7 @@ enum ClientState {
     READING_REQUESTLINE,
     READING_HEADERS,        // POST Master is waiting for \r\n\r\n
     READING_BODY,
-    READING_BODY_CHUNKED,           // POST Master is reading chunks/data
+    READING_BODY_CHUNKED,   // POST Master is reading chunks/data
     PARSING_REQUEST_LINE,   // Parsing request line
     PARSING_HEADERS,        // Parsing headers
     PARSING_BODY,           // Parsing body
@@ -25,13 +25,13 @@ class Client
 {
     // What do we need to store in client object? 
     private:
-            int             _fd; // Client socker
-            ClientState     _state; // Store the client state
+            int             _fd;            // Client socker
+            ClientState     _state;         // Store the client state
             
             std::string     _requestBuffer; //where we append the request
 
             HttpRequest     _request;
-            HttpResponse    _response;
+            // HttpResponse    _response;
 
     public:
             Client();
