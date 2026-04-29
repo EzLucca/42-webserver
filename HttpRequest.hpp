@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <map>
-#include <vector>
 #include <string>
 
 //HttpRequest consist of request line, headers (body and query optional)
@@ -37,6 +36,8 @@ class HttpRequest
             void setBody(std::string body);
             void setCurrentChunkSize(std::string chunkLine);
             void appendToBody(std::string bodydata);
+            void printHeaders();
+            void printBody();
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
