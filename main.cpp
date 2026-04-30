@@ -151,7 +151,7 @@ int main() {
                 Client& activeClient = clients[currentFd]; // get the activeclient
 
                 // 8Kb is standardized  size for single read 
-                char shovelBuffer[8192] = {0}; //intializing buffer with zeros
+                char shovelBuffer[1] = {0}; //intializing buffer with zeros
 
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
@@ -166,14 +166,13 @@ int main() {
                 }
                 else
                 {
-                    std::cout << shovelBuffer << std::endl;
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-                    std::cout << "hello" << std::endl;
                     httpParser.parse(activeClient);
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
 
+                /*
                 // Hardcoded mock response
                 std::string mock_response = 
                     "HTTP/1.1 200 OK\r\n"
@@ -190,10 +189,14 @@ int main() {
                 {
                     std::cerr << "Failed to send response" << std::endl;
                 }
+                */
                 //close the connections, and set the fd back to -1
+                if (activeClient.getState() == PROCESSING)
+                {
                 clients.erase(currentFd); // DUNNO IF THIS WORKS
                 close(fds[i].fd);
                 fds[i].fd = -1;
+                }
             }
         }
     }

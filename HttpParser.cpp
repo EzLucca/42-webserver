@@ -22,6 +22,7 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
     else 
     {
         //ERROR HANDLING HERE !!! if not all variables found, also we need to validate
+        return ;
     }
 }
 
@@ -87,6 +88,8 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         if (key == "transfer-encoding" && value == "chunked")
         {
             request.setIsChunked();
+            std::cout << "Chunked is flagged " << request.getIsChunked() << std::endl; //DEBUGGING
+            
         }
         request.setHeader(key, value); // add to the headers.
 
@@ -178,12 +181,14 @@ void HttpParser::parse(Client& client)
     }
     // 3. we parse the body, here we are comparing the content length number to the actual size of the string. when the size == to the content length, we know thats end of the body
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
-    if (client.getState() == READING_BODY_CHUNKED)
+    while (client.getState() == READING_BODY_CHUNKED)
     {
+        //std::cout << client.getRequest().getCurrentChunkSize() << std::endl;
         //in chunking we have phases Reading the size, and readint the data
         //our chunksize is initialized to -1, thats how we know we must read so:
         //PHASE 1
         const std::string& workBuffer = client.getBuffer();
+
         long chunkSize = client.getRequest().getCurrentChunkSize();
 
         if (chunkSize == -1)
@@ -191,23 +196,31 @@ void HttpParser::parse(Client& client)
             size_t pos = workBuffer.find("\r\n"); //find the first chunksize value
             if (pos != std::string::npos)
             {
-
             std::string line = workBuffer.substr(0, pos); // now we have the hex value as string
             client.getRequest().setCurrentChunkSize(line);
             client.eraseFromBuffer(pos + 2);
             }
+            else
+            {
+                return ;
+            }
         }
-        //Then we have the PHASE 2 where we read the actual data
         else
         {
+        //Then we have the PHASE 2 where we read the actual data
             //This is when we know we are in the end of the body
             if (chunkSize == 0)
             {
                 client.setState(PROCESSING);
+                client.getRequest().printBody();
                 client.eraseFromBuffer(2); // we remove the last \r\n
                 return ;
             }
-
+            if (workBuffer.size() <= ((size_t)chunkSize + 1)) // EXPERIMENTAL
+            {
+                return ;
+            }
+            
             // otherwise we read the chunksize amount of data, remove it from the buffer, and then return our flag back to -1
             //we need to also check ofc that there is enough data in the buffer to read.
             if (workBuffer.size() >= ((size_t)chunkSize + 2)) //+2 because of the hanging \r\n
@@ -217,6 +230,7 @@ void HttpParser::parse(Client& client)
                 client.eraseFromBuffer(chunkSize + 2);
                 client.getRequest().setCurrentChunkSize("-0x1");
             }
+            
         }
         
     }
