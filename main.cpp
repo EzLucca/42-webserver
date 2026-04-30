@@ -26,8 +26,6 @@ int main() {
     //MyReadFile.close(); //Close the file
 
     
-
-
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -68,7 +66,6 @@ int main() {
         return (1);
     }
     
-
     //prepare poll struct
     struct pollfd fds[MAX_CLIENTS];
     
@@ -168,6 +165,7 @@ int main() {
                 {
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
                     httpParser.parse(activeClient);
+                    // if parse is completed so if state is processing we start to execute the request, and after that make the response, check if still something in buffer, if, then clear request object and call parse again, make a loop
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;

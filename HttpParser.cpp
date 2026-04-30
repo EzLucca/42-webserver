@@ -8,20 +8,21 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
     if (firstSpace != std::string::npos && secondSpace != std::string::npos)
     {
         // now we parse
-        request.setMethod(line.substr(0, firstSpace)); // DOUBLE CHECK
-        request.setUri(line.substr(firstSpace + 1, secondSpace - firstSpace - 1)); // CHECK THAT THIS WORKS
-        request.setVersion(line.substr(secondSpace +1)); // DOUBLE CHECK THIS TOO
+        request.setMethod(line.substr(0, firstSpace));
+        //Validate method, if not valid, return
+        request.setUri(line.substr(firstSpace + 1, secondSpace - firstSpace - 1));
+        //validate Uri, if not valid return
+        request.setVersion(line.substr(secondSpace +1));
+        //validate version, if not valid return
 
         //DEBUGGING!!
         std::cout << "Parsed method: " << request.getMethod() << "\n"
                     << "Parsed Uri :" << request.getUri() << "\n"
                     << "Parsed version : " << request.getVersion() << std::endl;
-
-        //TODO! VALIDATE METHOD URI AND VERSION BEFORE GOING FORWARD!
     }
     else 
     {
-        //ERROR HANDLING HERE !!! if not all variables found, also we need to validate
+        //If the whole request line is not parsed, we return to wait more data
         return ;
     }
 }
@@ -139,7 +140,6 @@ void HttpParser::parse(Client& client)
             client.setState(READING_HEADERS); // set state to the next thing, so reading headers.
 
         }
-        //if parsing is done change the state!
     }
     
     // 2. we parse the headers, now we are searching for \r\n\r\n to know we have read the headers.
@@ -226,8 +226,8 @@ void HttpParser::parse(Client& client)
             if (workBuffer.size() >= ((size_t)chunkSize + 2)) //+2 because of the hanging \r\n
             {
                 std::string line = workBuffer.substr(0, chunkSize);
-                client.getRequest().appendToBody(line);
-                client.eraseFromBuffer(chunkSize + 2);
+                client.getRequest().appendToBody(line); //This needs to be saved inside a file(not inside a string object)
+                client.eraseFromBuffer(chunkSize + 2); // Free the buffer so we dont run into RAM problems.
                 client.getRequest().setCurrentChunkSize("-0x1");
             }
             
@@ -237,7 +237,6 @@ void HttpParser::parse(Client& client)
 
     if (client.getState() == READING_BODY)
     {
-        std::cout << "TEST" << std::endl;
         const std::string& bodyBuffer = client.getBuffer();
         size_t expectedBodySize = client.getRequest().getContentLength();
 
