@@ -3,10 +3,19 @@
 CgiHandler::CgiHandler(){
 }
 
-CgiHandler::CgiHandler(std::string method, std::string path, std::string queryString, std::string body, size_t contentLength) : _method(method), _path(path), _queryString(queryString), _body(body), _contentLength(contentLength){
+CgiHandler::CgiHandler(char **envp, std::string &body, std::string path) : envp(_envp), _body(&body), _path(path){
+
+}
+
+std::string	CgiHandler::createArgs(){
+
+	args = new char*[2];
+	args[0] = //script path
+	args[1] = NULL;
 }
 
 int	CgiHandler::cgiProcess() {
+
 	if (pipe(_fd) == -1)
 		exit(1);
 	_pid = fork();
@@ -42,6 +51,14 @@ int	CgiHandler::cgiProcess() {
 }
 
 Cgihandler::~CgiHandler(){
+
+	for (int i = 0; i < _envp.size(); i++){
+		delete _envp[i];
+	}
+	delete[] _envp;
+
+	for (int i = 0; i < 2; i++){
+		delete _args[i];
+	}
+	delete[] args;
 }
-
-

@@ -16,17 +16,17 @@ class CgiHandler
 		int				_status;
 		size_t				_ret;
 		std::vector<char>		_buf;
-		std::string			_method;
 		std::string			_path;
 		std::string			_args;
 		std::string			_body;
-		std::string			_queryString;
 		size_t				_contentLength;
 		std::vector<std::string>	_envp; // query string, request method, http headers *, gateway interface, content *, server/client metadata
 		int				cgiProcess();
 	public:
 		CgiHandler();
-		CgiHandler(std::string  method, std::string path, std::string queryString, std::string body, size_t contentLength);
+		CgiHandler(char **envp, std::string &body, std::string path);
+		std::string	createArgs();
+		std::string	getCmd();
 		~CgiHandler();
 
 
