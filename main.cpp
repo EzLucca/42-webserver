@@ -16,8 +16,8 @@
 #define PORT 8080
 #define MAX_CLIENTS 100
 
-// int main(int argc, char **argv) {
-int main() {
+int main(int argc, char **argv) {
+// int main() {
 
     //Lets start parsing the configFile
     //std::string readConf;
@@ -27,7 +27,6 @@ int main() {
     //    std::cout << readConf;
     //MyReadFile.close(); //Close the file
 
-#if 0
     // Arguments check
     if (argc > 2)
     {
@@ -41,9 +40,9 @@ int main() {
 
     configFile = argv[1];
 
-    if (config.configure(configFile))
-        return (1);
-#endif
+    // TODO: initial parsing
+    if (config.parse(configFile))
+        exit(1);
 
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
