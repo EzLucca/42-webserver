@@ -5,28 +5,30 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cstring>
 
 
 // takes the httprequest object, sets up pipes, forks the process, executes the script
 class CgiHandler
 {
 	private:
-		int				_fd[2];
-		pid_t				_pid;
-		int				_status;
-		size_t				_ret;
-		std::vector<char>		_buf;
-		std::string			_path;
-		std::string			_args;
-		std::string			_body;
-		size_t				_contentLength;
-		std::vector<std::string>	_envp; // query string, request method, http headers *, gateway interface, content *, server/client metadata
-		int				cgiProcess();
+		std::string								_cgiShebang; // where e.g. python interpreter lives e.g. usr/bin/python3
+		std::string								_cgiExtention; // format to save the script
+		std::string								_scriptPath; // path where the script lives
+		std::string								_method; //request method
+		std::string								_queryString;
+		std::string								_body; //request body
+		std::string								_contentType; //type determines what form to convert to
+		std::map<std::string, std::string>		_headers; //std::map used to store key value pairs
+		std::string								_serverName;
+		
+		/* envp: query string, request method, content length, server protocol, 
+		script filename, path info, content type, server name, redirect status */
 	public:
 		CgiHandler();
-		CgiHandler(char **envp, std::string &body, std::string path);
+		CgiHandler(HttpRequest &request, const config::LocationConfig &location);
 		std::string	createArgs();
-		std::string	getCmd();
+		std::string	cgiProcess();
 		~CgiHandler();
 
 
