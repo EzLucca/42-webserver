@@ -20,6 +20,7 @@ class HttpRequest
             size_t                              _contentLength;
             std::string                         _body;
             long                                _currentChunkSize;
+            long                                _fullChunkBodySize;
     public:
             HttpRequest();
             ~HttpRequest();
@@ -35,6 +36,7 @@ class HttpRequest
             void setIsChunked();
             void setBody(std::string body);
             void setCurrentChunkSize(std::string chunkLine);
+            void setFullChunkBodySize(size_t amount);
             void appendToBody(std::string bodydata);
             void printHeaders();
             void printBody();

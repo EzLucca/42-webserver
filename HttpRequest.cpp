@@ -4,7 +4,8 @@
 HttpRequest::HttpRequest() :
 _isChunked(false),
 _contentLength(0),
-_currentChunkSize(-1)
+_currentChunkSize(-1),
+_fullChunkBodySize(0)
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -124,5 +125,10 @@ void HttpRequest::printBody()
 {
     std::cout << "Printing the body!" << std::endl;
     std::cout << _body << std::endl;
+}
+
+void HttpRequest::setFullChunkBodySize(size_t amount)
+{
+    _fullChunkBodySize += amount;
 }
         
