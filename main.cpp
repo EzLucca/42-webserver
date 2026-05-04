@@ -63,7 +63,9 @@ int main(int argc, char **argv) {
     if (config.parse(configFile))
         exit(1);
 
+    // std::cout << config.getConfigBuffer() << std::endl;
     exit(3);
+//
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);

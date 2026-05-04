@@ -53,13 +53,13 @@ int ConfigParser::parse(std::string configFile)
     }
     std::string line;
 
-    // std::cout << configFile << std::endl;
     std::ifstream file(configFile);
     while (std::getline(file, line)) //Write everything to our string object
     {
         // buffer with everything by append line
         setConfigBuffer(line);
     }
-    std::cout << getConfigBuffer() << std::endl;
+    const std::string& workingBuffer = getConfigBuffer();
+
     return 0;
 }
