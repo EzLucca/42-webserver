@@ -8,10 +8,14 @@
 class ConfigParser
 {
     private:
+        std::string _configBuffer;
     public:
         ConfigParser();
         ~ConfigParser();
-        void parse(std::string configFile);
+        int parse(std::string configFile);
+        void    setConfigBuffer(std::string line);
+        std::string getConfigBuffer();
+
 };
 
 #endif

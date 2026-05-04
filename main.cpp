@@ -16,21 +16,40 @@
 #define PORT 8080
 #define MAX_CLIENTS 100
 
+bool validateConfigFile(std::string_view &fileName)
+{
+    size_t found;
+
+    found = fileName.find(".conf");
+    if (found == std::string::npos)
+    {
+        std::cerr << "Config file not included.";
+        return (false);
+    }
+    if (found != (fileName.size() - 5))
+    {
+        std::cerr << "Config file name is not correct.";
+        return (false);
+    }
+
+    return (true);
+}
+
 int main(int argc, char **argv) {
-// int main() {
 
-    //Lets start parsing the configFile
-    //std::string readConf;
-
-    //std::ifstream MyReadFile("configFile.conf"); //Open file
-    //while (std::getline(MyReadFile, readConf)) //Write everything to our string object
-    //    std::cout << readConf;
-    //MyReadFile.close(); //Close the file
-
-    // Arguments check
-    if (argc > 2)
+    if (argc != 2)
     {
         std::cout << "Usage:\n\t./webserv [configuration_file]" << std::endl;
+        return (1);
+    }
+    std::string_view fileName = argv[1];
+
+    try{
+        if(!validateConfigFile(fileName))
+            throw std::invalid_argument("Invalid configuration file.");
+    }
+    catch (const std::exception &e){
+        std::cerr << "Error: " << e.what() << std::endl;
         return (1);
     }
 
@@ -44,6 +63,7 @@ int main(int argc, char **argv) {
     if (config.parse(configFile))
         exit(1);
 
+    exit(3);
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);

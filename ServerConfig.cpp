@@ -29,17 +29,39 @@ void    ServerConfig::setErrorPage(int code, const std::string& errorPage)
 }
 void    ServerConfig::setRoute(const std::string& location, RouteConfig  routes)
 {
+    routes.path = location;
 }
 
 // getters
-int                                         getPort() const;
-const std::string                           getHost() const;
-const std::string                           getServerName() const;        // awesomeserver
-size_t                                      getClientMaxBodySize() const;
-const std::map<int, std::string>&           getErrorPages() const;
-const std::map<std::string, RouteConfig>&   getRoutes() const;
-
+int                                         ServerConfig::getPort() const
+{
+    return (_port);
+}
+const std::string                           ServerConfig::getHost() const
+{
+    return (_host);
+}
+const std::string                           ServerConfig::getServerName() const
+{
+    return (_serverName);
+}
+size_t                                      ServerConfig::getClientMaxBodySize() const
+{
+    return (_clientMaxBodySize);
+}
+const std::map<int, std::string>&           ServerConfig::getErrorPages() const
+{
+    return (_errorPages);
+}
+const std::map<std::string, RouteConfig>&   ServerConfig::getRoutes() const
+{
+    return (_routes);
+}
 
 // Useful helpers
-std::string         getErrorPage(int code) const;
-const RouteConfig*  getRoute(const std::string& location) const;
+// std::string         ServerConfig::getErrorPage(int code) const
+// {
+// }
+// const RouteConfig*  ServerConfig::getRoute(const std::string& location) const
+// {
+// }
