@@ -50,3 +50,8 @@ HttpRequest& Client::getRequest()
     return (_request);
 }
 
+int    Client::getFd() const
+{
+    return (_fd);
+}
+

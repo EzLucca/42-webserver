@@ -101,12 +101,29 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     }
 }
 
-/*
-void HttpParser::parseChunkedBody(std::string& rawBody, HttpRequest& request)
+void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request)
 {
+    //ios::binary flag to make sure the data is written in raw binary and not touched
+    //ios::app (append) flag to make sure the pointer is in the end of the file always when we write. 
+
+    //fstream has an internal buffer of ~4Kb (using RAM), so when we are writing into a file, its actually written after 4kb, or manual flush call
+    //filenaming needs to be unique, lets have client fd for example added there.
+    std::ofstream outFile("temp_body_" + std::to_string(clientFd) + ".bin", std::ios::out | std::ios::app | std::ios::binary);
+    outFile.write(bodyData.data(), request.getCurrentChunkSize()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
+    //also remember the filepath 
+    //we better to open and close file between writings. (this will also flush the fstream internal buffer), and this will protect us from fd limits.
+    //we need to use the outFile.write(datachunkData, datachunkSize) to write safely in to the file. 
+    //we need remember to increment the fullBodySize variable
+    
+    //filestreams automatically close when they get out of scope. but we should do it manually here just for safety
+    outFile.close();
+
+    //think about how to remove temp files, if connection drops out in the middle of reading body
 
 }
-*/
+
+
+
 
 HttpParser::HttpParser() // MAKE INITIALIZATION LIST
 {
@@ -183,6 +200,7 @@ void HttpParser::parse(Client& client)
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
     while (client.getState() == READING_BODY_CHUNKED)
     {
+
         //std::cout << client.getRequest().getCurrentChunkSize() << std::endl;
         //in chunking we have phases Reading the size, and readint the data
         //our chunksize is initialized to -1, thats how we know we must read so:
@@ -226,8 +244,10 @@ void HttpParser::parse(Client& client)
             if (workBuffer.size() >= ((size_t)chunkSize + 2)) //+2 because of the hanging \r\n
             {
                 std::string line = workBuffer.substr(0, chunkSize);
-                client.getRequest().appendToBody(line); //This needs to be saved inside a file(not inside a string object)
+                //client.getRequest().appendToBody(line); //This needs to be saved inside a file(not inside a string object)
+                parseBodyIntoFile(client.getFd(), line, client.getRequest()); // this is now writing the chunk of data into a file.
                 client.getRequest().setFullChunkBodySize(chunkSize); //increment full chunkbodysize after extracted the data,
+                std::cout << "chunkSize: " << chunkSize << std::endl; 
                 client.eraseFromBuffer(chunkSize + 2); // Free the buffer so we dont run into RAM problems.
                 client.getRequest().setCurrentChunkSize("-0x1");
             }
@@ -263,4 +283,6 @@ void HttpParser::parse(Client& client)
     }
     
 }
+
+
 

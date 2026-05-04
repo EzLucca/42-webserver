@@ -5,6 +5,7 @@
 #include "HttpRequest.hpp"
 #include "Client.hpp"
 #include <ctype.h>
+#include <fstream>
 
 // takes the raw string from client, parses it , and creates HttpRequest object
 class HttpParser
@@ -14,6 +15,7 @@ class HttpParser
             void parseAllHeaders(std::string& rawHeaders, HttpRequest& request);
             void parseSingleHeader(std::string& line, HttpRequest& request);
             void parseChunkedBody(std::string& rawBody, HttpRequest& request);
+            void parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request);
 
     public:
             HttpParser();

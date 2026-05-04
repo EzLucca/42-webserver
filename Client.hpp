@@ -37,12 +37,18 @@ class Client
             Client();
             Client(int fd); // constructor sets state = Reading headears on default
             ~Client();
-            ClientState getState() const;
+
             void setState(ClientState state);
             void appendToBuffer(const char* data, ssize_t size);
             const std::string getBuffer() const;
             void eraseFromBuffer(size_t length);
+
+
             HttpRequest& getRequest();
+            ClientState getState() const;
+            int getFd() const;
+
+
             
 
 
