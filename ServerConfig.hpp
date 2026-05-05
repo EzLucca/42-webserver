@@ -4,6 +4,7 @@
 # include <string>
 # include <vector>
 # include <map>
+# include <ostream>
 
 // This file should store the values from the config file after the configParser.
 
@@ -60,4 +61,5 @@ class ServerConfig
         const RouteConfig*  getRoute(const std::string& location) const;
 };
 
+std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m);
 #endif

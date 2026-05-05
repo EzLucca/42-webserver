@@ -27,9 +27,9 @@ void    ServerConfig::setErrorPage(int code, const std::string& errorPage)
 {
     _errorPages[code] = errorPage;
 }
-void    ServerConfig::setRoute(const std::string& location, RouteConfig  routes)
-{
-    routes.path = location;
+void    ServerConfig::setRoute(const std::string& location, RouteConfig route) {
+    route.path = location;
+    _routes[location] = route;
 }
 
 // getters
@@ -58,6 +58,17 @@ const std::map<std::string, RouteConfig>&   ServerConfig::getRoutes() const
     return (_routes);
 }
 
+std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m) {
+    os << "{";
+    bool first = true;
+    for (const auto& [key, value] : m) {
+        if (!first) os << ", ";
+        os << key << ": " << value;
+        first = false;
+    }
+    os << "}";
+    return os;
+}
 // Useful helpers
 // std::string         ServerConfig::getErrorPage(int code) const
 // {
