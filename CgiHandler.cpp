@@ -1,11 +1,12 @@
 #include "CgiHandler.hpp"
 
-CgiHandler::CgiHandler(){
+CgiHandler::CgiHandler()
+{
 }
 
 CgiHandler::CgiHandler(HttpRequest &request, const config::LocationConfig &location) //location info for cgi scripts
-: _cgiShebang(location.cgiShebang),
-_cgiExtention(location.cgiExtention),
+: _cgiPath(location.cgiPath), //rename later
+_cgiExtention(location.cgiExtention), //rename later
 _method(request.getMethod()),
 _queryString("");
 _body(request.getBody());
@@ -13,18 +14,23 @@ _contentType("");
 _serverName("");
 _headers(request.getHeaders());
 {
-	//build scriptpath
-	//set querystring (everything after '?')
+	//build scriptpath (script_name from the config + path from the request object until '?')
+	std::string	root = lc.root;
+	if (root.end_with("/"))
+		root.erase(root.size() - 1);
+	std::string	raw = request._path;
+	size_t	pos = raw.find('?');
+	//if (URI found in path != std::string npos)
+		//root = "/var/www/cgi" 
+		_scriptPath = root + raw.substr(0, pos);
+		_queryString = raw.substr(pos + 1);
+	//else 
+		//_scriptPath = root + raw;
 	//set content type (parse request object for "content-type" and type is after that)
+	_contentType = _headers.at("Content-Type");
 	//set server name (parse request object for "host" and server name is after that)
+	_serverName = _headers.at("Host");
 }
-/* nah
-std::string	CgiHandler::createArgs(){
-
-	args = new char*[2];
-	args[0] = _scriptPath;
-	args[1] = NULL;
-}*/
 
 std::string	CgiHandler::cgiProcess()
 {
@@ -57,7 +63,26 @@ std::string	CgiHandler::cgiProcess()
 		}
 		close(stdin_fd[0]);
 		close(stdout_fd[1]);
-		execve(_path, _args, _envp);
+		std::vector<std::string>	envs;
+		envs.push_back("REQUEST_METHOD=" + _method);
+		envs.push_back("QUERY_STRINGS=" + _queryString);
+		if (request._contentLength)
+			envs.push_back("CONTENT_LENGTH=" + std::to_string(request._contentLength));
+		else
+			envs.push_back("CONTENT_LENGTH=" + std::to_string(_body.size()));
+		envs.push_back("SERVER_PROTOCOL=" + request._version);
+		envs.push_back("SCRIPT_FILENAME=" + _scriptPath);
+		envs.push_back("PATH=" + _cgiPath);
+		envs.push_back("CONTENT_TYPE=" + _contentType);
+		envs.push_back("SERVER_NAME=" + _serverName);
+		envs.push_back("REDIRECT_STATUS=200");
+		//now we push back all of the envs elements to a <char *> vector 
+		std::vector<char *>	envp;
+		std::vector<char *> args;
+		args.push_back(const_cast<char *>(_cgiPath.cstr()));
+		args.push_back(const_cast<char *>(_scriptPath.cstr()));
+		args.push_back(NULL);
+		execve(_cgiPath.cstr(), args.data(), envp.data()); // _path is cgiPath, argv consists of cgiPath, scriptpath and null 
 		std::cerr << "CGI execve failed"
 		_exit(1);
 	}
@@ -66,7 +91,8 @@ std::string	CgiHandler::cgiProcess()
 		close(stdin_fd[0]);
 		close(stdout_fd[1]);
 		//here parent writes content of body to child, which is then read by child and appended to output, which is then returned
-		//if method == POST and body is not empty, create writing loop, write to stdin_fd[1]
+		//if method == POST and body is not empty and is chunked, create writing loop, write to stdin_fd[1]
+		//if body is not chunked and we have a content length read file storing body  
 		//afterwards, close stdin_fd[1]
 		std::string	output;
 		char		buf[4096];
@@ -92,13 +118,13 @@ std::string	CgiHandler::cgiProcess()
 
 Cgihandler::~CgiHandler(){
 
-	for (int i = 0; i < _envp.size(); i++){
-		delete _envp[i];
+	for (int i = 0; i < envp.size(); i++){
+		delete envp[i];
 	}
-	delete[] _envp;
+	delete[] envp;
 
-	for (int i = 0; i < 2; i++){
-		delete _args[i];
+	for (int i = 0; i < 3; i++){
+		delete args[i];
 	}
 	delete[] args;
 }

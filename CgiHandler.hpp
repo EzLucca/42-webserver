@@ -6,13 +6,16 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <cstring>
+#include <string>
+#include <vector>
+#include "HttpRequest.hpp"
 
 
 // takes the httprequest object, sets up pipes, forks the process, executes the script
 class CgiHandler
 {
 	private:
-		std::string								_cgiShebang; // where e.g. python interpreter lives e.g. usr/bin/python3
+		std::string								_cgiPath; // where e.g. python interpreter lives e.g. usr/bin/python3
 		std::string								_cgiExtention; // format to save the script
 		std::string								_scriptPath; // path where the script lives
 		std::string								_method; //request method
