@@ -19,7 +19,7 @@ _headers(request.getHeaders());
 	if (root.end_with("/"))
 		root.erase(root.size() - 1);
 	std::string	raw = request._path;
-	size_t	pos = raw.find('?');
+	size_t	pos = raw.find('?'); //is the path already parsed in the httprequest?
 	//if (URI found in path != std::string npos)
 		//root = "/var/www/cgi" 
 		_scriptPath = root + raw.substr(0, pos);
