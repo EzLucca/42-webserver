@@ -108,8 +108,10 @@ void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequ
 
     //fstream has an internal buffer of ~4Kb (using RAM), so when we are writing into a file, its actually written after 4kb, or manual flush call
     //filenaming needs to be unique, lets have client fd for example added there.
-    std::ofstream outFile("temp_body_" + std::to_string(clientFd) + ".bin", std::ios::out | std::ios::app | std::ios::binary);
+    request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
+    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary | std::ios::in); //take ios::in off
     outFile.write(bodyData.data(), request.getCurrentChunkSize()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
+    
     //also remember the filepath 
     //we better to open and close file between writings. (this will also flush the fstream internal buffer), and this will protect us from fd limits.
     //we need to use the outFile.write(datachunkData, datachunkSize) to write safely in to the file. 

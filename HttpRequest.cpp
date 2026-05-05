@@ -5,7 +5,8 @@ HttpRequest::HttpRequest() :
 _isChunked(false),
 _contentLength(0),
 _currentChunkSize(-1),
-_fullChunkBodySize(0)
+_fullChunkBodySize(0),
+_bodyFilePath("not-set")
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -130,5 +131,15 @@ void HttpRequest::printBody()
 void HttpRequest::setFullChunkBodySize(size_t amount)
 {
     _fullChunkBodySize += amount;
+}
+
+void HttpRequest::setBodyFilePath(std::string bodyFilePath)
+{
+    _bodyFilePath = bodyFilePath;
+}
+
+std::string HttpRequest::getBodyFilePath()
+{
+    return (_bodyFilePath);
 }
         

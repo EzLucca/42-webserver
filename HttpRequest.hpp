@@ -21,6 +21,8 @@ class HttpRequest
             std::string                         _body;
             long                                _currentChunkSize;
             long                                _fullChunkBodySize;
+            std::string                         _bodyFilePath;
+
     public:
             HttpRequest();
             ~HttpRequest();
@@ -40,6 +42,7 @@ class HttpRequest
             void appendToBody(std::string bodydata);
             void printHeaders();
             void printBody();
+            void setBodyFilePath(std::string setBodyFilePath);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
@@ -49,6 +52,7 @@ class HttpRequest
             std::string                         getMethod();
             std::string                         getUri();
             std::string                         getVersion();
+            std::string                         getBodyFilePath();
         
 
 };
