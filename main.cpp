@@ -163,6 +163,7 @@ int main() {
                 }
                 else
                 {
+                    
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
                     httpParser.parse(activeClient);
                     // if parse is completed so if state is processing we start to execute the request, and after that make the response, check if still something in buffer, if, then clear request object and call parse again, make a loop
