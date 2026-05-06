@@ -39,6 +39,7 @@ class ServerConfig
         ServerConfig();
         ~ServerConfig();
 
+        size_t pos;
         // setters
         void    setPort(int port);
         void    setHost(std::string host);

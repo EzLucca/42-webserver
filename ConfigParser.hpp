@@ -44,8 +44,12 @@ class ConfigParser
     public:
         ConfigParser();
         ~ConfigParser();
-        int parse(std::string configFile);
-        void    setConfigBuffer(std::string line);
+        int         parse(std::string configFile);
+        void        setConfigBuffer(std::string line);
+        void        setConfigContext();
+        void        setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos);
+        void        setConfigLocations(ServerConfig& config, std::string workingBuffer, size_t& pos);
+        // void        setConfigCgi(ServerConfig& config, std::string workingBuffer, size_t& pos);
         std::string getConfigBuffer();
 
 };
