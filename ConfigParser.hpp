@@ -3,13 +3,28 @@
 
 #include <iostream>
 #include "ServerConfig.hpp"
+#include <stack>
 
+struct Block
+{
+    std::string name;
+    std::vector<std::string> args;
+
+    // directive -> list of entries
+    // Example:
+    // error_page => { {"404", "/404.html"}, {"403", "/403.html"} }
+    std::map<std::string, std::vector<std::vector<std::string>>> directives;
+
+    std::deque<Block> locationBlock;
+};
 
 // Reads the text file, runs tokenization state machine, and spits out seerverconfig objects
 class ConfigParser
 {
     private:
         std::string _configBuffer;
+        RouteConfig _routes;
+
         // auto    findConfigKey(std::string key,std::string workingBuffer);
         template <typename T>
             T findConfigKey(const std::string& key, const std::string& workingBuffer, size_t& startPos) {
@@ -46,10 +61,14 @@ class ConfigParser
         ~ConfigParser();
         int         parse(std::string configFile);
         void        setConfigBuffer(std::string line);
-        void        setConfigContext();
+        // void        setConfigContext();
         void        setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos);
         void        setConfigLocations(ServerConfig& config, std::string workingBuffer, size_t& pos);
         // void        setConfigCgi(ServerConfig& config, std::string workingBuffer, size_t& pos);
+        void        addRoute(const RouteConfig& route);
+
+        void buildLocationConfig( const Block& block, ServerConfig& config);
+        void buildServerConfig( const Block& block, ServerConfig& config);
         std::string getConfigBuffer();
 
 };

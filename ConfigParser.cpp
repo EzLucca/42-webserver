@@ -6,32 +6,176 @@
 #include <string>
 #include <vector>
 
-// static void printconfig(ServerConfig config) // TEST:
-// {
-//     // to print
-//     std::cout << config.getPort() << std::endl;
-//     std::cout << config.getHost() << std::endl;
-//     std::cout << config.getServerName() << std::endl;
-//     std::cout << config.getClientMaxBodySize() << std::endl;
-//     std::cout << config.getErrorPages() << std::endl;
-//     std::cout << std::endl;
-//
-//     const auto& routes = config.getRoutes();
-//
-//     for (const auto& [path, route] : routes) {
-//         std::cout << "Route path: " << path << "\n";
-//         std::cout << "Root: " << route.root << "\n";
-//         std::cout << "Index: " << route.index << "\n";
-//         std::cout << "Methods: ";
-//         for (const auto& m : route.allowedMethods)
-//             std::cout << m << " ";
-//         std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
-//     }
-// }
+static void printconfig(ServerConfig config) // DEBUG:
+{
+    // to print
+    std::cout << config.getPort() << std::endl;
+    std::cout << config.getHost() << std::endl;
+    std::cout << config.getServerName() << std::endl;
+    std::cout << config.getClientMaxBodySize() << std::endl;
+    std::cout << config.getErrorPages() << std::endl;
+    std::cout << std::endl;
+
+    const auto& routes = config.getRoutes();
+
+    for (const auto& [path, route] : routes) {
+        std::cout << "Route path: " << path << "\n";
+        std::cout << "Root: " << route.root << "\n";
+        std::cout << "Index: " << route.index << "\n";
+        std::cout << "Methods: ";
+        for (const auto& m : route.allowedMethods)
+            std::cout << m << " ";
+        std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
+    }
+}
+    template <typename T>
+static void printvar(const T& var)
+{
+    std::cout << var << std::endl;
+}
+
+std::vector<std::string> tokenize(const std::string& input)
+{
+    std::vector<std::string> tokens;
+    std::string current;
+
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        char c = input[i];
+
+        // Remove comments
+        if (c == '#')
+        {
+            while (i < input.size() && input[i] != '\n')
+                ++i;
+
+            continue;
+        }
+
+        // Whitespace
+        if (std::isspace(static_cast<unsigned char>(c)))
+        {
+            if (!current.empty())
+            {
+                tokens.push_back(current);
+                current.clear();
+            }
+        }
+        // Special symbols
+        else if (c == '{' || c == '}' || c == ';')
+        {
+            if (!current.empty())
+            {
+                tokens.push_back(current);
+                current.clear();
+            }
+
+            tokens.push_back(std::string(1, c));
+        }
+        else
+        {
+            current += c;
+        }
+    }
+
+    // Last token
+    if (!current.empty())
+        tokens.push_back(current);
+
+    // Print tokens DEBUG:
+    // for (const std::string& token : tokens)
+    //     std::cout << token << '\n';
+
+    return tokens;
+}
+
+Block parseConfig(const std::string& config)
+{
+    std::vector<std::string> tokens = tokenize(config);
+
+    // To this point I have the tokens as a vector of strings
+    Block root;
+    root.name = "root";
+
+    std::stack<Block*> blockStack;
+    blockStack.push(&root);
+
+    size_t i = 0;
+
+    while (i < tokens.size())
+    {
+        if (tokens[i] == "}")
+        {
+            blockStack.pop();
+            ++i;
+            continue;
+        }
+
+        std::string name = tokens[i++];
+        std::vector<std::string> args;
+
+        // stores in the args vector of strings the values of each key.
+        while (i < tokens.size() && tokens[i] != "{" && tokens[i] != ";")
+        {
+            args.push_back(tokens[i++]);
+        }
+
+        // BLOCK
+        if (i < tokens.size() && tokens[i] == "{")
+        {
+            ++i;
+
+            Block newBlock;
+            newBlock.name = name;
+            newBlock.args = args;
+
+            blockStack.top()->locationBlock.push_back(newBlock);
+
+            Block* ptr = &blockStack.top()->locationBlock.back();
+
+            blockStack.push(ptr);
+        }
+        // DIRECTIVE
+        else if (i < tokens.size() && tokens[i] == ";")
+        {
+            ++i;
+            blockStack.top()->directives[name].push_back(args);
+        }
+    }
+    return root;
+}
+
+// DEBUG:
+void printBlock(const Block& block)
+{
+    std::cout <<  block.name;
+
+    for (const auto& arg : block.args)
+        std::cout << " " << arg;
+
+    std::cout << "\n";
+
+    for (const auto& d : block.directives)
+    {
+        for (const auto& entry : d.second)
+        {
+            std::cout << d.first << " ";
+
+            for (const auto& val : entry)
+                std::cout << val << " ";
+
+            std::cout << "\n";
+        }
+    }
+
+    for (const auto& child : block.locationBlock)
+        printBlock(child);
+}
 
 ConfigParser::ConfigParser() {
-    std::cout << "ConfigParser constructor called." << std::endl;
+    std::cout << "ConfigParser constructor called.\n" << std::endl;
 }
+
 ConfigParser::~ConfigParser() {
     std::cout << "ConfigParser destructor called." << std::endl;
 }
@@ -91,76 +235,10 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
     }
 }
 
-// std::map<std::string, std::string> getContextKeys(const std::string& buffer)
-// {
-//     std::map<std::string, std::string> directivesMap;
-//     std::istringstream stream(buffer);
-//     std::string line;
-//
-//     while (std::getline(stream, line)) {
-//         // Skip empty lines
-//         if (line.empty()) continue;
-//
-//         // std::cout << line << std::endl;
-//         std::istringstream lineStream(line);
-//         std::string token;
-//         while (lineStream >> token)
-//         {
-//             // pair the tokens
-//             if (token == "#") break;
-//             std::cout << token << std::endl;
-//         }
-//         // if (key.empty()) continue;
-//         // Insert into the map
-//         // directivesMap[key] = value;
-//     }
-//     // for (const auto& [key, value] : directivesMap) {
-//     //     std::cout << key << " : " << value << std::endl;
-//     // }
-//     return directivesMap;
-// }
-
-std::map<std::string, std::string> getContextKeys(const std::string& buffer)
-{
-    std::map<std::string, std::string> directivesMap;
-    std::istringstream stream(buffer);
-    std::string line;
-
-    while (std::getline(stream, line)) {
-        if (line.empty()) continue;
-
-        std::istringstream lineStream(line);
-        std::string key, value, token;
-
-        // Read key
-        if (!(lineStream >> key)) continue;
-
-        // Stop if line starts with comment
-        if (key == "#") continue;
-
-        // Read value
-        if (!(lineStream >> value)) continue;
-        if (value.find(";"))
-        {
-            std::cout << value << std::endl;
-
-        }
-        // store more values to each key. use vector?
-        // Ignore rest of line after '#'
-        while (lineStream >> token) {
-            if (token == "#") break;
-        }
-
-        directivesMap[key] = value;
-        std::cout << key << " : " << value << std::endl;
-    }
-
-    return directivesMap;
-}
-
 void ConfigParser::setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos) {
 
-    std::map<std::string, std::string>  keys = getContextKeys(workingBuffer);
+    // std::map<std::string, std::string>  keys = getContextKeys(workingBuffer);
+    // std::map<std::string, std::vector<std::string>>  keys = getContextKeys(workingBuffer);
     // std::cout << keys << std::endl;
     int port = findConfigKey<int>("listen", workingBuffer, pos);
     std::string host = findConfigKey<std::string>("host", workingBuffer, pos);
@@ -190,7 +268,100 @@ void ConfigParser::setConfigContext(ServerConfig& config, std::string workingBuf
 
 std::string ConfigParser::getConfigBuffer() { return (_configBuffer); }
 
-int ConfigParser::parse(std::string configFile) {
+// void ConfigParser::addRoute(const RouteConfig& route)
+// {
+//     _routes[route.path] = route;
+// }
+void ConfigParser::buildLocationConfig( const Block& block, ServerConfig& config)
+{
+    RouteConfig route;
+
+    (void)config;
+    // location /images
+    if (!block.args.empty())
+        route.path = block.args[0];
+
+    if (block.directives.count("root"))
+    {
+        route.root =
+            block.directives.at("root")[0][0];
+    }
+
+    if (block.directives.count("index"))
+    {
+        route.index =
+            block.directives.at("index")[0][0];
+    }
+
+    if (block.directives.count("autoindex"))
+    {
+        route.autoIndex =
+            block.directives.at("autoindex")[0][0] == "on";
+    }
+
+    if (block.directives.count("methods"))
+    {
+        route.allowedMethods =
+            block.directives.at("methods")[0];
+    }
+
+    // config.addRoute(route);
+}
+
+void ConfigParser::buildServerConfig( const Block& block, ServerConfig& config)
+{
+    auto it = block.directives.find("listen");
+
+    if (it != block.directives.end() && !it->second.empty())
+    {
+        int port = std::stoi(it->second[0][0]);
+        config.setPort(port);
+        std::cout << port << std::endl;
+        std::cout << "errorcode" << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error: missing 'listen' directive in server block\n";
+    }
+    // listen
+    // int port = std::stoi(block.directives.at("listen")[0][0]);
+    // config.setPort(port);
+    // std::cout << port << std::endl;
+    // std::cout << "errorcode" << std::endl;
+    if (block.directives.count("listen"))
+    {
+    }
+    exit(1);
+    // host
+    if (block.directives.count("host"))
+        config.setHost( block.directives.at("host")[0][0]);
+
+    // server_name
+    if (block.directives.count("server_name"))
+        config.setServerName( block.directives.at("server_name")[0][0]);
+
+    if (block.directives.count("clientMaxBodySize"))
+        config.setClientMaxBodySize(std::stoi(block.directives.at("clientMaxBodySize")[0][0]));
+    if (block.directives.count("error_page"))
+    {
+        int errorcode = std::stoi(block.directives.at("error_page")[0][0]);
+        std::cout << errorcode << std::endl;
+        std::cout << "errorcode" << std::endl;
+        printvar(errorcode);
+        // config.setErrorPage(block.directives.at("error_page"));
+    }
+    printconfig(config); // DEBUG:
+    exit(3);
+    // location blocks
+    for (const Block& child : block.locationBlock)
+    {
+        if (child.name == "location")
+            buildLocationConfig(child, config);
+    }
+}
+
+int ConfigParser::parse(std::string configFile) 
+{
 
     std::fstream fstream;
     if (configFile.empty() || openFile(configFile, &fstream)) {
@@ -208,12 +379,17 @@ int ConfigParser::parse(std::string configFile) {
     // workingBuffer now have all the configfile
     const std::string &workingBuffer = getConfigBuffer();
 
-    std::map<std::string, std::string>  keys = getContextKeys(workingBuffer);
+    // std::map<std::string, std::string>  keys = getContextKeys(workingBuffer);
+    // std::map<std::string, std::vector<std::string>>  keys = getContextKeys(workingBuffer);
     // std::cout << keys << std::endl;
-    exit(1);
+    Block root = parseConfig(workingBuffer);
+
+    printBlock(root);
+    // exit(1);
 
     // creating the ServerConfig object
     ServerConfig config;
+    buildServerConfig(root, config);
 
     // get blocks
     config.pos = 0; // track position
@@ -223,6 +399,6 @@ int ConfigParser::parse(std::string configFile) {
             break;
         setConfigContext(config, workingBuffer, config.pos); 
     }
-    // printconfig(config); // TEST:
+    // printconfig(config); // DEBUG:
     return 0;
     }
