@@ -122,12 +122,13 @@ void HttpRequest::printHeaders()
     }
 }
 
+/*
 void HttpRequest::printBody()
 {
     std::cout << "Printing the body!" << std::endl;
     std::cout << _body << std::endl;
 }
-
+*/
 void HttpRequest::setFullChunkBodySize(size_t amount)
 {
     _fullChunkBodySize += amount;
@@ -146,5 +147,10 @@ std::string HttpRequest::getBodyFilePath()
 long HttpRequest::getFullChunkBodySize()
 {
     return (_fullChunkBodySize);
+}
+
+std::string HttpRequest::getPath()
+{
+    return (_path);
 }
        

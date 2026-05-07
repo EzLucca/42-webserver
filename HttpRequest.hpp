@@ -41,7 +41,7 @@ class HttpRequest
             void setFullChunkBodySize(size_t amount);
             void appendToBody(std::string bodydata);
             void printHeaders();
-            void printBody();
+            //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);
 
             //getters
@@ -54,6 +54,7 @@ class HttpRequest
             std::string                         getUri();
             std::string                         getVersion();
             std::string                         getBodyFilePath();
+            std::string                         getPath();
         
 
 };

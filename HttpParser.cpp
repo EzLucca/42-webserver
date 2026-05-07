@@ -240,7 +240,7 @@ void HttpParser::parse(Client& client)
             if (chunkSize == 0)
             {
                 client.setState(PROCESSING);
-                client.getRequest().printBody();
+                //client.getRequest().printBody();
                 client.eraseFromBuffer(2); // we remove the last \r\n
                 return ;
             }
@@ -276,13 +276,16 @@ void HttpParser::parse(Client& client)
         {
             // we parse the body 
             std::string bodyData = bodyBuffer.substr(0, expectedBodySize);
-            std::cout << "Printing bodyData variable: " << bodyData << std::endl; 
+            client.getRequest().setBodyFilePath("temp_body_" + std::to_string(client.getFd()) + ".bin");
+            std::ofstream outFile(client.getRequest().getBodyFilePath(), std::ios::out | std::ios::binary); 
+            outFile.write(bodyData.data(), expectedBodySize);
+            //std::cout << "Printing bodyData variable: " << bodyData << std::endl; 
             // we save the body in the request object
-            client.getRequest().setBody(bodyData);
+            //client.getRequest().setBody(bodyData);
             //erase it from the buffer
             client.eraseFromBuffer(expectedBodySize);
             client.setState(PROCESSING);
-            client.getRequest().printBody();
+            //client.getRequest().printBody();
 
         }
 
