@@ -15,10 +15,28 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
         //validate Uri, if not valid return
         request.setVersion(line.substr(secondSpace +1));
         //validate version, if not valid return
-
+        
+        //validating methods
         if(request.getMethod() != "GET" && request.getMethod() != "POST" && request.getMethod() != "DELETE")
         {
-            throw HttpException(501, "Not implemented");
+            throw HttpException(501, "Not implemented.");
+        }
+        //validating uri, first check length 
+        if (request.getUri().length() > 2048)
+        {
+            throw HttpException(414, "URI Too Long");
+        }
+        if (request.getUri().empty() || request.getUri().at(0) == '/') //Check if works
+        {
+            throw HttpException(400, "Bad Request: URI must start with '/'");
+        }
+        //validate uri characteres
+        
+
+        //validating version
+        if (request.getVersion() != "HTTP/1.1")
+        {
+            throw HttpException(505, "HTTP version not supported.");
         }
 
         //DEBUGGING!!
@@ -41,7 +59,7 @@ void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
         size_t singleHeaderLength = rawHeaders.find("\r\n");
         if (singleHeaderLength == std::string::npos)
         {
-            //abort mission
+            // return to wait more data
             break;
         }
         if (singleHeaderLength == 0) // if we hit the \r\n in the index 0, we know we are in the end of headers so \r\n\r\n
