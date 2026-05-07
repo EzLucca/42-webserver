@@ -20,7 +20,7 @@ class CgiHandler
 		std::string								_scriptPath; // path where the script lives
 		std::string								_method; //request method
 		std::string								_queryString;
-		std::string								_body; //request body
+		std::string								_bodyPath; //request body
 		std::string								_contentType; //type determines what form to convert to
 		std::map<std::string, std::string>		_headers; //std::map used to store key value pairs
 		std::string								_serverName;
@@ -30,7 +30,6 @@ class CgiHandler
 	public:
 		CgiHandler();
 		CgiHandler(HttpRequest &request, const config::LocationConfig &location);
-		std::string	createArgs();
 		std::string	cgiProcess();
 		~CgiHandler();
 
@@ -51,7 +50,7 @@ class CgiHandler
  * 	Content-Type - CONTENT_TYPE for the CGI
  * 	Host - Often used to build authority / host for URLs
  * Body (for POST, etc.) - raw bytes to send on child's stdin after pipe setup
- * Connection context (mey not live on HttpRequest alone): client IP -> REMOTE_ADDR, loval port -> SERVER_PORT, server name from config
+ * Connection context (may not live on HttpRequest alone): client IP -> REMOTE_ADDR, loval port -> SERVER_PORT, server name from config
  *
  * CGI Handler input: HttpRequest + config + maybe socket metadata
  *
