@@ -12,7 +12,6 @@ class HttpRequest
     private:
             std::string                         _method;
             std::string                         _rawUri;       
-            std::string                         _path;         
             std::string                         _queryString;  
             std::string                         _version;
             std::map<std::string, std::string>  _headers;
@@ -54,7 +53,7 @@ class HttpRequest
             std::string                         getUri();
             std::string                         getVersion();
             std::string                         getBodyFilePath();
-            std::string                         getPath();
+  
         
 
 };

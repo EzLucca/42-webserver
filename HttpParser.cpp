@@ -257,7 +257,6 @@ void HttpParser::parse(Client& client)
                 //client.getRequest().appendToBody(line); //This needs to be saved inside a file(not inside a string object)
                 parseBodyIntoFile(client.getFd(), line, client.getRequest()); // this is now writing the chunk of data into a file.
                 client.getRequest().setFullChunkBodySize(chunkSize); //increment full chunkbodysize after extracted the data,
-                std::cout << "chunkSize: " << chunkSize << std::endl; 
                 client.eraseFromBuffer(chunkSize + 2); // Free the buffer so we dont run into RAM problems.
                 client.getRequest().setCurrentChunkSize("-0x1");
             }

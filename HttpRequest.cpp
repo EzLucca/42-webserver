@@ -31,11 +31,6 @@ void HttpRequest::setVersion(std::string version)
     _version = version;
 }
 
-void HttpRequest::setPath(std::string path)
-{
-    _path = path;
-}
-
 void HttpRequest::setQueryString(std::string queryString)
 {
     _queryString = queryString;
@@ -148,9 +143,3 @@ long HttpRequest::getFullChunkBodySize()
 {
     return (_fullChunkBodySize);
 }
-
-std::string HttpRequest::getPath()
-{
-    return (_path);
-}
-       
