@@ -142,4 +142,9 @@ std::string HttpRequest::getBodyFilePath()
 {
     return (_bodyFilePath);
 }
-        
+
+long HttpRequest::getFullChunkBodySize()
+{
+    return (_fullChunkBodySize);
+}
+       

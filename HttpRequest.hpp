@@ -49,6 +49,7 @@ class HttpRequest
             size_t                              getContentLength();
             bool                                getIsChunked();
             long                                getCurrentChunkSize();
+            long                                getFullChunkBodySize();
             std::string                         getMethod();
             std::string                         getUri();
             std::string                         getVersion();

@@ -1,4 +1,5 @@
 #include "HttpParser.hpp"
+#include "HttpException.hpp"
 
 void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 {
@@ -14,6 +15,11 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
         //validate Uri, if not valid return
         request.setVersion(line.substr(secondSpace +1));
         //validate version, if not valid return
+
+        if(request.getMethod() != "GET" && request.getMethod() != "POST" && request.getMethod() != "DELETE")
+        {
+            throw HttpException(501, "Not implemented");
+        }
 
         //DEBUGGING!!
         std::cout << "Parsed method: " << request.getMethod() << "\n"

@@ -11,6 +11,7 @@
 #include "HttpParser.hpp" // For parsing
 #include "Client.hpp"
 #include "HttpRequest.hpp"
+#include "HttpException.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100
@@ -153,6 +154,7 @@ int main() {
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
 
+                
                 if (valRead <= 0)
                 {
                     close(fds[i].fd);
@@ -165,8 +167,24 @@ int main() {
                 {
                     
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-                    httpParser.parse(activeClient);
-                    // if parse is completed so if state is processing we start to execute the request, and after that make the response, check if still something in buffer, if, then clear request object and call parse again, make a loop
+                    
+                    try
+                    {
+                        httpParser.parse(activeClient);
+                    }
+
+                    catch (const HttpException& e) 
+                    {
+                        activeClient.setState(ERROR);
+                        std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
+                    }
+                    // if parse is completed so if state is processing we start to execute the request
+                    if (activeClient.getState() == PROCESSING)
+                    {
+                        //here we process the request and build response on the fly
+
+                        // after processing and after sending the response, check the buffer, if another request, start the loop again
+                    }
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
@@ -190,7 +208,7 @@ int main() {
                 }
                 */
                 //close the connections, and set the fd back to -1
-                if (activeClient.getState() == PROCESSING)
+                if (activeClient.getState() == PROCESSING || activeClient.getState() == ERROR)
                 {
                 clients.erase(currentFd); // DUNNO IF THIS WORKS
                 close(fds[i].fd);
