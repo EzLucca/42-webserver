@@ -12,6 +12,8 @@
 #include "ConfigParser.hpp" // For parsing
 #include "Client.hpp"
 #include "HttpRequest.hpp"
+#include "HttpException.hpp"
+#include "HttpResponse.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100
@@ -108,8 +110,7 @@ int main(int argc, char **argv) {
         std::cerr << "Listen failed" << std::endl;
         return (1);
     }
-
-
+    
     //prepare poll struct
     struct pollfd fds[MAX_CLIENTS];
 
@@ -125,7 +126,8 @@ int main(int argc, char **argv) {
     std::cout << "Server listening on port " << PORT << "..." << std::endl;
 
     std::map<int, Client> clients;
-    HttpParser httpParser; // create one http parser for the server
+    HttpParser            httpParser; // create one http parser for the server
+    HttpResponse          httpResponse;
 
     // Main event loop
     while (true) {
@@ -192,11 +194,12 @@ int main(int argc, char **argv) {
                 Client& activeClient = clients[currentFd]; // get the activeclient
 
                 // 8Kb is standardized  size for single read 
-                char shovelBuffer[8192] = {0}; //intializing buffer with zeros
+                char shovelBuffer[1] = {0}; //intializing buffer with zeros
 
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
 
+                
                 if (valRead <= 0)
                 {
                     close(fds[i].fd);
@@ -207,14 +210,34 @@ int main(int argc, char **argv) {
                 }
                 else
                 {
-                    std::cout << shovelBuffer << std::endl;
+                    
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-                    std::cout << "hello" << std::endl;
-                    httpParser.parse(activeClient);
+                    
+                    try
+                    {
+                        httpParser.parse(activeClient);
+                    }
+
+                    catch (const HttpException& e) 
+                    {
+                        activeClient.setState(ERROR);
+                        std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
+                        httpResponse.setStatusCode(e.getStatusCode());
+                        httpResponse.setStatusMessage(e.getStatusMessage());
+
+                    }
+                    // if parse is completed so if state is processing we start to execute the request
+                    if (activeClient.getState() == PROCESSING)
+                    {
+                        //here we process the request and build response on the fly
+
+                        // after processing and after sending the response, check the buffer, if another request, start the loop again
+                    }
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
 
+                /*
                 // Hardcoded mock response
                 std::string mock_response = 
                     "HTTP/1.1 200 OK\r\n"
@@ -231,10 +254,14 @@ int main(int argc, char **argv) {
                 {
                     std::cerr << "Failed to send response" << std::endl;
                 }
+                */
                 //close the connections, and set the fd back to -1
-                clients.erase(currentFd);
+                if (activeClient.getState() == PROCESSING || activeClient.getState() == ERROR)
+                {
+                clients.erase(currentFd); // DUNNO IF THIS WORKS
                 close(fds[i].fd);
                 fds[i].fd = -1;
+                }
             }
         }
     }

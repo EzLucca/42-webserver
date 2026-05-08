@@ -17,6 +17,7 @@ enum ClientState {
     PROCESSING,             // GET Master is matching routing rules / opening files
     WAITING_FOR_CGI,        // CGI Master is waiting for the pipe to have data
     WRITING_RESPONSE,       // Sending the formatted data back to the browser
+    ERROR,
     FINISHED                // Flag to tell the main loop to close the socket
 };
 
@@ -37,12 +38,18 @@ class Client
             Client();
             Client(int fd); // constructor sets state = Reading headears on default
             ~Client();
-            ClientState getState() const;
+
             void setState(ClientState state);
             void appendToBuffer(const char* data, ssize_t size);
             const std::string getBuffer() const;
             void eraseFromBuffer(size_t length);
+
+
             HttpRequest& getRequest();
+            ClientState getState() const;
+            int getFd() const;
+
+
             
 
 

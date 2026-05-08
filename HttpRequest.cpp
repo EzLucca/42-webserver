@@ -4,7 +4,9 @@
 HttpRequest::HttpRequest() :
 _isChunked(false),
 _contentLength(0),
-_currentChunkSize(-1)
+_currentChunkSize(-1),
+_fullChunkBodySize(0),
+_bodyFilePath("not-set")
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -27,11 +29,6 @@ void HttpRequest::setUri(std::string uri)
 void HttpRequest::setVersion(std::string version)
 {
     _version = version;
-}
-
-void HttpRequest::setPath(std::string path)
-{
-    _path = path;
 }
 
 void HttpRequest::setQueryString(std::string queryString)
@@ -120,9 +117,29 @@ void HttpRequest::printHeaders()
     }
 }
 
+/*
 void HttpRequest::printBody()
 {
     std::cout << "Printing the body!" << std::endl;
     std::cout << _body << std::endl;
 }
-        
+*/
+void HttpRequest::setFullChunkBodySize(size_t amount)
+{
+    _fullChunkBodySize += amount;
+}
+
+void HttpRequest::setBodyFilePath(std::string bodyFilePath)
+{
+    _bodyFilePath = bodyFilePath;
+}
+
+std::string HttpRequest::getBodyFilePath()
+{
+    return (_bodyFilePath);
+}
+
+long HttpRequest::getFullChunkBodySize()
+{
+    return (_fullChunkBodySize);
+}
