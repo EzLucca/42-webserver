@@ -102,4 +102,27 @@ std::string HttpRequest::getVersion()
 {
     return (_version);
 }
+
+void HttpRequest::printHeaders()
+{
+    //create iterator, we use const because we are not gonna change anything
+    std::map<std::string, std::string>::const_iterator it;
+    std::cout << "Printing Headers!" << std::endl;
+
+
+    for (it = _headers.begin(); it != _headers.end(); ++it) 
+    {
+        //first is header (key)
+        //second is the value
+        
+        std::cout << "Header: [" << it->first << "] " 
+                << "Value: [" << it->second << "]" << std::endl;
+    }
+}
+
+void HttpRequest::printBody()
+{
+    std::cout << "Printing the body!" << std::endl;
+    std::cout << _body << std::endl;
+}
         

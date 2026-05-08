@@ -60,8 +60,10 @@ std::string HttpParser::trimSpaces(std::string& value)
 std::string HttpParser::stringToLower(std::string value)
 {
     std::string s = value;
-    for (auto& x : s)
-        x = std::tolower(x);
+    for (size_t i = 0; i < s.length(); ++i) 
+    {
+        s[i] = std::tolower(s[i]);
+    }
     return (s);
 }
 
@@ -76,7 +78,7 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         //HTTP standard has OWS ( optional whitespace), so after parsing value we need to check if there is space before the value!
         value = trimSpaces(value);
         //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
-        value = stringToLower(value);
+        key = stringToLower(key); // DOESNT WORK, FIX!
         if (key == "content-length")
         {
             // extract the key and value (value into number) and save to request object
@@ -134,12 +136,6 @@ void HttpParser::parse(Client& client)
             client.setState(READING_HEADERS); // set state to the next thing, so reading headers.
 
         }
-        else
-        {
-            // we land here if we didnt find the word, so if for example have small buffersize, and have a partial requestline.
-            // here we just return and do nothing.
-            return ;
-        }
         //if parsing is done change the state!
     }
     
@@ -152,7 +148,7 @@ void HttpParser::parse(Client& client)
         if (pos != std::string::npos)
         {
             //we found the \r\n\r\n, so our hearders are fully in received.
-            std::string line = workBuffer.substr(0, pos);
+            std::string line = workBuffer.substr(0, pos + 2);
 
             parseAllHeaders(line, client.getRequest());
 
@@ -161,18 +157,24 @@ void HttpParser::parse(Client& client)
 
             // WE ARE SETTING THE STATE OF READIING BODY ONLY if we have headers like "Content length" and or "Transfer-Encoding chunked."
             HttpRequest request = client.getRequest();
-
-            if (request.getIsChunked())                 //Priority 1
+            request.printHeaders();
+            std::cout << "contentlength: " << request.getContentLength() << std::endl;
+            
+            if (request.getIsChunked())
+            {
+                
                 client.setState(READING_BODY_CHUNKED);
-            else if (request.getContentLength() > 0)    //Priority 2
+            }
+            else if (request.getContentLength() > 0)
+            {
                 client.setState(READING_BODY);
-            else                                        //Priority 3 (NO BODY)
+            }
+            else
+            {
                 client.setState(PROCESSING);
+            }
         }
-        else
-        {
-        return ;
-        }
+        
     }
     // 3. we parse the body, here we are comparing the content length number to the actual size of the string. when the size == to the content length, we know thats end of the body
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
@@ -218,13 +220,10 @@ void HttpParser::parse(Client& client)
         }
         
     }
-    else 
-    {
-        return ;
-    }
 
     if (client.getState() == READING_BODY)
     {
+        std::cout << "TEST" << std::endl;
         const std::string& bodyBuffer = client.getBuffer();
         size_t expectedBodySize = client.getRequest().getContentLength();
 
@@ -233,11 +232,13 @@ void HttpParser::parse(Client& client)
         {
             // we parse the body 
             std::string bodyData = bodyBuffer.substr(0, expectedBodySize);
+            std::cout << "Printing bodyData variable: " << bodyData << std::endl; 
             // we save the body in the request object
             client.getRequest().setBody(bodyData);
             //erase it from the buffer
             client.eraseFromBuffer(expectedBodySize);
             client.setState(PROCESSING);
+            client.getRequest().printBody();
 
         }
 
