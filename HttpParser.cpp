@@ -1,4 +1,5 @@
 #include "HttpParser.hpp"
+#include "HttpException.hpp"
 
 void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 {
@@ -8,20 +9,54 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
     if (firstSpace != std::string::npos && secondSpace != std::string::npos)
     {
         // now we parse
-        request.setMethod(line.substr(0, firstSpace)); // DOUBLE CHECK
-        request.setUri(line.substr(firstSpace + 1, secondSpace - firstSpace - 1)); // CHECK THAT THIS WORKS
-        request.setVersion(line.substr(secondSpace +1)); // DOUBLE CHECK THIS TOO
+        request.setMethod(line.substr(0, firstSpace));
+        //Validate method, if not valid, return
+        request.setUri(line.substr(firstSpace + 1, secondSpace - firstSpace - 1));
+        //validate Uri, if not valid return
+        request.setVersion(line.substr(secondSpace +1));
+        //validate version, if not valid return
+        
+        //validating methods
+        if(request.getMethod() != "GET" && request.getMethod() != "POST" && request.getMethod() != "DELETE")
+        {
+            throw HttpException(501, "Not implemented.");
+        }
+        //validating uri, first check length 
+        size_t uriLen = request.getUri().size();
+        std::string uri = request.getUri();
+        if (uriLen > 2048)
+        {
+            throw HttpException(414, "URI Too Long");
+        }
+        if (request.getUri().empty() || request.getUri().at(0) == '/') //Check if works
+        {
+            throw HttpException(400, "Bad Request: URI must start with '/'");
+        }
+        //validate uri characteres
+        for (size_t i = 0; i < uriLen; ++i) 
+        {
+            char c = uri[i];
+            // check for spaces and not printable characters
+            if (c <= 32 || c >= 127) { 
+            throw HttpException(400, "Bad Request: Invalid character in URI");
+        }
+}
+
+        //validating version
+        if (request.getVersion() != "HTTP/1.1")
+        {
+            throw HttpException(505, "HTTP version not supported.");
+        }
 
         //DEBUGGING!!
         std::cout << "Parsed method: " << request.getMethod() << "\n"
                     << "Parsed Uri :" << request.getUri() << "\n"
                     << "Parsed version : " << request.getVersion() << std::endl;
-
-        //TODO! VALIDATE METHOD URI AND VERSION BEFORE GOING FORWARD!
     }
     else 
     {
-        //ERROR HANDLING HERE !!! if not all variables found, also we need to validate
+        //If the whole request line is not parsed, we return to wait more data
+        return ;
     }
 }
 
@@ -33,7 +68,7 @@ void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
         size_t singleHeaderLength = rawHeaders.find("\r\n");
         if (singleHeaderLength == std::string::npos)
         {
-            //abort mission
+            // return to wait more data
             break;
         }
         if (singleHeaderLength == 0) // if we hit the \r\n in the index 0, we know we are in the end of headers so \r\n\r\n
@@ -87,6 +122,8 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         if (key == "transfer-encoding" && value == "chunked")
         {
             request.setIsChunked();
+            std::cout << "Chunked is flagged " << request.getIsChunked() << std::endl; //DEBUGGING
+            
         }
         request.setHeader(key, value); // add to the headers.
 
@@ -98,11 +135,46 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
 }
 
 /*
-void HttpParser::parseChunkedBody(std::string& rawBody, HttpRequest& request)
+void HttpParser::validateHeaders(HttpRequest& request)
 {
+    //we need to validate 3 things.  host is mandatory, so if we have multiple sites, we know which config block to use
 
+    //check for host from the map
+
+    //then we need to validate that if we have post, we need to have content length or transfer encopding.
+    // also if content length is around, we need to validate the value, that its valid number, not minus number, or characters inside of it
+
+    //check transfer encoding value, if its something else than chunked, for example gzip. return 501 Not implemented: Unsupported transfer-encoding
+
+    //also if we find transfer encoding and content length both around (we shouldnt have both),  -->400, "Bad Request: Content-Length and Transfer-Encoding conflict".
 }
 */
+
+void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request)
+{
+    //ios::binary flag to make sure the data is written in raw binary and not touched
+    //ios::app (append) flag to make sure the pointer is in the end of the file always when we write. 
+
+    //fstream has an internal buffer of ~4Kb (using RAM), so when we are writing into a file, its actually written after 4kb, or manual flush call
+    //filenaming needs to be unique, lets have client fd for example added there.
+    // in case of keep alive connection, check if there is already temp file from previous request. if there is, remove the old before creating new
+
+    request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
+    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary); 
+    outFile.write(bodyData.data(), request.getCurrentChunkSize()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
+    
+    //also remember the filepath 
+    //we better to open and close file between writings. (this will also flush the fstream internal buffer), and this will protect us from fd limits.
+    //we need to use the outFile.write(datachunkData, datachunkSize) to write safely in to the file. 
+    //we need remember to increment the fullBodySize variable
+    
+    //filestreams automatically close when they get out of scope. but we should do it manually here just for safety
+    outFile.close();
+
+    //think about how to remove temp files, if connection drops out in the middle of reading body
+
+}
+
 
 HttpParser::HttpParser() // MAKE INITIALIZATION LIST
 {
@@ -136,7 +208,6 @@ void HttpParser::parse(Client& client)
             client.setState(READING_HEADERS); // set state to the next thing, so reading headers.
 
         }
-        //if parsing is done change the state!
     }
     
     // 2. we parse the headers, now we are searching for \r\n\r\n to know we have read the headers.
@@ -178,12 +249,15 @@ void HttpParser::parse(Client& client)
     }
     // 3. we parse the body, here we are comparing the content length number to the actual size of the string. when the size == to the content length, we know thats end of the body
         //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
-    if (client.getState() == READING_BODY_CHUNKED)
+    while (client.getState() == READING_BODY_CHUNKED)
     {
+
+        //std::cout << client.getRequest().getCurrentChunkSize() << std::endl;
         //in chunking we have phases Reading the size, and readint the data
         //our chunksize is initialized to -1, thats how we know we must read so:
         //PHASE 1
         const std::string& workBuffer = client.getBuffer();
+
         long chunkSize = client.getRequest().getCurrentChunkSize();
 
         if (chunkSize == -1)
@@ -191,39 +265,49 @@ void HttpParser::parse(Client& client)
             size_t pos = workBuffer.find("\r\n"); //find the first chunksize value
             if (pos != std::string::npos)
             {
-
             std::string line = workBuffer.substr(0, pos); // now we have the hex value as string
             client.getRequest().setCurrentChunkSize(line);
             client.eraseFromBuffer(pos + 2);
             }
+            else
+            {
+                return ;
+            }
         }
-        //Then we have the PHASE 2 where we read the actual data
         else
         {
+        //Then we have the PHASE 2 where we read the actual data
             //This is when we know we are in the end of the body
             if (chunkSize == 0)
             {
                 client.setState(PROCESSING);
+                //client.getRequest().printBody();
                 client.eraseFromBuffer(2); // we remove the last \r\n
                 return ;
             }
-
+            if (workBuffer.size() <= ((size_t)chunkSize + 1)) // EXPERIMENTAL
+            {
+                return ;
+            }
+            
             // otherwise we read the chunksize amount of data, remove it from the buffer, and then return our flag back to -1
             //we need to also check ofc that there is enough data in the buffer to read.
             if (workBuffer.size() >= ((size_t)chunkSize + 2)) //+2 because of the hanging \r\n
             {
                 std::string line = workBuffer.substr(0, chunkSize);
-                client.getRequest().appendToBody(line);
-                client.eraseFromBuffer(chunkSize + 2);
+                //client.getRequest().appendToBody(line); //This needs to be saved inside a file(not inside a string object)
+                parseBodyIntoFile(client.getFd(), line, client.getRequest()); // this is now writing the chunk of data into a file.
+                client.getRequest().setFullChunkBodySize(chunkSize); //increment full chunkbodysize after extracted the data,
+                client.eraseFromBuffer(chunkSize + 2); // Free the buffer so we dont run into RAM problems.
                 client.getRequest().setCurrentChunkSize("-0x1");
             }
+            
         }
         
     }
 
     if (client.getState() == READING_BODY)
     {
-        std::cout << "TEST" << std::endl;
         const std::string& bodyBuffer = client.getBuffer();
         size_t expectedBodySize = client.getRequest().getContentLength();
 
@@ -232,13 +316,16 @@ void HttpParser::parse(Client& client)
         {
             // we parse the body 
             std::string bodyData = bodyBuffer.substr(0, expectedBodySize);
-            std::cout << "Printing bodyData variable: " << bodyData << std::endl; 
+            client.getRequest().setBodyFilePath("temp_body_" + std::to_string(client.getFd()) + ".bin");
+            std::ofstream outFile(client.getRequest().getBodyFilePath(), std::ios::out | std::ios::binary); 
+            outFile.write(bodyData.data(), expectedBodySize);
+            //std::cout << "Printing bodyData variable: " << bodyData << std::endl; 
             // we save the body in the request object
-            client.getRequest().setBody(bodyData);
+            //client.getRequest().setBody(bodyData);
             //erase it from the buffer
             client.eraseFromBuffer(expectedBodySize);
             client.setState(PROCESSING);
-            client.getRequest().printBody();
+            //client.getRequest().printBody();
 
         }
 
@@ -249,4 +336,6 @@ void HttpParser::parse(Client& client)
     }
     
 }
+
+
 
