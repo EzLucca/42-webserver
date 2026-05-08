@@ -83,7 +83,8 @@ int main() {
     std::cout << "Server listening on port " << PORT << "..." << std::endl;
 
     std::map<int, Client> clients;
-    HttpParser httpParser; // create one http parser for the server
+    HttpParser            httpParser; // create one http parser for the server
+    HttpResponse          httpResponse;
 
     // Main event loop
     while (true) {
@@ -178,6 +179,9 @@ int main() {
                     {
                         activeClient.setState(ERROR);
                         std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
+                        httpResponse.setStatusCode(e.getStatusCode());
+                        httpResponse.setStatusMessage(e.getStatusMessage());
+
                     }
                     // if parse is completed so if state is processing we start to execute the request
                     if (activeClient.getState() == PROCESSING)

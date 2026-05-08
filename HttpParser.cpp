@@ -134,6 +134,7 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     }
 }
 
+/*
 void HttpParser::validateHeaders(HttpRequest& request)
 {
     //we need to validate 3 things.  host is mandatory, so if we have multiple sites, we know which config block to use
@@ -147,6 +148,7 @@ void HttpParser::validateHeaders(HttpRequest& request)
 
     //also if we find transfer encoding and content length both around (we shouldnt have both),  -->400, "Bad Request: Content-Length and Transfer-Encoding conflict".
 }
+*/
 
 void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request)
 {

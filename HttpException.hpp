@@ -18,4 +18,5 @@ public:
     virtual const char* what() const throw() { return _message.c_str(); }
     
     int getStatusCode() const { return _statusCode; }
+    std::string getStatusMessage() const { return _message; }
 };
