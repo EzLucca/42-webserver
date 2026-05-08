@@ -3,15 +3,7 @@
 
 #include <iostream>
 #include "ServerConfig.hpp"
-#include <stack>
-
-struct Block
-{
-    std::string name;
-    std::vector<std::string> args;
-    std::map<std::string, std::vector<std::vector<std::string>>> directives;
-    std::deque<Block> locationBlock;
-};
+#include "ServerManager.hpp"
 
 // Reads the text file, runs tokenization state machine, and spits out seerverconfig objects
 class ConfigParser
@@ -54,7 +46,7 @@ class ConfigParser
     public:
         ConfigParser();
         ~ConfigParser();
-        int         parse(std::string configFile, ServerConfig& server);
+        int         parse(std::string configFile, ServerManager& server);
         void        setConfigBuffer(std::string line);
         // void        setConfigContext();
         void        setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos);
@@ -62,8 +54,6 @@ class ConfigParser
         // void        setConfigCgi(ServerConfig& config, std::string workingBuffer, size_t& pos);
         void        addRoute(const RouteConfig& route);
 
-        void buildLocationConfig( const Block& block, ServerConfig& config);
-        void buildServerConfig( const Block& block, ServerConfig& config);
         std::string getConfigBuffer();
 
 };

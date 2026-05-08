@@ -67,6 +67,7 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
         // Optional keys: root, index, allow_methods, autoindex
         try {
             route.root = findConfigKey<std::string>("root", workingBuffer, pos);
+            // TODO: validate root folder
         } catch (...) { route.root = ""; }
 
         try {
@@ -78,6 +79,7 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
             std::istringstream iss(methodsStr);
             std::string method;
             while (iss >> method) {
+                // TODO: validate methods GET POST DELETE check if location allows it
                 route.allowedMethods.push_back(method);
             }
         } catch (...) { route.allowedMethods.clear(); }
@@ -95,9 +97,14 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
     void ConfigParser::setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos) {
 
         int port = findConfigKey<int>("listen", workingBuffer, pos);
+        // TODO: range of ports 1024 - 49151
+
         std::string host = findConfigKey<std::string>("host", workingBuffer, pos);
         std::string  serverName = findConfigKey<std::string>("server_name", workingBuffer, pos);        // awesomeserver
+
         size_t  clientMaxBodySize = findConfigKey<size_t>("client_max_body_size", workingBuffer, pos);
+        // TODO: check for unit type.
+        // 10M or 10MB
 
         config.setPort(port);
         config.setHost(host);
@@ -115,14 +122,18 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
             std::string errorPath;
 
             iss >> errorCode >> errorPath;
+            // TODO: check errorpath 
             config.setErrorPage(errorCode, errorPath);
         }
-        setConfigLocations(config, workingBuffer, config.pos);
+        // setConfigLocations(config, workingBuffer, config.pos);
+        setConfigLocations(config, workingBuffer, pos);
+
+        // printconfig(config); // DEBUG:
     }
 
     std::string ConfigParser::getConfigBuffer() { return (_configBuffer); }
 
-    int ConfigParser::parse(std::string configFile, ServerConfig& config) 
+    int ConfigParser::parse(std::string configFile, ServerManager& server) 
     {
 
         std::fstream fstream;
@@ -148,13 +159,16 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
 
         // creating the ServerConfig object
         // get blocks
-        // ServerConfig config;
-        config.pos = 0; // track position
+        size_t pos = 0;
         while (true) {
-            size_t found = workingBuffer.find("server {", config.pos); // server { for validation
+            ServerConfig config;
+            // config.pos = 0; // track position
+            size_t found = workingBuffer.find("server {", pos); // server { for validation
             if (found == std::string::npos)
                 break;
-            setConfigContext(config, workingBuffer, config.pos); 
+            setConfigContext(config, workingBuffer, pos); 
+            server.addServer(config);
+            std::cout << pos << std::endl;
         }
         // printconfig(config); // DEBUG:
         return 0;
