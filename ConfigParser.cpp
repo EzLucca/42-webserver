@@ -133,7 +133,9 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
 
     std::string ConfigParser::getConfigBuffer() { return (_configBuffer); }
 
-    int ConfigParser::parse(std::string configFile, ServerManager& server) 
+    // IMPORTANT: Parse should receive the manager object
+    // int ConfigParser::parse(std::string configFile, ServerManager& server) 
+    int ConfigParser::parse(std::string configFile, ServerConfig& config) 
     {
 
         std::fstream fstream;
@@ -161,14 +163,14 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
         // get blocks
         size_t pos = 0;
         while (true) {
-            ServerConfig config;
+            // ServerConfig config;
             // config.pos = 0; // track position
             size_t found = workingBuffer.find("server {", pos); // server { for validation
             if (found == std::string::npos)
                 break;
             setConfigContext(config, workingBuffer, pos); 
-            server.addServer(config);
-            std::cout << pos << std::endl;
+            // server.addServer(config);
+            // std::cout << pos << std::endl;
         }
         // printconfig(config); // DEBUG:
         return 0;
