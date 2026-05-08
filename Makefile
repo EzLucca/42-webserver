@@ -6,7 +6,13 @@ CXX       = c++
 CXXFLAGS  = -Wall -Wextra -Werror -std=c++20
 
 # Files
-SRC       = main.cpp Client.cpp HttpParser.cpp HttpRequest.cpp
+SRC       = main.cpp \
+			Client.cpp \
+			HttpParser.cpp \
+			HttpRequest.cpp \
+			ConfigParser.cpp \
+			ServerConfig.cpp \
+
 OBJ       = $(SRC:.cpp=.o)
 
 # Default

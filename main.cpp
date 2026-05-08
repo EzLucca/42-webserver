@@ -9,6 +9,7 @@
 #include <fstream>      //For ile manipulation
 
 #include "HttpParser.hpp" // For parsing
+#include "ConfigParser.hpp" // For parsing
 #include "Client.hpp"
 #include "HttpRequest.hpp"
 #include "HttpException.hpp"
@@ -17,17 +18,56 @@
 #define PORT 8080
 #define MAX_CLIENTS 100
 
-int main() {
+bool validateConfigFile(std::string_view &fileName)
+{
+    size_t found;
 
-    //Lets start parsing the configFile
-    //std::string readConf;
+    found = fileName.find(".conf");
+    if (found == std::string::npos)
+    {
+        std::cerr << "Config file not included.";
+        return (false);
+    }
+    if (found != (fileName.size() - 5))
+    {
+        std::cerr << "Config file name is not correct.";
+        return (false);
+    }
 
-    //std::ifstream MyReadFile("configFile.conf"); //Open file
-    //while (std::getline(MyReadFile, readConf)) //Write everything to our string object
-    //    std::cout << readConf;
-    //MyReadFile.close(); //Close the file
+    return (true);
+}
 
-    
+int main(int argc, char **argv) {
+
+    if (argc != 2)
+    {
+        std::cout << "Usage:\n\t./webserv [configuration_file]" << std::endl;
+        return (1);
+    }
+    std::string_view fileName = argv[1];
+
+    try{
+        if(!validateConfigFile(fileName))
+            throw std::invalid_argument("Invalid configuration file.");
+    }
+    catch (const std::exception &e){
+        std::cerr << "Error: " << e.what() << std::endl;
+        return (1);
+    }
+
+    // Start parsing the config file
+    std::string configFile;
+    ConfigParser config;
+    ServerConfig server;
+
+    configFile = argv[1];
+
+    // TODO: initial parsing
+    if (config.parse(configFile, server))
+        exit(1);
+
+    // exit(2);
+    // std::cout << config.getConfigBuffer() << std::endl;
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -51,7 +91,7 @@ int main() {
     std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
-    address.sin_port = htons(PORT);       // hton transforms port to understand the byte order
+    address.sin_port = htons(server.getPort());       // hton transforms port to understand the byte order
 
     // once executed succesfully, os registers that any it traffic that arrives at port 8080
     // must be routed directly to this specific c++ program
@@ -70,7 +110,7 @@ int main() {
     
     //prepare poll struct
     struct pollfd fds[MAX_CLIENTS];
-    
+
     // Initialize, -1 means untouched
     for (int i = 0; i < MAX_CLIENTS; ++i) {
         fds[i].fd = -1; 
@@ -90,7 +130,7 @@ int main() {
     while (true) {
         // poll() waits here, timeout -1 means that it waits infinitely that somethin happpens
         int poll_count = poll(fds, MAX_CLIENTS, -1);
-        
+
         if (poll_count < 0) {
             std::cerr << "Poll error" << std::endl;
             break;
@@ -122,7 +162,7 @@ int main() {
 
                 fcntl(new_client_fd, F_SETFL, O_NONBLOCK); //set file status flags to nonblocking
                 bool added = false; //flag if adding client succesfull
-                
+
 
                 // Save the client fd, and insert into our array
                 for (int j = 0; j < MAX_CLIENTS; j++)
@@ -133,7 +173,7 @@ int main() {
                         fds[j].events = POLLIN; //  activate pollin
                         clients.insert(std::make_pair(new_client_fd, Client(new_client_fd))); // add the client to the map
                         added = true;
-                        
+
                         std::cout << "New client connected on FD: "<< new_client_fd << std::endl;
                         break;
                     }
@@ -202,11 +242,11 @@ int main() {
                     "Content-Length: 13\r\n"
                     "\r\n"
                     "Hello, World!";
-                
-                
+
+
                 //lets use write or send to send the mock response to the client
                 int bytesSent = write(fds[i].fd, mock_response.c_str(), mock_response.length());
-                
+
                 if (bytesSent < 0)
                 {
                     std::cerr << "Failed to send response" << std::endl;
