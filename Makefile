@@ -12,6 +12,7 @@ SRC       = main.cpp \
 			HttpRequest.cpp \
 			ConfigParser.cpp \
 			ServerConfig.cpp \
+			ServerManager.cpp \
 
 OBJ       = $(SRC:.cpp=.o)
 
