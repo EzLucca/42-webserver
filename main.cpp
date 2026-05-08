@@ -12,6 +12,7 @@
 #include "Client.hpp"
 #include "HttpRequest.hpp"
 #include "HttpException.hpp"
+#include "HttpResponse.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100

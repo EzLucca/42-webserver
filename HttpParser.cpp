@@ -22,7 +22,9 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
             throw HttpException(501, "Not implemented.");
         }
         //validating uri, first check length 
-        if (request.getUri().length() > 2048)
+        size_t uriLen = request.getUri().size();
+        std::string uri = request.getUri();
+        if (uriLen > 2048)
         {
             throw HttpException(414, "URI Too Long");
         }
@@ -31,7 +33,14 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
             throw HttpException(400, "Bad Request: URI must start with '/'");
         }
         //validate uri characteres
-        
+        for (size_t i = 0; i < uriLen; ++i) 
+        {
+            char c = uri[i];
+            // check for spaces and not printable characters
+            if (c <= 32 || c >= 127) { 
+            throw HttpException(400, "Bad Request: Invalid character in URI");
+        }
+}
 
         //validating version
         if (request.getVersion() != "HTTP/1.1")
@@ -125,6 +134,20 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     }
 }
 
+void HttpParser::validateHeaders(HttpRequest& request)
+{
+    //we need to validate 3 things.  host is mandatory, so if we have multiple sites, we know which config block to use
+
+    //check for host from the map
+
+    //then we need to validate that if we have post, we need to have content length or transfer encopding.
+    // also if content length is around, we need to validate the value, that its valid number, not minus number, or characters inside of it
+
+    //check transfer encoding value, if its something else than chunked, for example gzip. return 501 Not implemented: Unsupported transfer-encoding
+
+    //also if we find transfer encoding and content length both around (we shouldnt have both),  -->400, "Bad Request: Content-Length and Transfer-Encoding conflict".
+}
+
 void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request)
 {
     //ios::binary flag to make sure the data is written in raw binary and not touched
@@ -149,8 +172,6 @@ void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequ
     //think about how to remove temp files, if connection drops out in the middle of reading body
 
 }
-
-
 
 
 HttpParser::HttpParser() // MAKE INITIALIZATION LIST

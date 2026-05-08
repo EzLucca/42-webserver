@@ -16,6 +16,7 @@ class HttpParser
             void parseSingleHeader(std::string& line, HttpRequest& request);
             void parseChunkedBody(std::string& rawBody, HttpRequest& request);
             void parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request);
+            void validateHeaders(HttpRequest& request);
 
     public:
             HttpParser();
