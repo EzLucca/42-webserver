@@ -9,12 +9,7 @@ struct Block
 {
     std::string name;
     std::vector<std::string> args;
-
-    // directive -> list of entries
-    // Example:
-    // error_page => { {"404", "/404.html"}, {"403", "/403.html"} }
     std::map<std::string, std::vector<std::vector<std::string>>> directives;
-
     std::deque<Block> locationBlock;
 };
 
@@ -59,7 +54,7 @@ class ConfigParser
     public:
         ConfigParser();
         ~ConfigParser();
-        int         parse(std::string configFile);
+        int         parse(std::string configFile, ServerConfig& server);
         void        setConfigBuffer(std::string line);
         // void        setConfigContext();
         void        setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos);

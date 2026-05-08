@@ -56,16 +56,16 @@ int main(int argc, char **argv) {
     // Start parsing the config file
     std::string configFile;
     ConfigParser config;
+    ServerConfig server;
 
     configFile = argv[1];
 
     // TODO: initial parsing
-    if (config.parse(configFile))
+    if (config.parse(configFile, server))
         exit(1);
 
+    // exit(2);
     // std::cout << config.getConfigBuffer() << std::endl;
-    exit(3);
-//
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
     std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
-    address.sin_port = htons(PORT);       // hton transforms port to understand the byte order
+    address.sin_port = htons(server.getPort());       // hton transforms port to understand the byte order
 
     // once executed succesfully, os registers that any it traffic that arrives at port 8080
     // must be routed directly to this specific c++ program

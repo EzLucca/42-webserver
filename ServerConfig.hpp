@@ -5,6 +5,8 @@
 # include <vector>
 # include <map>
 # include <ostream>
+# include <stdbool.h>
+
 
 // This file should store the values from the config file after the configParser.
 
