@@ -7,7 +7,8 @@ _contentLength(0),
 _currentChunkSize(-1),
 _fullChunkBodySize(0),
 _bodyFilePath("not-set"),
-_bytesWritten(0)
+_bytesWritten(0),
+_keepAlive(true)
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -159,4 +160,14 @@ size_t HttpRequest::getBytesWritten()
 void HttpRequest::addBytesWritten(size_t bytes)
 {
     _bytesWritten =+ bytes;
+}
+
+void HttpRequest::setKeepAlive(bool keepAlive)
+{
+    _keepAlive = keepAlive;
+}
+
+bool HttpRequest::getKeepAlive()
+{
+    return (_keepAlive);
 }

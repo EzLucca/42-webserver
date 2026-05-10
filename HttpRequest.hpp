@@ -22,6 +22,7 @@ class HttpRequest
             long                                _fullChunkBodySize;
             std::string                         _bodyFilePath;
             size_t                              _bytesWritten;
+            bool                                _keepAlive;
 
     public:
             HttpRequest();
@@ -43,6 +44,7 @@ class HttpRequest
             void printHeaders();
             //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);
+            void setKeepAlive(bool keepAlive);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
@@ -55,6 +57,7 @@ class HttpRequest
             std::string                         getVersion();
             std::string                         getBodyFilePath();
             size_t                              getBytesWritten();
+            bool                                getKeepAlive();
 
             void                                addBytesWritten(size_t bytes);
   

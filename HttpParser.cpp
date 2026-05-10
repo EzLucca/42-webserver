@@ -114,6 +114,12 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         value = trimSpaces(value);
         //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
         key = stringToLower(key); // DOESNT WORK, FIX!
+
+        if (key == "connection")
+        {
+            if (value == "closed")
+                request.setKeepAlive(false);
+        }
         if (key == "content-length")
         {   try
             {
