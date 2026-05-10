@@ -115,9 +115,19 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
         key = stringToLower(key); // DOESNT WORK, FIX!
         if (key == "content-length")
-        {
+        {   try
+            {
             // extract the key and value (value into number) and save to request object
             request.setContentLength(value); // Maybe we should try catch this, need somekind of validation check
+            }
+            catch (const std::invalid_argument& e) {
+                // catching characaters
+                throw HttpException(400, "Bad Request: Invalid Content-Length format");
+            } 
+            catch (const std::out_of_range& e) {
+                // catching too big numbers 
+                throw HttpException(400, "Bad Request: Content-Length is astronomically large");
+            }
         }
         if (key == "transfer-encoding" && value == "chunked")
         {
@@ -131,24 +141,45 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     else if (colonPos == std::string::npos)
     {
         // ERROR HANDLING, if we cant find :, that means its a bad request
+        throw HttpException(400, "Bad Request: Malformed header (missing colon)");
     }
 }
 
-/*
+
 void HttpParser::validateHeaders(HttpRequest& request)
 {
     //we need to validate 3 things.  host is mandatory, so if we have multiple sites, we know which config block to use
-
+    const std::map<std::string, std::string>& headers = request.getHeaders();
     //check for host from the map
+    //try to find the key host
+    std::map<std::string, std::string>::const_iterator it = headers.find("host");
+    if (it == headers.end())
+    {
+        //couldnt find a key, whole map searched through
+        throw HttpException(400, "Bad Request: Missing host header.");
+    }
 
-    //then we need to validate that if we have post, we need to have content length or transfer encopding.
-    // also if content length is around, we need to validate the value, that its valid number, not minus number, or characters inside of it
+    bool hasContentHeader = false;
+    bool hasTransferEncodingHeader = false;
+
+    it = headers.find("content-length");
+    if (it != headers.end())
+        hasContentHeader = true;
+    it = headers.find("transfer-encoding");
+    if (it != headers.end())
+        hasTransferEncodingHeader = true;
 
     //check transfer encoding value, if its something else than chunked, for example gzip. return 501 Not implemented: Unsupported transfer-encoding
+    if (hasTransferEncodingHeader == true)
+    {
+        if (it->second != "chunked")
+            throw HttpException(501, "Not implemented.");
+    }
+    if (hasContentHeader && hasTransferEncodingHeader)
+        throw HttpException(400, "Bad Request: Content-Length and Transfer-Encoding conflict (Smuggling attempt detected)");
 
-    //also if we find transfer encoding and content length both around (we shouldnt have both),  -->400, "Bad Request: Content-Length and Transfer-Encoding conflict".
 }
-*/
+
 
 void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request)
 {

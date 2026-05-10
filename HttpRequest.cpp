@@ -48,7 +48,13 @@ void HttpRequest::setHeader(std::string key, std::string value)
 
 void HttpRequest::setContentLength(std::string& value)
 {
-    _contentLength = std::stoi(value);
+    int parsedLength = std::stoi(value);
+    
+    // We need to check manually minus values
+    if (parsedLength < 0) {
+        throw std::invalid_argument("Negative Content-Length"); 
+    }
+    _contentLength = static_cast<size_t>(parsedLength);
 }
 
 void HttpRequest::setIsChunked()
