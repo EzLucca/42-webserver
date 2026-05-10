@@ -21,6 +21,7 @@ class HttpRequest
             long                                _currentChunkSize;
             long                                _fullChunkBodySize;
             std::string                         _bodyFilePath;
+            size_t                              _bytesWritten;
 
     public:
             HttpRequest();
@@ -53,6 +54,9 @@ class HttpRequest
             std::string                         getUri();
             std::string                         getVersion();
             std::string                         getBodyFilePath();
+            size_t                              getBytesWritten();
+
+            void                                addBytesWritten(size_t bytes);
   
         
 

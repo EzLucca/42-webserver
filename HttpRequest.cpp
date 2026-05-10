@@ -6,7 +6,8 @@ _isChunked(false),
 _contentLength(0),
 _currentChunkSize(-1),
 _fullChunkBodySize(0),
-_bodyFilePath("not-set")
+_bodyFilePath("not-set"),
+_bytesWritten(0)
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -148,4 +149,14 @@ std::string HttpRequest::getBodyFilePath()
 long HttpRequest::getFullChunkBodySize()
 {
     return (_fullChunkBodySize);
+}
+
+size_t HttpRequest::getBytesWritten()
+{
+    return (_bytesWritten);
+}
+
+void HttpRequest::addBytesWritten(size_t bytes)
+{
+    _bytesWritten =+ bytes;
 }

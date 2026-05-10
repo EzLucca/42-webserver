@@ -191,8 +191,11 @@ void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequ
     // in case of keep alive connection, check if there is already temp file from previous request. if there is, remove the old before creating new
 
     request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
-    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary); 
-    outFile.write(bodyData.data(), request.getCurrentChunkSize()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
+    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary);
+    if (!outFile.is_open())
+        throw HttpException(500, "Internal Server Error: Could not open temp file for writing");
+    
+    outFile.write(bodyData.data(), bodyData.size()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
     
     //also remember the filepath 
     //we better to open and close file between writings. (this will also flush the fstream internal buffer), and this will protect us from fd limits.
@@ -340,25 +343,30 @@ void HttpParser::parse(Client& client)
     if (client.getState() == READING_BODY)
     {
         const std::string& bodyBuffer = client.getBuffer();
-        size_t expectedBodySize = client.getRequest().getContentLength();
-
-        // we check if there is all the body data inside the buffer again
-        if (bodyBuffer.size() >= expectedBodySize)
-        {
-            // we parse the body 
-            std::string bodyData = bodyBuffer.substr(0, expectedBodySize);
-            client.getRequest().setBodyFilePath("temp_body_" + std::to_string(client.getFd()) + ".bin");
-            std::ofstream outFile(client.getRequest().getBodyFilePath(), std::ios::out | std::ios::binary); 
-            outFile.write(bodyData.data(), expectedBodySize);
-            //std::cout << "Printing bodyData variable: " << bodyData << std::endl; 
-            // we save the body in the request object
-            //client.getRequest().setBody(bodyData);
-            //erase it from the buffer
-            client.eraseFromBuffer(expectedBodySize);
-            client.setState(PROCESSING);
-            //client.getRequest().printBody();
-
+    
+    // fd 
+    if (!bodyBuffer.empty()) {
+        size_t bytesToWrite = bodyBuffer.size();
+        size_t bytesRemaining = client.getRequest().getContentLength() - client.getRequest().getBytesWritten();
+        
+        // make sure we dont accidentally write from new request
+        if (bytesToWrite > bytesRemaining) {
+            bytesToWrite = bytesRemaining; 
         }
+
+        std::string chunkToWrite = bodyBuffer.substr(0, bytesToWrite);
+        parseBodyIntoFile(client.getFd(), chunkToWrite, client.getRequest());
+        
+        // update state, free ram
+        client.getRequest().addBytesWritten(bytesToWrite);
+        client.eraseFromBuffer(bytesToWrite);
+    }
+
+    // Check if ready
+    if (client.getRequest().getBytesWritten() >= client.getRequest().getContentLength()) 
+    {
+        client.setState(PROCESSING);
+    }
 
     }
     else 
