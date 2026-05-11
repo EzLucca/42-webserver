@@ -1,28 +1,58 @@
 #include "CgiHandler.hpp"
+/*
+ static void printconfig(ServerConfig config) // DEBUG:
+ {
+     // to print
+     std::cout << config.getPort() << std::endl;
+     std::cout << config.getHost() << std::endl;
+     std::cout << config.getServerName() << std::endl;
+     std::cout << config.getClientMaxBodySize() << std::endl;
+     std::cout << config.getErrorPages() << std::endl;
+     std::cout << std::endl;
 
+     const auto& routes = config.getRoutes();
+
+     for (const auto& [path, route] : routes) {
+         std::cout << "Route path: " << path << "\n";
+         std::cout << "Root: " << route.root << "\n";
+         std::cout << "Index: " << route.index << "\n";
+         std::cout << "Methods: ";
+         for (const auto& m : route.allowedMethods)
+             std::cout << m << " ";
+         std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
+     }
+ }
+*/
 CgiHandler::CgiHandler()
 {
 }
 
-CgiHandler::CgiHandler(HttpRequest &request, const config::LocationConfig &location) //location info for cgi scripts
-: _cgiPath(location.getCgiPath()), //rename later
-_cgiExtention(location.getCgiExtention()), //rename later
+CgiHandler::CgiHandler(HttpRequest &request, ServerConfig &location) //location info for cgi scripts
+:// _cgiPath(location.getRoute()), //find the location of cgi
+//_cgiExtention(location.getCgiExtention()), //rename later
 _method(request.getMethod()),
-_queryString("");
-_contentType("");
-_serverName("");
+_queryString(""),
+_contentType(""),
+_serverName("")
 {
 	//SCRIPT PATH = ROOT FROM CONFIG + SCRIPT NAME FROM RAW URI(e.g. /cgi-bin/process.pl) + PATH_INFO FROM RAW URI BEFORE '?'
-	_headers(request.getHeaders()); //TODO guard against malformed requests
-	_bodyFilePath(request.getBodyFilePath());
-	std::string	root = lc.getRoot;
-	if (root.end_with("/"))
+	_headers = request.getHeaders(); //TODO guard against malformed requests
+	_bodyFilePath = request.getBodyFilePath();
+
+
+//	printconfig(location);
+
+	
+	const RouteConfig cgiStruct = *location.getRoute("/cgi-bin");
+	std::string	root = cgiStruct.root;
+	std::cout << root << std::endl;
+	if (root.ends_with("/"))
 		root.erase(root.size() - 1);
 	std::string	raw = request.getUri();
 	size_t	pos = raw.find('?');
-	if (root.find(uri) != std::string npos)
+	if (root.find(raw) != std::string::npos)
 		root = "/var/www/cgi";
-	if (pos != std::string npos)
+	if (pos != std::string::npos)
 	{
 		_scriptPath = root + raw.substr(0, pos);
 		_queryString = raw.substr(pos + 1);
@@ -30,20 +60,21 @@ _serverName("");
 	else
 	{
 		_scriptPath = root + raw;
-		_quesryString = "";
+		_queryString = "";
 	}
 	if  (!_headers.count("content-type") || !_headers.count("host"))
 	{
 		std::cerr << "Malformed request\n";
-		delete _scriptPath;
-		delete _queryString;
+//		delete _scriptPath;
+//		delete _queryString;
 		_exit(1);
 	}
 	_contentType = _headers.at("content-type");
-	_serverName = _headers.at("host");1
+	_serverName = _headers.at("host");
+	std::cout << _scriptPath << std::endl;
 }
 
-std::string	CgiHandler::cgiProcess()
+std::string	CgiHandler::cgiProcess(HttpRequest &request)
 {
 	int	request_fd[2];
 	int	response_fd[2];
@@ -63,44 +94,41 @@ std::string	CgiHandler::cgiProcess()
 		std::cerr << "CGI fork failed\n";
 		return ("");
 	}
-	else if (pid == 0)
+	else if (_pid == 0)
 	{
 		close(response_fd[0]);
 		close(request_fd[1]);
-		if (dup2(request_fd[0], STDIN_FILENO) < 0 || (dup2(response_fd[1], STDOUT_FILENO) < 0)
+		if (dup2(request_fd[0], STDIN_FILENO) < 0 || (dup2(response_fd[1], STDOUT_FILENO) < 0))
 		{
 			std::cerr << "CGI dup2 failed\n";
 			_exit(1);
 		}
 		close(request_fd[0]);
 		close(response_fd[1]);
-		std::vector<std::string>	envs;
-		envs.push_back("REQUEST_METHOD=" + _method);
-		envs.push_back("QUERY_STRINGS=" + _queryString);
-		if (request._isChunked)
-			envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getFullChunkBodySize()));
+//		std::vector<std::string>	_envs;
+		_envs.push_back("REQUEST_METHOD=" + _method);
+		_envs.push_back("QUERY_STRINGS=" + _queryString);
+		if (request.getIsChunked())
+			_envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getFullChunkBodySize()));
 		else
-			envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getContentLength());
-		envs.push_back("SERVER_PROTOCOL=" + request._version);
-		envs.push_back("SCRIPT_FILENAME=" + _scriptPath);
-		envs.push_back("BODY_PATH=" + _bodyFilePath);
-		envs.push_back("PATH_INFO=" + _cgiPath);
-		envs.push_back("CONTENT_TYPE=" + _contentType);
-		envs.push_back("SERVER_NAME=" + _serverName);
-		envs.push_back("REDIRECT_STATUS=200");
-		std::vector<char *>	envp;
+			_envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getContentLength()));
+		_envs.push_back("SERVER_PROTOCOL=" + request.getVersion());
+		_envs.push_back("SCRIPT_FILENAME=" + _scriptPath);
+		_envs.push_back("BODY_PATH=" + _bodyFilePath);
+//		_envs.push_back("PATH_INFO=" + _cgiPath);
+		_envs.push_back("CONTENT_TYPE=" + _contentType);
+		_envs.push_back("SERVER_NAME=" + _serverName);
+		_envs.push_back("REDIRECT_STATUS=200");
+		std::vector<char *>	_envp;
 		int	i = 0;
-		while (envs[i])
-		{
-			envp.push_back(const_cast<char *>(envs[i]))
-			i++;
-		}
-		envp[i] = NULL;
-		std::vector<char *> args;
-		args.push_back(const_cast<char *>(_cgiPath.cstr()));
-		args.push_back(const_cast<char *>(_scriptPath.cstr()));
-		args.push_back(NULL);
-		execve(_cgiPath.cstr(), args.data(), envp.data()); // _path is cgiPath, argv consists of cgiPath, scriptpath and null 
+		for (auto &s : _envs)
+			_envp.push_back(const_cast<char *>(s.c_str()));
+		_envp[i] = NULL;
+		std::vector<char *> _args;
+//		_args.push_back(const_cast<char *>(_cgiPath.cstr()));
+		_args.push_back(const_cast<char *>(_scriptPath.c_str()));
+		_args.push_back(NULL);
+		execve(_scriptPath.c_str(), _args.data(), _envp.data()); // _path is cgiPath, argv consists of cgiPath, scriptpath and null 
 		std::cerr << "CGI execve failed\n";
 		_exit(1);
 	}
@@ -108,7 +136,7 @@ std::string	CgiHandler::cgiProcess()
 	{
 		close(request_fd[0]);
 		close(response_fd[1]);
-		ssize_t	bytesWritten = write(request_fd[1], _body.cstr(), _body.size())); // maybe useless???????
+		ssize_t	bytesWritten = write(request_fd[1], _bodyFilePath.c_str(), _bodyFilePath.size()); // maybe useless???????
 		if (bytesWritten == -1)
 		{
 			close(request_fd[1]);
@@ -118,6 +146,7 @@ std::string	CgiHandler::cgiProcess()
 		close(request_fd[1]);
 		std::string	responseOutput;
 		char		buf[4096];
+		int			status;
 		while (true)
 		{
 			ssize_t bytesRead = read(response_fd[0], buf, sizeof(buf)); //buf needs to be cleared every time
@@ -131,27 +160,31 @@ std::string	CgiHandler::cgiProcess()
 			responseOutput.append(buf, bytesRead);
 		}
 		close(response_fd[0]);
-		waitpid(pid, &status, 0);
+		waitpid(_pid, &status, 0);
 		if (WIFEXITED(status))
-			return(WEXISTATUS(status));
+		{
+			if (WEXITSTATUS(status) == -1) //check correct exit status
+				return ("");
+		}
 		return(responseOutput);
 	}
 }
 
-Cgihandler::~CgiHandler(){
-
-	for (int i = 0; i < envs.size(); i++){
-		delete envs[i];
+CgiHandler::~CgiHandler()
+{
+/*
+	for (unsigned long i = 0; i < _envs.size(); i++){
+		delete _envs[i];
 	}
-	delete[] envs;
+	delete[] _envs;
 
-	for (int i = 0; i < envp.size(); i++){
-		delete envp[i];
+	for (unsigned long i = 0; i < _envp.size(); i++){
+		delete _envp[i];
 	}
-	delete[] envp;
+	delete[] _envp;
 
-	for (int i = 0; i < 3; i++){
-		delete args[i];
+	for (unsigned long i = 0; i < 3; i++){
+		delete _args[i];
 	}
-	delete[] args;
+	delete[] _args;*/
 }

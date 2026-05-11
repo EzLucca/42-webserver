@@ -76,3 +76,15 @@ std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m) 
 // const RouteConfig*  ServerConfig::getRoute(const std::string& location) const
 // {
 // }
+const RouteConfig*  ServerConfig::getRoute(const std::string& key) const
+{
+    std::map<std::string, RouteConfig>::const_iterator it = _routes.find(key);
+
+    if (it != _routes.end())
+    {
+        // std::cout << "Route found" << std::endl;
+        return &it->second;
+    }
+    // std::cout << "Route not found" << std::endl;
+    return NULL; // TODO: returning null will break the stuff
+}

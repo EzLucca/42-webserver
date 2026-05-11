@@ -17,7 +17,6 @@ class HttpRequest
             std::map<std::string, std::string>  _headers;
             bool                                _isChunked;
             size_t                              _contentLength;
-            std::string                         _bodyFilePath;
             long                                _currentChunkSize;
             long                                _fullChunkBodySize;
             std::string                         _bodyFilePath;
@@ -35,10 +34,8 @@ class HttpRequest
             void setHeader(std::string key, std::string value);
             void setContentLength(std::string& value);
             void setIsChunked();
-            void setBody(std::string body);
             void setCurrentChunkSize(std::string chunkLine);
             void setFullChunkBodySize(size_t amount);
-            void appendToBody(std::string bodydata);
             void printHeaders();
             //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);

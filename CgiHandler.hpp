@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include "HttpRequest.hpp"
+#include "ServerConfig.hpp"
 
 
 // takes the httprequest object, sets up pipes, forks the process, executes the script
@@ -20,17 +21,20 @@ class CgiHandler
 		std::string								_scriptPath; // path where the script lives
 		std::string								_method; //request method
 		std::string								_queryString;
-		std::string								_bodyPath; //request body
+		std::string								_bodyFilePath; //request body
 		std::string								_contentType; //type determines what form to convert to
 		std::map<std::string, std::string>		_headers; //std::map used to store key value pairs
 		std::string								_serverName;
+		std::vector<std::string>				_envs;
+		std::vector<char *>						_envp;
+		std::vector<char *>						_args;
 		
 		/* envp: query string, request method, content length, server protocol, 
 		script filename, path info, content type, server name, redirect status */
 	public:
 		CgiHandler();
-		CgiHandler(HttpRequest &request, const config::LocationConfig &location);
-		std::string	cgiProcess();
+		CgiHandler(HttpRequest &request, ServerConfig &location);
+		std::string	cgiProcess(HttpRequest &request);
 		~CgiHandler();
 
 
@@ -64,3 +68,4 @@ class CgiHandler
  * 6. Parent: write body to stdin pipe if needed, close write ends so child sees EOF, read child stdout into a buffer
  * 7. Parse CGI output: often headers until blank line, then body
  * 8. waitpid, map status to HTTP error
+ */

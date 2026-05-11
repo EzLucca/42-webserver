@@ -7,12 +7,12 @@ _statusMessage("not-set")
     std::cout << "HttpResponse constructor called." << std::endl;
 }
 
-const int HttpResponse::getStatusCode() const
+int HttpResponse::getStatusCode() const
 {
     return (_statusCode);
 }
 
-const std::string HttpResponse::getStatusMessage() const
+std::string HttpResponse::getStatusMessage() const
 {
     return (_statusMessage);
 }
@@ -25,4 +25,8 @@ void    HttpResponse::setStatusCode(int statusCode)
 void    HttpResponse::setStatusMessage(std::string statusMessage)
 {
     _statusMessage = statusMessage;
+}
+
+HttpResponse::~HttpResponse()
+{
 }
