@@ -30,6 +30,61 @@
 //         std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
 //     }
 // }
+// static void printvar(std::string var)
+// {
+//     std::cout << var << std::endl;
+// }
+
+// void    secondparse(std::string configFile, ServerConfig& config)
+void    secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos)
+{
+    (void)config;
+    (void)pos;
+
+    std::map<std::string, std::string> values;
+    std::istringstream stream(workingBuffer);
+    std::string key;
+    std::string value;
+    std::string line;
+
+    while (std::getline(stream, line)) {
+        std::istringstream linestream(line);
+        std::string key, value;
+
+        linestream >> key;
+        if(key == "server" || key.empty())
+            continue;
+        if(key == "location")
+        {
+            std::map<std::string, std::string> locationValues;
+            std::istringstream linestream(line);
+            std::string key, value;
+
+            linestream >> key;
+            std::cout << key << std::endl;
+            break;
+        }
+        std::getline(linestream, value);
+
+        // trim leading spaces
+        size_t start = value.find_first_not_of(" \t");
+        if (start != std::string::npos)
+            value = value.substr(start);
+
+        // remove trailing ';'
+        if (!value.empty() && value.back() == ';')
+            value.pop_back();
+
+        values[key] = value;
+    }
+
+    // print results
+    for (const auto& [k, v] : values) {
+        std::cout << "[ " << k << " ] " << v << "\n";
+    }
+
+    // printvar(content);
+}
 
 std::string ConfigParser::trim(const std::string& str)
 {
@@ -122,52 +177,6 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
 
     void ConfigParser::setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos)
     {
-        // std::map<std::string, std::string> values;
-        // std::istringstream stream(workingBuffer);
-        // std::string key;
-        // std::string value;
-        // std::string line;
-        //
-        // while (std::getline(stream, line)) {
-        //     std::istringstream linestream(line);
-        //     std::string key, value;
-        //
-        //     linestream >> key;
-        //     if(key == "server" || key.empty())
-        //         continue;
-        //     if(key == "location")
-        //     {
-        //         std::map<std::string, std::string> locationValues;
-        //         std::istringstream linestream(line);
-        //         std::string key, value;
-        //
-        //         linestream >> key;
-        //         std::cout << key << std::endl;
-        //         break;
-        //     }
-        //     std::getline(linestream, value);
-        //
-        //     // trim leading spaces
-        //     size_t start = value.find_first_not_of(" \t");
-        //     if (start != std::string::npos)
-        //         value = value.substr(start);
-        //
-        //     // remove trailing ';'
-        //     if (!value.empty() && value.back() == ';')
-        //         value.pop_back();
-        //
-        //     values[key] = value;
-        // }
-        //
-        // // print results
-        // for (const auto& [k, v] : values) {
-        //     std::cout << "[ " << k << " ] " << v << "\n";
-        // }
-        // exit(1);
-
-
-
-
         int port = findConfigKey<int>("listen", workingBuffer, pos);
         // TODO: range of ports 1024 - 49151
         if (port < 1024 || port > 49151)
@@ -237,9 +246,22 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
         // workingBuffer now have all the configfile
         const std::string &workingBuffer = getConfigBuffer();
 
+        size_t pos = 0;
+
+        // TEST:
+        try{
+            secondparse(config, workingBuffer, pos);
+        }
+        catch (const std::exception& e) 
+        {
+            std::cout << e.what() << " (testing)";
+        }
+        exit(1);
+        // ~TEST:
+
+
         // creating the ServerConfig object
         // get blocks
-        size_t pos = 0;
         while (true) {
             // ServerConfig config;
             // config.pos = 0; // track position
