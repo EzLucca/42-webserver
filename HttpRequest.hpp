@@ -12,7 +12,6 @@ class HttpRequest
     private:
             std::string                         _method;
             std::string                         _rawUri;       
-            std::string                         _path;         
             std::string                         _queryString;  
             std::string                         _version;
             std::map<std::string, std::string>  _headers;
@@ -20,6 +19,9 @@ class HttpRequest
             size_t                              _contentLength;
             std::string                         _bodyFilePath;
             long                                _currentChunkSize;
+            long                                _fullChunkBodySize;
+            std::string                         _bodyFilePath;
+
     public:
             HttpRequest();
             ~HttpRequest();
@@ -35,18 +37,23 @@ class HttpRequest
             void setIsChunked();
             void setBody(std::string body);
             void setCurrentChunkSize(std::string chunkLine);
+            void setFullChunkBodySize(size_t amount);
             void appendToBody(std::string bodydata);
             void printHeaders();
-            void printBody();
+            //void printBody();
+            void setBodyFilePath(std::string setBodyFilePath);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
             size_t                              getContentLength();
             bool                                getIsChunked();
             long                                getCurrentChunkSize();
+            long                                getFullChunkBodySize();
             std::string                         getMethod();
             std::string                         getUri();
             std::string                         getVersion();
+            std::string                         getBodyFilePath();
+  
         
 
 };

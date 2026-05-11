@@ -9,25 +9,68 @@
 #include <fstream>      //For ile manipulation
 
 #include "HttpParser.hpp" // For parsing
+#include "ConfigParser.hpp" // For parsing
 #include "Client.hpp"
 #include "HttpRequest.hpp"
+#include "HttpException.hpp"
+#include "HttpResponse.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100
 
-int main() {
+bool validateConfigFile(std::string_view &fileName)
+{
+    size_t found;
 
-    //Lets start parsing the configFile
-    //std::string readConf;
+    found = fileName.find(".conf");
+    if (found == std::string::npos)
+    {
+        std::cerr << "Config file not included.";
+        return (false);
+    }
+    if (found != (fileName.size() - 5))
+    {
+        std::cerr << "Config file name is not correct.";
+        return (false);
+    }
 
-    //std::ifstream MyReadFile("configFile.conf"); //Open file
-    //while (std::getline(MyReadFile, readConf)) //Write everything to our string object
-    //    std::cout << readConf;
-    //MyReadFile.close(); //Close the file
+    return (true);
+}
 
-    
+int main(int argc, char **argv) {
 
+    if (argc != 2)
+    {
+        std::cout << "Usage:\n\t./webserv [configuration_file]" << std::endl;
+        return (1);
+    }
+    std::string_view fileName = argv[1];
 
+    try{
+        if(!validateConfigFile(fileName))
+            throw std::invalid_argument("Invalid configuration file.");
+    }
+    catch (const std::exception &e){
+        std::cerr << "Error: " << e.what() << std::endl;
+        return (1);
+    }
+
+    // Start parsing the config file
+    std::string configFile;
+    ConfigParser config;
+    // ServerManager server;
+    ServerConfig server;
+
+    configFile = argv[1];
+
+    // TODO: initial parsing
+    if (config.parse(configFile, server))
+        exit(1);
+
+    // server.printServers();
+    // exit(2);
+
+    // std::cout << config.getConfigBuffer() << std::endl;
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -68,10 +111,9 @@ int main() {
         return (1);
     }
     
-
     //prepare poll struct
     struct pollfd fds[MAX_CLIENTS];
-    
+
     // Initialize, -1 means untouched
     for (int i = 0; i < MAX_CLIENTS; ++i) {
         fds[i].fd = -1; 
@@ -84,13 +126,14 @@ int main() {
     std::cout << "Server listening on port " << PORT << "..." << std::endl;
 
     std::map<int, Client> clients;
-    HttpParser httpParser; // create one http parser for the server
+    HttpParser            httpParser; // create one http parser for the server
+    HttpResponse          httpResponse;
 
     // Main event loop
     while (true) {
         // poll() waits here, timeout -1 means that it waits infinitely that somethin happpens
         int poll_count = poll(fds, MAX_CLIENTS, -1);
-        
+
         if (poll_count < 0) {
             std::cerr << "Poll error" << std::endl;
             break;
@@ -122,7 +165,7 @@ int main() {
 
                 fcntl(new_client_fd, F_SETFL, O_NONBLOCK); //set file status flags to nonblocking
                 bool added = false; //flag if adding client succesfull
-                
+
 
                 // Save the client fd, and insert into our array
                 for (int j = 0; j < MAX_CLIENTS; j++)
@@ -133,7 +176,7 @@ int main() {
                         fds[j].events = POLLIN; //  activate pollin
                         clients.insert(std::make_pair(new_client_fd, Client(new_client_fd))); // add the client to the map
                         added = true;
-                        
+
                         std::cout << "New client connected on FD: "<< new_client_fd << std::endl;
                         break;
                     }
@@ -151,11 +194,12 @@ int main() {
                 Client& activeClient = clients[currentFd]; // get the activeclient
 
                 // 8Kb is standardized  size for single read 
-                char shovelBuffer[8192] = {0}; //intializing buffer with zeros
+                char shovelBuffer[1] = {0}; //intializing buffer with zeros
 
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
 
+                
                 if (valRead <= 0)
                 {
                     close(fds[i].fd);
@@ -166,14 +210,34 @@ int main() {
                 }
                 else
                 {
-                    std::cout << shovelBuffer << std::endl;
+                    
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-                    std::cout << "hello" << std::endl;
-                    httpParser.parse(activeClient);
+                    
+                    try
+                    {
+                        httpParser.parse(activeClient);
+                    }
+
+                    catch (const HttpException& e) 
+                    {
+                        activeClient.setState(ERROR);
+                        std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
+                        httpResponse.setStatusCode(e.getStatusCode());
+                        httpResponse.setStatusMessage(e.getStatusMessage());
+
+                    }
+                    // if parse is completed so if state is processing we start to execute the request
+                    if (activeClient.getState() == PROCESSING)
+                    {
+                        //here we process the request and build response on the fly
+
+                        // after processing and after sending the response, check the buffer, if another request, start the loop again
+                    }
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
 
+                /*
                 // Hardcoded mock response
                 std::string mock_response = 
                     "HTTP/1.1 200 OK\r\n"
@@ -181,19 +245,23 @@ int main() {
                     "Content-Length: 13\r\n"
                     "\r\n"
                     "Hello, World!";
-                
-                
+
+
                 //lets use write or send to send the mock response to the client
                 int bytesSent = write(fds[i].fd, mock_response.c_str(), mock_response.length());
-                
+
                 if (bytesSent < 0)
                 {
                     std::cerr << "Failed to send response" << std::endl;
                 }
+                */
                 //close the connections, and set the fd back to -1
+                if (activeClient.getState() == PROCESSING || activeClient.getState() == ERROR)
+                {
                 clients.erase(currentFd); // DUNNO IF THIS WORKS
                 close(fds[i].fd);
                 fds[i].fd = -1;
+                }
             }
         }
     }

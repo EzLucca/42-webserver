@@ -16,6 +16,13 @@ _state(READING_REQUESTLINE)
 
 Client::~Client()
 {
+    //if connection drops out, we delete tmp file/
+    
+    if (_request.getBodyFilePath() != "not-set")
+    {
+        std::remove(_request.getBodyFilePath().c_str());
+    }
+    
     std::cout << "Client object destroyed." << std::endl; 
 }
 
@@ -48,5 +55,10 @@ void Client::eraseFromBuffer(size_t len)
 HttpRequest& Client::getRequest()
 {
     return (_request);
+}
+
+int    Client::getFd() const
+{
+    return (_fd);
 }
 
