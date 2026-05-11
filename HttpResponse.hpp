@@ -22,7 +22,7 @@ class HttpResponse
             void    setStatusCode(int statusCode);
             void    setStatusMessage(std::string statusMessage);
             //getters
-            const int             getStatusCode() const;
+            int             getStatusCode() const;
             const std::string     getStatusMessage() const;  
     // BODY -- The actual content returned , such as HTML, JSON, or text
 

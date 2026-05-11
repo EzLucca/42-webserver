@@ -10,6 +10,7 @@ SRC       = main.cpp \
 			Client.cpp \
 			HttpParser.cpp \
 			HttpRequest.cpp \
+			HttpResponse.cpp \
 			ConfigParser.cpp \
 			ServerConfig.cpp \
 			ServerManager.cpp \

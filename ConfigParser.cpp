@@ -1,10 +1,12 @@
 #include "ConfigParser.hpp"
 #include "ServerConfig.hpp"
+#include "HttpParser.hpp"
 #include <cctype>
 #include <fstream> //For ile manipulation
 #include <sstream> //For ile manipulation
 #include <string>
 #include <vector>
+#include <filesystem>
 
 // static void printconfig(ServerConfig config) // DEBUG:
 // {
@@ -29,6 +31,17 @@
 //     }
 // }
 
+std::string ConfigParser::trim(const std::string& str)
+{
+    size_t start = str.find_first_not_of(" \t\n\r");
+    size_t end = str.find_last_not_of(" \t\n\r");
+
+    if (start == std::string::npos)
+        return "";
+
+    return str.substr(start, end - start + 1);
+}
+
 ConfigParser::ConfigParser() {
     std::cout << "ConfigParser constructor called.\n" << std::endl;
 }
@@ -47,6 +60,17 @@ static int openFile(const std::string &file_path, std::fstream *fstream) {
         return (1);
     }
     return (0);
+}
+
+static int checkExistance(std::string filePath)
+{
+    if(!std::filesystem::exists(filePath))
+    {
+        std::cout << filePath << std::endl; 
+        std::cout << "The path is invalid!" << std::endl;
+        exit(2);
+    }
+    return 0;
 }
 
 void ConfigParser::setConfigBuffer(std::string line) {
@@ -68,6 +92,7 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
         try {
             route.root = findConfigKey<std::string>("root", workingBuffer, pos);
             // TODO: validate root folder
+            checkExistance(route.root);
         } catch (...) { route.root = ""; }
 
         try {
@@ -80,6 +105,7 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
             std::string method;
             while (iss >> method) {
                 // TODO: validate methods GET POST DELETE check if location allows it
+
                 route.allowedMethods.push_back(method);
             }
         } catch (...) { route.allowedMethods.clear(); }
@@ -94,10 +120,61 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
     }
     }
 
-    void ConfigParser::setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos) {
+    void ConfigParser::setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos)
+    {
+        // std::map<std::string, std::string> values;
+        // std::istringstream stream(workingBuffer);
+        // std::string key;
+        // std::string value;
+        // std::string line;
+        //
+        // while (std::getline(stream, line)) {
+        //     std::istringstream linestream(line);
+        //     std::string key, value;
+        //
+        //     linestream >> key;
+        //     if(key == "server" || key.empty())
+        //         continue;
+        //     if(key == "location")
+        //     {
+        //         std::map<std::string, std::string> locationValues;
+        //         std::istringstream linestream(line);
+        //         std::string key, value;
+        //
+        //         linestream >> key;
+        //         std::cout << key << std::endl;
+        //         break;
+        //     }
+        //     std::getline(linestream, value);
+        //
+        //     // trim leading spaces
+        //     size_t start = value.find_first_not_of(" \t");
+        //     if (start != std::string::npos)
+        //         value = value.substr(start);
+        //
+        //     // remove trailing ';'
+        //     if (!value.empty() && value.back() == ';')
+        //         value.pop_back();
+        //
+        //     values[key] = value;
+        // }
+        //
+        // // print results
+        // for (const auto& [k, v] : values) {
+        //     std::cout << "[ " << k << " ] " << v << "\n";
+        // }
+        // exit(1);
+
+
+
 
         int port = findConfigKey<int>("listen", workingBuffer, pos);
         // TODO: range of ports 1024 - 49151
+        if (port < 1024 || port > 49151)
+        {
+            std::cerr << "port out of range." << std::endl;
+            exit(2);
+        }
 
         std::string host = findConfigKey<std::string>("host", workingBuffer, pos);
         std::string  serverName = findConfigKey<std::string>("server_name", workingBuffer, pos);        // awesomeserver
@@ -122,7 +199,9 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
             std::string errorPath;
 
             iss >> errorCode >> errorPath;
-            // TODO: check errorpath 
+            // TODO: check errorpath
+            checkExistance(errorPath);
+
             config.setErrorPage(errorCode, errorPath);
         }
         // setConfigLocations(config, workingBuffer, config.pos);
@@ -137,7 +216,6 @@ void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingB
     // int ConfigParser::parse(std::string configFile, ServerManager& server) 
     int ConfigParser::parse(std::string configFile, ServerConfig& config) 
     {
-
         std::fstream fstream;
         if (configFile.empty() || openFile(configFile, &fstream)) {
             std::cerr << "Config file name is not correct." << std::endl;

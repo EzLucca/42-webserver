@@ -37,6 +37,13 @@ bool validateConfigFile(std::string_view &fileName)
     return (true);
 }
 
+void test(ServerConfig &server)
+{
+    const RouteConfig *example = server.getRoute("/cgi-bin");
+    std::string example2 = example->root;
+    std::cout << example2 << std::endl;
+}
+
 int main(int argc, char **argv) {
 
     if (argc != 2)
@@ -67,6 +74,13 @@ int main(int argc, char **argv) {
     if (config.parse(configFile, server))
         exit(1);
 
+    // TEST:
+    // std::string error = server.getErrorPage(404);
+    // std::cout << error << std::endl;
+    //
+    test(server);
+    // std::cout << example->path << std::endl;
+    // exit(1);
     // server.printServers();
     // exit(2);
 
