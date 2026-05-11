@@ -37,10 +37,8 @@ class HttpRequest
             void setHeader(std::string key, std::string value);
             void setContentLength(std::string& value);
             void setIsChunked();
-            void setBody(std::string body);
             void setCurrentChunkSize(std::string chunkLine);
             void setFullChunkBodySize(size_t amount);
-            void appendToBody(std::string bodydata);
             void printHeaders();
             //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);
