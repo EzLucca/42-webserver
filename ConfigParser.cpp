@@ -30,17 +30,14 @@
 //         std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
 //     }
 // }
-// static void printvar(std::string var)
-// {
-//     std::cout << var << std::endl;
-// }
 
-void    parselocation(std::istringstream &stream, size_t& pos)
+void    parselocation(std::istringstream &stream, size_t& pos, RouteConfig &config)
 {
     std::map<std::string, std::string> values;
     std::string key;
     std::string value;
 
+    (void)config;
     while(stream >> key)
     {
         if (key == "}")
@@ -59,7 +56,19 @@ void    parselocation(std::istringstream &stream, size_t& pos)
 
         values[key] = value;
     }
+
     for (const auto& [k, v] : values) {
+        if(k == "allow_methods")
+        {
+            std::stringstream ss(v);
+            std::string word;
+            while (ss >> word)
+                config.allowedMethods.push_back(word);
+            std::cout << " ] "  << "\n";
+        }
+        if(k == "autoindex")
+            config.autoIndex = (v == "on");
+            
         std::cout << "[ " << k << " ] " << v << "\n";
     }
 }
@@ -83,14 +92,6 @@ void    secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos
         pos += sizeof(key);
         if(key == "server" || key.empty())
             continue;
-        while (key == "location")
-        {
-            // RouteConfig nestedlocation = parselocation(linestream);
-            // linestream has the current line only
-            // with stream the whole buffer is send. No pos update
-            parselocation(stream, pos);
-            break;
-        }
         std::getline(linestream, value);
 
         // trim leading spaces
@@ -103,7 +104,33 @@ void    secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos
             value.pop_back();
 
         values[key] = value;
+
+        while (key == "location")
+        {
+            RouteConfig nestedLocation;
+
+            if (value.find("{") == std::string::npos)
+            {
+                std::cout << "{ location not found" << std::endl;
+                exit(2);
+            }
+
+            size_t locationPos = value.find(" ");
+            std::string locationValue = value.substr(0, locationPos);
+
+            nestedLocation.path = locationValue;
+
+
+            std::cout << "[" << key << "] " << locationValue << std::endl;
+            // linestream has the current line only
+            // with stream the whole buffer is send. No pos update
+            parselocation(stream, pos, nestedLocation);
+            break;
+        }
+
     }
+
+    // function to set the values from the map to the config object
 
     // print results
     // for (const auto& [k, v] : values) {
