@@ -35,11 +35,39 @@
 //     std::cout << var << std::endl;
 // }
 
+void    parselocation(std::istringstream &stream, size_t& pos)
+{
+    std::map<std::string, std::string> values;
+    std::string key;
+    std::string value;
+
+    while(stream >> key)
+    {
+        if (key == "}")
+            break;
+        pos += sizeof(key);
+        std::getline(stream, value);
+
+        // trim leading spaces
+        size_t start = value.find_first_not_of(" \t");
+        if (start != std::string::npos)
+            value = value.substr(start);
+
+        // remove trailing ';'
+        if (!value.empty() && value.back() == ';')
+            value.pop_back();
+
+        values[key] = value;
+    }
+    for (const auto& [k, v] : values) {
+        std::cout << "[ " << k << " ] " << v << "\n";
+    }
+}
+
 // void    secondparse(std::string configFile, ServerConfig& config)
 void    secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos)
 {
     (void)config;
-    (void)pos;
 
     std::map<std::string, std::string> values;
     std::istringstream stream(workingBuffer);
@@ -52,16 +80,15 @@ void    secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos
         std::string key, value;
 
         linestream >> key;
+        pos += sizeof(key);
         if(key == "server" || key.empty())
             continue;
-        if(key == "location")
+        while (key == "location")
         {
-            std::map<std::string, std::string> locationValues;
-            std::istringstream linestream(line);
-            std::string key, value;
-
-            linestream >> key;
-            std::cout << key << std::endl;
+            // RouteConfig nestedlocation = parselocation(linestream);
+            // linestream has the current line only
+            // with stream the whole buffer is send. No pos update
+            parselocation(stream, pos);
             break;
         }
         std::getline(linestream, value);
@@ -79,9 +106,9 @@ void    secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos
     }
 
     // print results
-    for (const auto& [k, v] : values) {
-        std::cout << "[ " << k << " ] " << v << "\n";
-    }
+    // for (const auto& [k, v] : values) {
+    //     std::cout << "[ " << k << " ] " << v << "\n";
+    // }
 
     // printvar(content);
 }
