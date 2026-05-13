@@ -8,29 +8,6 @@
 #include <vector>
 #include <filesystem>
 
-// static void printconfig(ServerConfig config) // DEBUG:
-// {
-//     // to print
-//     std::cout << config.getPort() << std::endl;
-//     std::cout << config.getHost() << std::endl;
-//     std::cout << config.getServerName() << std::endl;
-//     std::cout << config.getClientMaxBodySize() << std::endl;
-//     std::cout << config.getErrorPages() << std::endl;
-//     std::cout << std::endl;
-//
-//     const auto& routes = config.getRoutes();
-//
-//     for (const auto& [path, route] : routes) {
-//         std::cout << "Route path: " << path << "\n";
-//         std::cout << "Root: " << route.root << "\n";
-//         std::cout << "Index: " << route.index << "\n";
-//         std::cout << "Methods: ";
-//         for (const auto& m : route.allowedMethods)
-//             std::cout << m << " ";
-//         std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
-//     }
-// }
-
 static void printServerConfig(ServerConfig config)
 {
     // TEST: remove after
@@ -38,11 +15,16 @@ static void printServerConfig(ServerConfig config)
     std::cout << "Host: " << config.getHost() << std::endl;
     std::cout << "ServerName: " << config.getServerName() << std::endl;
     std::cout << "ClientMaxBodySize: " << config.getClientMaxBodySize() << std::endl;
-    std::cout << "ErrorPages: " << config.getErrorPages() << std::endl;
+    for (const auto& pair : config.getErrorPages())
+    {
+        std::cout << "ErrorPage[" << pair.first << "] = "
+            << pair.second << std::endl;
+    }
 
     for (const auto& [routePath, route] : config.getRoutes())
     {
-        std::cout << "  vectorRoute: " << routePath << std::endl;
+        std::cout << "----------------------" << std::endl;
+        std::cout << "  location: " << routePath << std::endl;
 
         for (const auto& [key, vec] : route.vectorRoute)
         {
@@ -53,25 +35,24 @@ static void printServerConfig(ServerConfig config)
 
             std::cout << std::endl;
         }
-
         std::cout << "----------------------" << std::endl;
     }
 }
 
 void    setDirectives(ServerConfig &config, std::map<std::string, std::string> &values)
 {
-    // size_t                              _clientMaxBodySize;
-    // std::map<int, std::string>          _errorPages;        // indexed error pages
-
     config.setPort(stoi(values["listen"]));
     config.setHost(values["host"]);
     config.setServerName(values["server_name"]);
-    // config.setErrorPage(stoi(value["error_page"]), );
 
-    std::cout << values["error_page"] << std::endl;
+    // check for body size in MB
+    if (values["client_max_body_size"].find("M") != std::string::npos)
+    {
+        config.setClientMaxBodySize(stoi(values["client_max_body_size"]));
+    }
+    else
+        config.setClientMaxBodySize(0);
 
-    // check for body size
-    // list of error pages
 }
 
 std::string ConfigParser::trim(const std::string& str)
@@ -99,11 +80,7 @@ void ConfigParser::parselocation(std::istringstream &stream, size_t& pos, RouteC
 
         std::getline(stream, value);
 
-        // trim leading spaces
-        // size_t start = value.find_first_not_of(" \t");
-        // if (start != std::string::npos)
-        //     value = value.substr(start);
-        trim(value);
+        value = trim(value);
 
         // remove ';'
         if (!value.empty() && value.back() == ';')
@@ -120,18 +97,6 @@ void ConfigParser::parselocation(std::istringstream &stream, size_t& pos, RouteC
         }
         config.vectorRoute[key].push_back(value);
     }
-
-    // TEST: remove after
-    // for (const auto& [key, vec] : config.vectorRoute)
-    // {
-    //     std::cout << "  [ " << key << " ]";
-    //
-    //     for (const auto& value : vec)
-    //     {
-    //         std::cout << value << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
 }
 
 void    ConfigParser::secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos)
@@ -147,15 +112,12 @@ void    ConfigParser::secondparse(ServerConfig& config, std::string workingBuffe
         std::string key, value;
 
         linestream >> key;
-        pos += sizeof(key);
+        pos += key.size();
         if(key == "server" || key.empty())
             continue;
         std::getline(linestream, value);
 
-        // trim leading spaces
-        size_t start = value.find_first_not_of(" \t");
-        if (start != std::string::npos)
-            value = value.substr(start);
+        value = trim(value);
 
         // remove trailing ';'
         if (!value.empty() && value.back() == ';')
@@ -163,20 +125,18 @@ void    ConfigParser::secondparse(ServerConfig& config, std::string workingBuffe
 
         values[key] = value;
 
-        while (key == "error_page")
+        if (key == "error_page")
         {
-            size_t found = workingBuffer.find("error_page", pos);
-            if (found == std::string::npos)
-                break;
             std::istringstream iss(value);
+
             int errorCode;
             std::string errorPath;
 
             iss >> errorCode >> errorPath;
-            // TODO: check errorpath
-            // checkExistance(errorPath);
 
             config.setErrorPage(errorCode, errorPath);
+
+            continue;
         }
         while (key == "location")
         {
@@ -191,14 +151,6 @@ void    ConfigParser::secondparse(ServerConfig& config, std::string workingBuffe
             size_t locationPos = value.find(" ");
             std::string locationValue = value.substr(0, locationPos);
 
-            // nestedLocation.path = locationValue;
-
-            // TEST: remove after
-            // std::cout << "[" << key << "] " << locationValue << "$" << std::endl;
-
-
-            // linestream has the current line only
-            // with stream the whole buffer is send. No pos update
             parselocation(stream, pos, nestedLocation);
             config.setRoute(locationValue, nestedLocation);
             break;
