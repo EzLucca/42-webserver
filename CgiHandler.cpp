@@ -55,6 +55,11 @@ _serverName("")
 	if (root.ends_with("/"))
 		root.erase(root.size() - 1);
 	std::string	raw = request.getUri();
+
+	//*****************************
+	std::cout << "raw: " + raw << std::endl;
+	//*****************************
+	
 	size_t	pos = raw.find('?');
 	if (root.find(raw) != std::string::npos)
 		root = "/var/www/cgi";
@@ -85,7 +90,8 @@ _serverName("")
 	_serverName = _headers.at("host");
 
 	//***********************************
-	std::cout << _scriptPath << std::endl;
+	std::cout << "_serverName: " + _serverName << std::endl;
+	std::cout << "_contentType: " + _contentType << std::endl;
 	//***********************************
 }
 
