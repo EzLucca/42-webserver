@@ -29,7 +29,7 @@ class ConfigParser
                     endPos++;
                 }
 
-                std::string valueStr = workingBuffer.substr(pos, endPos - pos);
+                std::string valueStr = trim(workingBuffer.substr(pos, endPos - pos));
 
                 startPos = endPos; // update starting position for next search
 
@@ -54,6 +54,7 @@ class ConfigParser
         void        setConfigLocations(ServerConfig& config, std::string workingBuffer, size_t& pos);
         // void        setConfigCgi(ServerConfig& config, std::string workingBuffer, size_t& pos);
         void        addRoute(const RouteConfig& route);
+		std::string trim(const std::string& str);
 
         std::string getConfigBuffer();
 

@@ -1,5 +1,6 @@
 #include "CgiHandler.hpp"
-/*
+
+//****************************************************
  static void printconfig(ServerConfig config) // DEBUG:
  {
      // to print
@@ -22,7 +23,8 @@
          std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
      }
  }
-*/
+//****************************************************
+
 CgiHandler::CgiHandler()
 {
 }
@@ -39,13 +41,17 @@ _serverName("")
 	_headers = request.getHeaders(); //TODO guard against malformed requests
 	_bodyFilePath = request.getBodyFilePath();
 
-
-//	printconfig(location);
-
+	//***************************
+	printconfig(location);
+	//***************************
 	
-	const RouteConfig cgiStruct = *location.getRoute("/cgi-bin");
-	std::string	root = cgiStruct.root;
+	const RouteConfig *cgiStruct = location.getRoute("/cgi-bin");
+	std::string	root = cgiStruct->root;
+
+	//*****************************
 	std::cout << root << std::endl;
+	//*****************************
+
 	if (root.ends_with("/"))
 		root.erase(root.size() - 1);
 	std::string	raw = request.getUri();
@@ -62,6 +68,12 @@ _serverName("")
 		_scriptPath = root + raw;
 		_queryString = "";
 	}
+
+	//***********************************
+	std::cout << "raw: " + raw << std::endl;
+	std::cout << "_scriptPath: " + _scriptPath << std::endl;
+	//***********************************
+
 	if  (!_headers.count("content-type") || !_headers.count("host"))
 	{
 		std::cerr << "Malformed request\n";
@@ -71,7 +83,10 @@ _serverName("")
 	}
 	_contentType = _headers.at("content-type");
 	_serverName = _headers.at("host");
+
+	//***********************************
 	std::cout << _scriptPath << std::endl;
+	//***********************************
 }
 
 std::string	CgiHandler::cgiProcess(HttpRequest &request)

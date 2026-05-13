@@ -37,6 +37,17 @@ ConfigParser::~ConfigParser() {
     std::cout << "ConfigParser destructor called." << std::endl;
 }
 
+std::string ConfigParser::trim(const std::string& str)
+{
+    size_t start = str.find_first_not_of(" \t\n\r");
+    size_t end = str.find_last_not_of(" \t\n\r");
+
+    if (start == std::string::npos)
+        return "";
+
+    return str.substr(start, end - start + 1);
+}
+
 static int openFile(const std::string &file_path, std::fstream *fstream) {
     if (fstream->is_open())
         fstream->close();
