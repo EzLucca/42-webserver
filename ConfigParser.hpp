@@ -52,11 +52,14 @@ class ConfigParser
         // void        setConfigContext();
         void        setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos);
         void        setConfigLocations(ServerConfig& config, std::string workingBuffer, size_t& pos);
-        // void        setConfigCgi(ServerConfig& config, std::string workingBuffer, size_t& pos);
         void        addRoute(const RouteConfig& route);
+        std::string trim(const std::string& str);
+
+        // second version
+        void        secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos);
+        void        parselocation(std::istringstream &stream, size_t& pos, RouteConfig &config);
 
         std::string getConfigBuffer();
-        std::string trim(const std::string& str);
 
 };
 

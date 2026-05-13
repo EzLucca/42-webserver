@@ -28,7 +28,6 @@ void    ServerConfig::setErrorPage(int code, const std::string& errorPage)
     _errorPages[code] = errorPage;
 }
 void    ServerConfig::setRoute(const std::string& location, RouteConfig route) {
-    route.path = location;
     _routes[location] = route;
 }
 
