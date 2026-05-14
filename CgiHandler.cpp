@@ -158,7 +158,12 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				close(request_fd[1]);
 				close(response_fd[0]);
 				std::cerr << "CGI failed to open script file\n";
-				return ("");
+				waitpid(_pid, &status, 0)
+				if (WIFEXITED(status))
+				{
+					if (WEXITSTATUS(status) != 0)
+						return("");
+				}
 			}
 			char	bodyBuf[4096];
 			while (true)
@@ -171,7 +176,12 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					close(response_fd[0]);
 					close(opennedBodyFile);
 					std::cerr << "CGI script file read failed\n";
-					return ("");
+					waitpid(_pid, &status, 0)
+					if (WIFEXITED(status))
+					{
+						if (WEXITSTATUS(status) != 0)
+							return("");
+					}
 				}
 				if (bytesRead == 0)
 				{
@@ -188,10 +198,16 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 						close(response_fd[0]);
 						close(opennedBodyFile);
 						std::cerr << "CGI write failed\n";
-						return ("");
+						waitpid(_pid, &status, 0)
+						if (WIFEXITED(status))
+						{
+							if (WEXITSTATUS(status) != 0)
+								return("");
+						}
 					}
 					totalWritten += bytesWritten;
 				}
+			}
 		}
 		close(request_fd[1]);
 		std::string	responseOutput;
@@ -204,7 +220,12 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 			{
 				close(response_fd[0]);
 				std::cerr << "CGI response read failed\n";
-				return("");
+				waitpid(_pid, &status, 0)
+				if (WIFEXITED(status))
+				{
+					if (WEXITSTATUS(status) != 0)
+						return("");
+				}
 			}
 			if (bytesRead == 0)
 				break ;
@@ -213,7 +234,10 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		close(response_fd[0]);
 		waitpid(_pid, &status, 0);
 		if (WIFEXITED(status))
-			return (WEXITSTATUS(status)); //check correct exit status
+		{
+			if (WEXITSTATUS(status) != 0); //check correct exit status
+				return  ("");
+		}
 		return(responseOutput);
 	}
 }
