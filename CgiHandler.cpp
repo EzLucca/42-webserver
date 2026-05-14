@@ -135,10 +135,9 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		_envs.push_back("SERVER_NAME=" + _serverName);
 		_envs.push_back("REDIRECT_STATUS=200");
 		std::vector<char *>	_envp;
-//		int	i = 0;
 		for (auto &s : _envs)
 			_envp.push_back(const_cast<char *>(s.c_str()));
-//		_envp[i] = NULL;
+		_envp.push_back(NULL);
 		std::vector<char *> _args;
 //		_args.push_back(const_cast<char *>(_cgiPath.cstr()));
 		_args.push_back(const_cast<char *>(_scriptPath.c_str()));
@@ -151,38 +150,43 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 	{
 		close(request_fd[0]);
 		close(response_fd[1]);
-		int	opennedBodyFile = (_bodyFilePath, O_WRONLY);
-		if (opennedBodyFile < 0)
+		if (_method == "POST" && _bodyFilePath)
 		{
-			std::cerr << "CGI failed to open script file\n";
-			return ("");
-		}
-		char	bodyBuf[4096];
-		while (true)
-		{
+			int	opennedBodyFile = open(_bodyFilePath, O_RDONLY);
+			if (opennedBodyFile < 0)
+			{
+				close(request_fd[1]);
+				close(response_fd[0]);
+				std::cerr << "CGI failed to open script file\n";
+				return ("");
+			}
+			char	bodyBuf[4096];
+			while (true)
+			{
 
-			ssize_t	bytesRead = read(opennedBodyFile, bodyBuf, sizeof(bodyBuf));
-			if (bytesRead == -1)
-			{
-				close(request_fd[1]);
-				close(response_fd[0]);
-				close(opennedBodyFile);
-				std::cerr << "CGI script file read failed\n";
-				return ("");
-			}
-			ssize_t	bytesWritten = write(request_fd[1], bodyBuf.c_str(), sizeof(bodyBuf)); // maybe useless???????
-			if (bytesWritten == -1)
-			{
-				close(request_fd[1]);
-				close(response_fd[0]);
-				close(opennedBodyFile);
-				std::cerr << "CGI write failed\n";
-				return ("");
-			}
-			if (bytesWritten == 0)
-			{
-				close(opennedBodyFile);
-				break ;
+				ssize_t	bytesRead = read(opennedBodyFile, bodyBuf, sizeof(bodyBuf));
+				if (bytesRead == -1)
+				{
+					close(request_fd[1]);
+					close(response_fd[0]);
+					close(opennedBodyFile);
+					std::cerr << "CGI script file read failed\n";
+					return ("");
+				}
+				ssize_t	bytesWritten = write(request_fd[1], bodyBuf, bytesRead); // maybe useless???????
+				if (bytesWritten == -1)
+				{
+					close(request_fd[1]);
+					close(response_fd[0]);
+					close(opennedBodyFile);
+					std::cerr << "CGI write failed\n";
+					return ("");
+				}
+				if (bytesRead == 0)
+				{
+					close(opennedBodyFile);
+					break ;
+				}
 			}
 		}
 		close(request_fd[1]);
@@ -191,7 +195,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		int			status;
 		while (true)
 		{
-			ssize_t bytesRead = read(response_fd[0], buf, sizeof(buf)); //buf needs to be cleared every time
+			ssize_t bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf)); //buf needs to be cleared every time
 			if (bytesRead == -1)
 			{
 				close(response_fd[0]);
@@ -199,7 +203,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 			}
 			if (bytesRead == 0)
 				break ;
-			responseOutput.append(buf, bytesRead);
+			responseOutput.append(responseBuf, bytesRead);
 		}
 		close(response_fd[0]);
 		waitpid(_pid, &status, 0);
