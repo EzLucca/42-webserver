@@ -158,8 +158,8 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 			{
 				close(request_fd[1]);
 				close(response_fd[0]);
-				std::cerr << "CGI failed to open script file\n";
-				waitpid(_pid, &status, 0)
+				std::cerr << "CGI failed to open body file\n";
+				waitpid(_pid, &status, 0);
 				return("");
 			}
 			char	bodyBuf[4096];
@@ -172,8 +172,8 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					close(request_fd[1]);
 					close(response_fd[0]);
 					close(opennedBodyFile);
-					std::cerr << "CGI script file read failed\n";
-					waitpid(_pid, &status, 0)
+					std::cerr << "CGI body file read failed\n";
+					waitpid(_pid, &status, 0);
 					return("");
 				}
 				if (bytesRead == 0)
@@ -190,8 +190,8 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 						close(request_fd[1]);
 						close(response_fd[0]);
 						close(opennedBodyFile);
-						std::cerr << "CGI write failed\n";
-						waitpid(_pid, &status, 0)
+						std::cerr << "CGI body file write to child failed\n";
+						waitpid(_pid, &status, 0);
 						return("");
 					}
 					totalWritten += bytesWritten;
@@ -208,7 +208,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 			{
 				close(response_fd[0]);
 				std::cerr << "CGI response read failed\n";
-				waitpid(_pid, &status, 0)
+				waitpid(_pid, &status, 0);
 				return("");
 			}
 			if (bytesRead == 0)
@@ -221,6 +221,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		{
 			if (WEXITSTATUS(status) != 0) //check correct exit status
 				return  ("");
+			return ("");
 		}
 		return(responseOutput);
 	}
