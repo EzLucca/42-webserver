@@ -73,12 +73,12 @@ _serverName("")
 	std::cout << "_scriptPath: " + _scriptPath << std::endl;
 	//***********************************
 
-	if  (!_headers.count("content-type") || !_headers.count("host")) //too strict
+	if  ((_method == "GET" && !_headers.count("content-type"))
+		|| !_headers.count("host"))
 	{
 		std::cerr << "Malformed request\n";
 //		delete _scriptPath;
 //		delete _queryString;
-		_exit(1);
 	}
 	_contentType = _headers.at("content-type");
 	_serverName = _headers.at("host");
@@ -116,7 +116,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		if (dup2(request_fd[0], STDIN_FILENO) < 0 || (dup2(response_fd[1], STDOUT_FILENO) < 0))
 		{
 			std::cerr << "CGI dup2 failed\n";
-			return ("");
+			_exit(1);
 		}
 		close(request_fd[0]);
 		close(response_fd[1]);
@@ -129,7 +129,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 			_envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getContentLength()));
 		_envs.push_back("SERVER_PROTOCOL=" + request.getVersion());
 		_envs.push_back("SCRIPT_FILENAME=" + _scriptPath);
-		_envs.push_back("BODY_PATH=" + _bodyFilePath);
+//		_envs.push_back("BODY_PATH=" + _bodyFilePath);
 //		_envs.push_back("PATH_INFO=" + _cgiPath);
 		_envs.push_back("CONTENT_TYPE=" + _contentType);
 		_envs.push_back("SERVER_NAME=" + _serverName);
@@ -151,17 +151,43 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 	{
 		close(request_fd[0]);
 		close(response_fd[1]);
-		ssize_t	bytesWritten = write(request_fd[1], _bodyFilePath.c_str(), _bodyFilePath.size()); // maybe useless???????
-		if (bytesWritten == -1)
+		int	opennedBodyFile = (_bodyFilePath, O_WRONLY);
+		if (opennedBodyFile < 0)
 		{
-			close(request_fd[1]);
-			close(response_fd[0]);
-			std::cerr << "CGI write failed\n";
+			std::cerr << "CGI failed to open script file\n";
 			return ("");
+		}
+		char	bodyBuf[4096];
+		while (true)
+		{
+
+			ssize_t	bytesRead = read(opennedBodyFile, bodyBuf, sizeof(bodyBuf));
+			if (bytesRead == -1)
+			{
+				close(request_fd[1]);
+				close(response_fd[0]);
+				close(opennedBodyFile);
+				std::cerr << "CGI script file read failed\n";
+				return ("");
+			}
+			ssize_t	bytesWritten = write(request_fd[1], bodyBuf.c_str(), sizeof(bodyBuf)); // maybe useless???????
+			if (bytesWritten == -1)
+			{
+				close(request_fd[1]);
+				close(response_fd[0]);
+				close(opennedBodyFile);
+				std::cerr << "CGI write failed\n";
+				return ("");
+			}
+			if (bytesWritten == 0)
+			{
+				close(opennedBodyFile);
+				break ;
+			}
 		}
 		close(request_fd[1]);
 		std::string	responseOutput;
-		char		buf[4096];
+		char		responseBuf[4096];
 		int			status;
 		while (true)
 		{
