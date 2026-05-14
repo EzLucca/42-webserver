@@ -150,6 +150,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 	{
 		close(request_fd[0]);
 		close(response_fd[1]);
+		int			status;
 		if (_method == "POST" && _bodyFilePath != "not-set")
 		{
 			int	opennedBodyFile = open(_bodyFilePath.c_str(), O_RDONLY);
@@ -159,11 +160,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				close(response_fd[0]);
 				std::cerr << "CGI failed to open script file\n";
 				waitpid(_pid, &status, 0)
-				if (WIFEXITED(status))
-				{
-					if (WEXITSTATUS(status) != 0)
-						return("");
-				}
+				return("");
 			}
 			char	bodyBuf[4096];
 			while (true)
@@ -177,11 +174,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					close(opennedBodyFile);
 					std::cerr << "CGI script file read failed\n";
 					waitpid(_pid, &status, 0)
-					if (WIFEXITED(status))
-					{
-						if (WEXITSTATUS(status) != 0)
-							return("");
-					}
+					return("");
 				}
 				if (bytesRead == 0)
 				{
@@ -199,11 +192,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 						close(opennedBodyFile);
 						std::cerr << "CGI write failed\n";
 						waitpid(_pid, &status, 0)
-						if (WIFEXITED(status))
-						{
-							if (WEXITSTATUS(status) != 0)
-								return("");
-						}
+						return("");
 					}
 					totalWritten += bytesWritten;
 				}
@@ -212,7 +201,6 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		close(request_fd[1]);
 		std::string	responseOutput;
 		char		responseBuf[4096];
-		int			status;
 		while (true)
 		{
 			ssize_t bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf)); //buf needs to be cleared every time
@@ -221,11 +209,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				close(response_fd[0]);
 				std::cerr << "CGI response read failed\n";
 				waitpid(_pid, &status, 0)
-				if (WIFEXITED(status))
-				{
-					if (WEXITSTATUS(status) != 0)
-						return("");
-				}
+				return("");
 			}
 			if (bytesRead == 0)
 				break ;
@@ -235,7 +219,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		waitpid(_pid, &status, 0);
 		if (WIFEXITED(status))
 		{
-			if (WEXITSTATUS(status) != 0); //check correct exit status
+			if (WEXITSTATUS(status) != 0) //check correct exit status
 				return  ("");
 		}
 		return(responseOutput);
