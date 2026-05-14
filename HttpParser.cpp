@@ -28,7 +28,7 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
         {
             throw HttpException(414, "URI Too Long");
         }
-        if (request.getUri().empty() || request.getUri().at(0) == '/') //Check if works
+        if (request.getUri().empty() || request.getUri().at(0) != '/') //Check if works
         {
             throw HttpException(400, "Bad Request: URI must start with '/'");
         }

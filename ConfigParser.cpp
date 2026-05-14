@@ -6,28 +6,28 @@
 #include <string>
 #include <vector>
 
-// static void printconfig(ServerConfig config) // DEBUG:
-// {
-//     // to print
-//     std::cout << config.getPort() << std::endl;
-//     std::cout << config.getHost() << std::endl;
-//     std::cout << config.getServerName() << std::endl;
-//     std::cout << config.getClientMaxBodySize() << std::endl;
-//     std::cout << config.getErrorPages() << std::endl;
-//     std::cout << std::endl;
-//
-//     const auto& routes = config.getRoutes();
-//
-//     for (const auto& [path, route] : routes) {
-//         std::cout << "Route path: " << path << "\n";
-//         std::cout << "Root: " << route.root << "\n";
-//         std::cout << "Index: " << route.index << "\n";
-//         std::cout << "Methods: ";
-//         for (const auto& m : route.allowedMethods)
-//             std::cout << m << " ";
-//         std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
-//     }
-// }
+//  static void printconfig(ServerConfig config) // DEBUG:
+//  {
+//      // to print
+//      std::cout << config.getPort() << std::endl;
+//      std::cout << config.getHost() << std::endl;
+//      std::cout << config.getServerName() << std::endl;
+//      std::cout << config.getClientMaxBodySize() << std::endl;
+//      std::cout << config.getErrorPages() << std::endl;
+//      std::cout << std::endl;
+// 
+//      const auto& routes = config.getRoutes();
+// 
+//      for (const auto& [path, route] : routes) {
+//          std::cout << "Route path: " << path << "\n";
+//          std::cout << "Root: " << route.root << "\n";
+//          std::cout << "Index: " << route.index << "\n";
+//          std::cout << "Methods: ";
+//          for (const auto& m : route.allowedMethods)
+//              std::cout << m << " ";
+//          std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
+//      }
+//  }
 
 ConfigParser::ConfigParser() {
     std::cout << "ConfigParser constructor called.\n" << std::endl;
@@ -35,6 +35,17 @@ ConfigParser::ConfigParser() {
 
 ConfigParser::~ConfigParser() {
     std::cout << "ConfigParser destructor called." << std::endl;
+}
+
+std::string ConfigParser::trim(const std::string& str)
+{
+    size_t start = str.find_first_not_of(" \t\n\r");
+    size_t end = str.find_last_not_of(" \t\n\r");
+
+    if (start == std::string::npos)
+        return "";
+
+    return str.substr(start, end - start + 1);
 }
 
 static int openFile(const std::string &file_path, std::fstream *fstream) {
