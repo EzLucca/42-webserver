@@ -47,35 +47,29 @@ _serverName("")
 	
 	const RouteConfig *cgiStruct = location.getRoute("/cgi-bin");
 	std::string	root = cgiStruct->root;
-
-	//*****************************
-	std::cout << root << std::endl;
-	//*****************************
-
+	std::string	locationPath = cgiStruct->path;
 	if (root.ends_with("/"))
 		root.erase(root.size() - 1);
 	std::string	raw = request.getUri();
-
-	//*****************************
-	std::cout << "raw: " + raw << std::endl;
-	//*****************************
-	
-	size_t	pos = raw.find('?');
-	if (root.find(raw) != std::string::npos)
-		root = "/var/www/cgi";
-	if (pos != std::string::npos)
+	size_t	queryPos = raw.find('?');
+	std::string	uriPath;
+	if (queryPos != std::string::npos)
 	{
-		_scriptPath = root + raw.substr(0, pos);
-		_queryString = raw.substr(pos + 1);
+		uriPath = raw.substr(0, queryPos);
+		_queryString = raw.substr(queryPos + 1);
 	}
 	else
 	{
-		_scriptPath = root + raw;
+		uriPath = raw;
 		_queryString = "";
 	}
+	std::string	scriptName = uriPath.substr(locationPath.length());
+	_scriptPath = root + scriptName;
 
 	//***********************************
+	std::cout << "root: " + root << std::endl;
 	std::cout << "raw: " + raw << std::endl;
+	std::cout << "scriptName: " + scriptName << std::endl;
 	std::cout << "_scriptPath: " + _scriptPath << std::endl;
 	//***********************************
 
