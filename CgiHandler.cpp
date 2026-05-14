@@ -73,7 +73,7 @@ _serverName("")
 	std::cout << "_scriptPath: " + _scriptPath << std::endl;
 	//***********************************
 
-	if  ((_method == "GET" && !_headers.count("content-type"))
+	if  ((_method == "POST" && !_headers.count("content-type"))
 		|| !_headers.count("host"))
 	{
 		std::cerr << "Malformed request\n";
@@ -178,16 +178,20 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					close(opennedBodyFile);
 					break ;
 				}
-				ssize_t	bytesWritten = write(request_fd[1], bodyBuf, bytesRead); // maybe useless???????
-				if (bytesWritten == -1)
+				ssize_t	totalWritten = 0;
+				while (totalWritten < bytesRead)
 				{
-					close(request_fd[1]);
-					close(response_fd[0]);
-					close(opennedBodyFile);
-					std::cerr << "CGI write failed\n";
-					return ("");
+					ssize_t	bytesWritten = write(request_fd[1], bodyBuf + totalWritten, bytesRead - totalWritten);
+					if (bytesWritten == -1)
+					{
+						close(request_fd[1]);
+						close(response_fd[0]);
+						close(opennedBodyFile);
+						std::cerr << "CGI write failed\n";
+						return ("");
+					}
+					totalWritten += bytesWritten;
 				}
-			}
 		}
 		close(request_fd[1]);
 		std::string	responseOutput;
@@ -209,10 +213,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		close(response_fd[0]);
 		waitpid(_pid, &status, 0);
 		if (WIFEXITED(status))
-		{
-			if (WEXITSTATUS(status) == -1) //check correct exit status
-				return ("");
-		}
+			return (WEXITSTATUS(status)); //check correct exit status
 		return(responseOutput);
 	}
 }
