@@ -150,9 +150,19 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 	{
 		close(request_fd[0]);
 		close(response_fd[1]);
-		set fds[0] = response_fd[0], POLLIN;
-		set	fds[1] = request_fd[1], POLLOUT;
+		struct pollfd	fds
+		{
+			fds[0].fd = response_fd[0];
+			fds[0].events = POLLIN;
+			fds[0].revents = 0;
+
+			fds[1].fd = request_fd[1];
+			fds[1].events = POLLOUT;
+			fds[1].revents = 0;
+		}
 		int			status;
+		std::string	responseOutput;
+		char		responseBuf[4096];
 		if (_method == "POST" && _bodyFilePath != "not-set")
 		{
 			int	opennedBodyFile = open(_bodyFilePath.c_str(), O_RDONLY);
@@ -204,7 +214,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 						if (bytesRead == 0)
 						{
 							close(opennedBodyFile);
-							fds.fd[1] = -1;
+						//	fds[1].fd = -1;
 							break ;
 						}
 						ssize_t	totalWritten = 0;
@@ -223,31 +233,26 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 							totalWritten += bytesWritten;
 						}
 					}
+					if (fds.revents & POLLIN)
+					{
+						ssize_t bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf)); //buf needs to be cleared every time
+						if (bytesRead == -1)
+						{
+							close(response_fd[0]);
+							std::cerr << "CGI response read failed\n";
+							waitpid(_pid, &status, WNOHANG);
+							return("");
+						}
+						if (bytesRead == 0)
+						{
+							fds[0].fd = -1;
+							break ;
+						}
+						responseOutput.append(responseBuf, bytesRead);
+					}
 				}
-			}
-			close(request_fd[1]);
-		}
-		std::string	responseOutput;
-		char		responseBuf[4096];
-		while (true)
-		{
-			if (fds.revents & POLLIN)
-			{
-				ssize_t bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf)); //buf needs to be cleared every time
-				if (bytesRead == -1)
-				{
-					close(response_fd[0]);
-					std::cerr << "CGI response read failed\n";
-					waitpid(_pid, &status, WNOHANG);
-					return("");
-				}
-				if (bytesRead == 0)
-				{
-					fds.fd[0] = -1;
-					break ;
-				}
-				responseOutput.append(responseBuf, bytesRead);
-			}
+				fds[1].fd = -1;
+				close(request_fd[1]);
 		}
 		close(response_fd[0]);
 		waitpid(_pid, &status, 0);
