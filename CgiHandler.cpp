@@ -30,8 +30,8 @@ CgiHandler::CgiHandler()
 }
 
 CgiHandler::CgiHandler(HttpRequest &request, ServerConfig &location) //location info for cgi scripts
-:// _cgiPath(location.getRoute()), //find the location of cgi
-//_cgiExtention(location.getCgiExtention()), //rename later
+:// _cgiPath(location.getRoute()), //cgiPass
+//_cgiExtention(location.getCgiExtention()), //for validation
 _method(request.getMethod()),
 _queryString(""),
 _contentType(""),
@@ -77,8 +77,6 @@ _serverName("")
 		|| !_headers.count("host"))
 	{
 		std::cerr << "Malformed request\n";
-//		delete _scriptPath;
-//		delete _queryString;
 	}
 	_contentType = _headers.at("content-type");
 	_serverName = _headers.at("host");
@@ -123,17 +121,16 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 //		std::vector<std::string>	_envs;
 		_envs.push_back("REQUEST_METHOD=" + _method);
 		_envs.push_back("QUERY_STRING=" + _queryString);
-		if (request.getIsChunked())
+		if (request.getIsChunked()) //validate content_length to be under the maximum allowed
 			_envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getFullChunkBodySize()));
 		else
 			_envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getContentLength()));
 		_envs.push_back("SERVER_PROTOCOL=" + request.getVersion());
 		_envs.push_back("SCRIPT_FILENAME=" + _scriptPath);
-//		_envs.push_back("BODY_PATH=" + _bodyFilePath);
 //		_envs.push_back("PATH_INFO=" + _cgiPath);
-		_envs.push_back("CONTENT_TYPE=" + _contentType);
+		_envs.push_back("CONTENT_TYPE=" + _contentType); //validation????????????????????
 		_envs.push_back("SERVER_NAME=" + _serverName);
-		_envs.push_back("REDIRECT_STATUS=200");
+		_envs.push_back("REDIRECT_STATUS=200");//?????????????
 		std::vector<char *>	_envp;
 		for (auto &s : _envs)
 			_envp.push_back(const_cast<char *>(s.c_str()));
@@ -151,15 +148,13 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		close(request_fd[0]);
 		close(response_fd[1]);
 		struct pollfd	fds[2];
-		{
-			fds[0].fd = response_fd[0];
-			fds[0].events = POLLIN;
-			fds[0].revents = 0;
+		fds[0].fd = response_fd[0];
+		fds[0].events = POLLIN;
+		fds[0].revents = 0;
 
-			fds[1].fd = request_fd[1];
-			fds[1].events = POLLOUT;
-			fds[1].revents = 0;
-		}
+		fds[1].fd = request_fd[1];
+		fds[1].events = POLLOUT;
+		fds[1].revents = 0;
 		int			status;
 		std::string	responseOutput;
 		char		responseBuf[4096];
@@ -191,7 +186,10 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				close(request_fd[1]);
 				close(response_fd[0]);
 				if (opennedBodyFile != -1)
+				{
 					close(opennedBodyFile);
+					opennedBodyFile = -1;
+				}
 				std::cerr << "Error in CGI poll()\n";
 				waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
 				return("");
@@ -201,7 +199,10 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				close(request_fd[1]);
 				close(response_fd[0]);
 				if (opennedBodyFile != -1)
+				{
 					close(opennedBodyFile);
+					opennedBodyFile = -1;
+				}
 				std::cerr << "CGI poll timeout\n";
 				waitpid(_pid, &status, WNOHANG);
 				return("");
@@ -213,14 +214,22 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				{
 					close(request_fd[1]);
 					close(response_fd[0]);
-					close(opennedBodyFile);
+					if (opennedBodyFile != -1)
+					{
+						close(opennedBodyFile);
+						opennedBodyFile = -1;
+					}
 					std::cerr << "CGI body file read failed\n";
 					waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
 					return("");
 				}
 				if (bytesRead == 0)
 				{
-					close(opennedBodyFile);
+					if (opennedBodyFile != -1)
+					{
+						close(opennedBodyFile);
+						opennedBodyFile = -1;
+					}
 					close(request_fd[1]);
 					fds[1].fd = -1;
 					continue ;
@@ -233,7 +242,11 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					{
 						close(request_fd[1]);
 						close(response_fd[0]);
-						close(opennedBodyFile);
+						if (opennedBodyFile != -1)
+						{
+							close(opennedBodyFile);
+							opennedBodyFile = -1;
+						}
 						std::cerr << "CGI body file write to child failed\n";
 						waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
 						return("");
