@@ -188,18 +188,20 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 			int	ready = poll(fds, 2, timeout);
 			if (ready == -1)
 			{
-				std::cerr << "Error in CGI poll()\n";
 				close(request_fd[1]);
 				close(response_fd[0]);
-				close(opennedBodyFile);
-				waitpid(_pid, &status, WNOHANG);
+				if (opennedBodyFile != -1)
+					close(opennedBodyFile);
+				std::cerr << "Error in CGI poll()\n";
+				waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
 				return("");
 			}
 			else if (ready == 0)
 			{
 				close(request_fd[1]);
 				close(response_fd[0]);
-				close(opennedBodyFile);
+				if (opennedBodyFile != -1)
+					close(opennedBodyFile);
 				std::cerr << "CGI poll timeout\n";
 				waitpid(_pid, &status, WNOHANG);
 				return("");
@@ -213,7 +215,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					close(response_fd[0]);
 					close(opennedBodyFile);
 					std::cerr << "CGI body file read failed\n";
-					waitpid(_pid, &status, WNOHANG);
+					waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
 					return("");
 				}
 				if (bytesRead == 0)
@@ -233,7 +235,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 						close(response_fd[0]);
 						close(opennedBodyFile);
 						std::cerr << "CGI body file write to child failed\n";
-						waitpid(_pid, &status, WNOHANG);
+						waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
 						return("");
 					}
 					totalWritten += bytesWritten;
@@ -246,7 +248,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				{
 					close(response_fd[0]);
 					std::cerr << "CGI response read failed\n";
-					waitpid(_pid, &status, WNOHANG);
+					waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
 					return("");
 				}
 				if (bytesRead == 0)
@@ -258,7 +260,8 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				responseOutput.append(responseBuf, bytesRead);
 			}
 		}
-		close(response_fd[0]);
+		if (fds[0].fd != -1)
+			close(response_fd[0]);
 		waitpid(_pid, &status, 0);
 		if (!WIFEXITED(status))
 			return ("");
