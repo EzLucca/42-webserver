@@ -73,7 +73,7 @@ _serverName("")
 	std::cout << "_scriptPath: " + _scriptPath << std::endl;
 	//***********************************
 
-	if  (!_headers.count("content-type") || !_headers.count("host"))
+	if  (!_headers.count("content-type") || !_headers.count("host")) //too strict
 	{
 		std::cerr << "Malformed request\n";
 //		delete _scriptPath;
@@ -116,13 +116,13 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		if (dup2(request_fd[0], STDIN_FILENO) < 0 || (dup2(response_fd[1], STDOUT_FILENO) < 0))
 		{
 			std::cerr << "CGI dup2 failed\n";
-			_exit(1);
+			return ("");
 		}
 		close(request_fd[0]);
 		close(response_fd[1]);
 //		std::vector<std::string>	_envs;
 		_envs.push_back("REQUEST_METHOD=" + _method);
-		_envs.push_back("QUERY_STRINGS=" + _queryString);
+		_envs.push_back("QUERY_STRING=" + _queryString);
 		if (request.getIsChunked())
 			_envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getFullChunkBodySize()));
 		else
@@ -135,10 +135,10 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		_envs.push_back("SERVER_NAME=" + _serverName);
 		_envs.push_back("REDIRECT_STATUS=200");
 		std::vector<char *>	_envp;
-		int	i = 0;
+//		int	i = 0;
 		for (auto &s : _envs)
 			_envp.push_back(const_cast<char *>(s.c_str()));
-		_envp[i] = NULL;
+//		_envp[i] = NULL;
 		std::vector<char *> _args;
 //		_args.push_back(const_cast<char *>(_cgiPath.cstr()));
 		_args.push_back(const_cast<char *>(_scriptPath.c_str()));
@@ -156,7 +156,8 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		{
 			close(request_fd[1]);
 			close(response_fd[0]);
-			exit(1);
+			std::cerr << "CGI write failed\n";
+			return ("");
 		}
 		close(request_fd[1]);
 		std::string	responseOutput;
