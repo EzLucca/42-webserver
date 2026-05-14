@@ -150,9 +150,9 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 	{
 		close(request_fd[0]);
 		close(response_fd[1]);
-		if (_method == "POST" && _bodyFilePath)
+		if (_method == "POST" && _bodyFilePath != "not-set")
 		{
-			int	opennedBodyFile = open(_bodyFilePath, O_RDONLY);
+			int	opennedBodyFile = open(_bodyFilePath.c_str(), O_RDONLY);
 			if (opennedBodyFile < 0)
 			{
 				close(request_fd[1]);
@@ -173,6 +173,11 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					std::cerr << "CGI script file read failed\n";
 					return ("");
 				}
+				if (bytesRead == 0)
+				{
+					close(opennedBodyFile);
+					break ;
+				}
 				ssize_t	bytesWritten = write(request_fd[1], bodyBuf, bytesRead); // maybe useless???????
 				if (bytesWritten == -1)
 				{
@@ -181,11 +186,6 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					close(opennedBodyFile);
 					std::cerr << "CGI write failed\n";
 					return ("");
-				}
-				if (bytesRead == 0)
-				{
-					close(opennedBodyFile);
-					break ;
 				}
 			}
 		}
@@ -199,7 +199,8 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 			if (bytesRead == -1)
 			{
 				close(response_fd[0]);
-				exit(1);
+				std::cerr << "CGI response read failed\n";
+				return("");
 			}
 			if (bytesRead == 0)
 				break ;
