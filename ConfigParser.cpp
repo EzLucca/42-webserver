@@ -7,45 +7,45 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <arpa/inet.h>
 
-static void printServerConfig(ServerConfig config)
+static int checkExistance(std::string filePath)
 {
-    // TEST: remove after
-    std::cout << "Port: " << config.getPort() << std::endl;
-    std::cout << "Host: " << config.getHost() << std::endl;
-    std::cout << "ServerName: " << config.getServerName() << std::endl;
-    std::cout << "ClientMaxBodySize: " << config.getClientMaxBodySize() << std::endl;
-    for (const auto& pair : config.getErrorPages())
+    if(!std::filesystem::exists(filePath))
     {
-        std::cout << "ErrorPage[" << pair.first << "] = "
-            << pair.second << std::endl;
+        std::cout << filePath << std::endl; 
+        std::cout << "The path is invalid!" << std::endl;
+        exit(2);
     }
-
-    for (const auto& [routePath, route] : config.getRoutes())
-    {
-        std::cout << "----------------------" << std::endl;
-        std::cout << "  location: " << routePath << std::endl;
-
-        for (const auto& [key, vec] : route.vectorRoute)
-        {
-            std::cout << "    " << key << " : ";
-
-            for (const auto& value : vec)
-                std::cout << value << " ";
-
-            std::cout << std::endl;
-        }
-        std::cout << "----------------------" << std::endl;
-    }
+    return 0;
 }
 
 void    setDirectives(ServerConfig &config, std::map<std::string, std::string> &values)
 {
-    config.setPort(stoi(values["listen"]));
-    config.setHost(values["host"]);
+    // TODO: port validation
+    if(values["listen"].empty())
+        std::cerr << "port empty." << std::endl;
+    int port = stoi(values["listen"]);
+    if (port < 1024 || port > 49151)
+    {
+        std::cerr << "port out of range." << std::endl;
+        exit(2);
+    }
+    config.setPort(port);
+
+    // TODO: host validation
+    std::string host = values["host"];
+    struct sockaddr_in sa;
+
+    if(inet_pton(AF_INET, host.c_str(), &(sa.sin_addr)) == 1)
+        config.setHost(host);
+    else
+        std::cerr << "host invalid" << std::endl;
+
+    // TODO: server name validation
     config.setServerName(values["server_name"]);
 
-    // check for body size in MB
+    // TODO: client max body size validation
     if (values["client_max_body_size"].find("M") != std::string::npos)
     {
         config.setClientMaxBodySize(stoi(values["client_max_body_size"]));
@@ -66,7 +66,7 @@ std::string ConfigParser::trim(const std::string& str)
     return str.substr(start, end - start + 1);
 }
 
-void ConfigParser::parselocation(std::istringstream &stream, size_t& pos, RouteConfig &config)
+void ConfigParser::parselocation(std::istream &stream, RouteConfig &config)
 {
     std::string key;
     std::string value;
@@ -76,13 +76,10 @@ void ConfigParser::parselocation(std::istringstream &stream, size_t& pos, RouteC
         if (key == "}")
             break;
 
-        pos += key.size();
-
         std::getline(stream, value);
 
         value = trim(value);
 
-        // remove ';'
         if (!value.empty() && value.back() == ';')
             value.pop_back();
 
@@ -99,68 +96,106 @@ void ConfigParser::parselocation(std::istringstream &stream, size_t& pos, RouteC
     }
 }
 
-void    ConfigParser::secondparse(ServerConfig& config, std::string workingBuffer, size_t& pos)
+bool ConfigParser::shouldSkipLine(const std::string& line)
 {
-    std::map<std::string, std::string> values;
-    std::istringstream stream(workingBuffer);
+    return line.empty();
+}
+
+bool ConfigParser::isBlockEnd(const std::string& line)
+{
+    return line == "}";
+}
+
+bool ConfigParser::isServerStart(const std::string& line)
+{
+    return line == "server {";
+}
+
+void ConfigParser::parseErrorPage( const std::string& value, ServerConfig& config)
+{
+    std::istringstream iss(value);
+
+    int errorCode;
+    std::string errorPath;
+
+    iss >> errorCode >> errorPath;
+
+    checkExistance(errorPath);
+    config.setErrorPage(errorCode, errorPath);
+}
+
+// TODO: validate location, root, cig_pass and methods.
+void ConfigParser::parseLocationBlock( const std::string& value, std::istream& stream, ServerConfig& config)
+{
+    RouteConfig nestedLocation;
+
+    if (value.find("{") == std::string::npos)
+        throw std::runtime_error("{ location not found");
+
+    size_t locationPos = value.find(" ");
+
+    std::string locationValue = value.substr(0, locationPos);
+    // checkExistance(locationValue);
+
+    parselocation(stream, nestedLocation);
+
+    config.setRoute(locationValue, nestedLocation);
+}
+
+void ConfigParser::parseDirective( const std::string& line, std::istream& stream, ServerConfig& config, std::map<std::string, std::string>& values)
+{
+    std::istringstream linestream(line);
+
     std::string key;
     std::string value;
-    std::string line;
 
-    while (std::getline(stream, line)) {
-        std::istringstream linestream(line);
-        std::string key, value;
+    linestream >> key;
 
-        linestream >> key;
-        pos += key.size();
-        if(key == "server" || key.empty())
-            continue;
-        std::getline(linestream, value);
+    std::getline(linestream, value);
 
-        value = trim(value);
+    value = trim(value);
 
-        // remove trailing ';'
-        if (!value.empty() && value.back() == ';')
-            value.pop_back();
-
-        values[key] = value;
-
-        if (key == "error_page")
-        {
-            std::istringstream iss(value);
-
-            int errorCode;
-            std::string errorPath;
-
-            iss >> errorCode >> errorPath;
-
-            config.setErrorPage(errorCode, errorPath);
-
-            continue;
-        }
-        while (key == "location")
-        {
-            RouteConfig nestedLocation;
-
-            if (value.find("{") == std::string::npos)
-            {
-                std::cout << "{ location not found" << std::endl;
-                exit(2);
-            }
-
-            size_t locationPos = value.find(" ");
-            std::string locationValue = value.substr(0, locationPos);
-
-            parselocation(stream, pos, nestedLocation);
-            config.setRoute(locationValue, nestedLocation);
-            break;
-        }
-
+    if (!value.empty() && value.back() == ';')
+        value.pop_back();
+    if (key == "error_page")
+    {
+        parseErrorPage(value, config);
+        return;
     }
+    if (key == "location")
+    {
+        parseLocationBlock(value, stream, config);
+        return;
+    }
+    values[key] = value;
+}
 
+bool ConfigParser::parseConfig(ServerConfig& config, std::istream& stream)
+{
+    std::map<std::string, std::string> values;
+
+    std::string line;
+    bool foundServer = false;
+
+    while (std::getline(stream, line))
+    {
+        line = trim(line);
+
+        if (shouldSkipLine(line))
+            continue;
+        if (isBlockEnd(line))
+            break;
+        if (isServerStart(line))
+        {
+            foundServer = true;
+            continue;
+        }
+        parseDirective(line, stream, config, values);
+    }
+    if (!foundServer)
+        return false;
     setDirectives(config, values);
-    // function to set the values from the map to the config object
-    printServerConfig(config);
+    return true;
 }
 
 ConfigParser::ConfigParser() {
@@ -183,114 +218,17 @@ static int openFile(const std::string &file_path, std::fstream *fstream) {
     return (0);
 }
 
-// static int checkExistance(std::string filePath)
-// {
-//     if(!std::filesystem::exists(filePath))
-//     {
-//         std::cout << filePath << std::endl; 
-//         std::cout << "The path is invalid!" << std::endl;
-//         exit(2);
-//     }
-//     return 0;
-// }
-
 void ConfigParser::setConfigBuffer(std::string line) {
     _configBuffer.append(line);
     _configBuffer.append("\n");
 }
 
-// void ConfigParser::setConfigLocations(ServerConfig& config, std::string workingBuffer, size_t& pos)
-// {
-//     while (true) {
-//         size_t found = workingBuffer.find("location", pos);
-//         if (found == std::string::npos)
-//             break;
-//
-//         RouteConfig route; // create a fresh RouteConfig each iteration
-//         route.path = findConfigKey<std::string>("location", workingBuffer, pos);
-//         // check for {
-//         // Optional keys: root, index, allow_methods, autoindex
-//         try {
-//             route.root = findConfigKey<std::string>("root", workingBuffer, pos);
-//             // TODO: validate root folder
-//             checkExistance(route.root);
-//         } catch (...) { route.root = ""; }
-//
-//         try {
-//             route.index = findConfigKey<std::string>("index", workingBuffer, pos);
-//         } catch (...) { route.index = ""; }
-//
-//         try {
-//             std::string methodsStr = findConfigKey<std::string>("allow_methods", workingBuffer, pos);
-//             std::istringstream iss(methodsStr);
-//             std::string method;
-//             while (iss >> method) {
-//                 // TODO: validate methods GET POST DELETE check if location allows it
-//
-//                 route.allowedMethods.push_back(method);
-//             }
-//         } catch (...) { route.allowedMethods.clear(); }
-//
-//         try {
-//             std::string autoIndexStr = findConfigKey<std::string>("autoindex", workingBuffer, pos);
-//             route.autoIndex = (autoIndexStr == "on");
-//         } catch (...) { route.autoIndex = false; }
-//
-//         // Save this route into the ServerConfig _routes map
-//         config.setRoute(route.path, route);
-//     }
-// }
-
-// void ConfigParser::setConfigContext(ServerConfig& config, std::string workingBuffer, size_t& pos)
-// {
-//     int port = findConfigKey<int>("listen", workingBuffer, pos);
-//     // TODO: range of ports 1024 - 49151
-//     if (port < 1024 || port > 49151)
-//     {
-//         std::cerr << "port out of range." << std::endl;
-//         exit(2);
-//     }
-//
-//     std::string host = findConfigKey<std::string>("host", workingBuffer, pos);
-//     std::string  serverName = findConfigKey<std::string>("server_name", workingBuffer, pos);        // awesomeserver
-//
-//     size_t  clientMaxBodySize = findConfigKey<size_t>("client_max_body_size", workingBuffer, pos);
-//     // TODO: check for unit type.
-//     // 10M or 10MB
-//
-//     config.setPort(port);
-//     config.setHost(host);
-//     config.setServerName(serverName);
-//     config.setClientMaxBodySize(clientMaxBodySize);
-//
-//     // getting all the error pages
-//     while (true) {
-//         size_t found = workingBuffer.find("error_page", pos);
-//         if (found == std::string::npos)
-//             break;
-//         std::string errorPages = findConfigKey<std::string>("error_page", workingBuffer, pos);
-//         std::istringstream iss(errorPages);
-//         int errorCode;
-//         std::string errorPath;
-//
-//         iss >> errorCode >> errorPath;
-//         // TODO: check errorpath
-//         checkExistance(errorPath);
-//
-//         config.setErrorPage(errorCode, errorPath);
-//     }
-//     // setConfigLocations(config, workingBuffer, config.pos);
-//     setConfigLocations(config, workingBuffer, pos);
-//
-//     // printconfig(config); // DEBUG:
-// }
-
 std::string ConfigParser::getConfigBuffer() { return (_configBuffer); }
 
 // IMPORTANT: Parse should receive the manager object
-// int ConfigParser::parse(std::string configFile, ServerManager& server) 
-int ConfigParser::parse(std::string configFile, ServerConfig& config) 
+int ConfigParser::parse(std::string configFile, ServerManager& server) 
 {
+    // TODO: check if file is open and permissions
     std::fstream fstream;
     if (configFile.empty() || openFile(configFile, &fstream)) {
         std::cerr << "Config file name is not correct." << std::endl;
@@ -312,11 +250,19 @@ int ConfigParser::parse(std::string configFile, ServerConfig& config)
     // workingBuffer now have all the configfile
     const std::string &workingBuffer = getConfigBuffer();
 
-    size_t pos = 0;
-
     // TEST:
     try{
-        secondparse(config, workingBuffer, pos);
+        std::istringstream stream(workingBuffer);
+
+        while (stream)
+        {
+            ServerConfig config;
+
+            if(!parseConfig(config, stream))
+                break;
+            server.addServer(config);
+        }
+        server.printServers();
     }
     catch (const std::exception& e) 
     {
@@ -325,19 +271,5 @@ int ConfigParser::parse(std::string configFile, ServerConfig& config)
     exit(1);
     // ~TEST:
 
-
-    // creating the ServerConfig object
-    // get blocks
-    while (true) {
-        // ServerConfig config;
-        // config.pos = 0; // track position
-        size_t found = workingBuffer.find("server {", pos); // server { for validation
-        if (found == std::string::npos)
-            break;
-        setConfigContext(config, workingBuffer, pos); 
-        // server.addServer(config);
-        // std::cout << pos << std::endl;
-    }
-    // printconfig(config); // DEBUG:
     return 0;
-    }
+}

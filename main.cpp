@@ -65,8 +65,8 @@ int main(int argc, char **argv) {
     // Start parsing the config file
     std::string configFile;
     ConfigParser config;
-    // ServerManager server;
-    ServerConfig server;
+    ServerManager server;
+    // ServerConfig server;
 
     configFile = argv[1];
 
