@@ -8,6 +8,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <poll.h>
 #include "HttpRequest.hpp"
 #include "ServerConfig.hpp"
 
