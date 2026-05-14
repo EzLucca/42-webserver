@@ -163,9 +163,10 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 		int			status;
 		std::string	responseOutput;
 		char		responseBuf[4096];
+		int	opennedBodyFile = -1;
 		if (_method == "POST" && _bodyFilePath != "not-set")
 		{
-			int	opennedBodyFile = open(_bodyFilePath.c_str(), O_RDONLY);
+			opennedBodyFile = open(_bodyFilePath.c_str(), O_RDONLY);
 			if (opennedBodyFile < 0)
 			{
 				close(request_fd[1]);
@@ -174,6 +175,11 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 				waitpid(_pid, &status, 0);
 				return("");
 			}
+		}
+		else
+		{
+			close(request_fd[1]);
+			fds[1].fd = -1;
 		}
 		while (fds[0].fd != -1 || fds[1].fd != -1)
 		{
@@ -215,6 +221,7 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					close(opennedBodyFile);
 					close(request_fd[1]);
 					fds[1].fd = -1;
+					continue ;
 				}
 				ssize_t	totalWritten = 0;
 				while (totalWritten < bytesRead)
@@ -232,36 +239,31 @@ std::string	CgiHandler::cgiProcess(HttpRequest &request)
 					totalWritten += bytesWritten;
 				}
 			}
-			else
+			if (fds[0].revents & POLLIN)
 			{
-				close(request_fd[1]);
-				fds[1].fd = -1;
-				if (fds[0].revents & POLLIN)
+				ssize_t bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf)); //buf needs to be cleared every time
+				if (bytesRead == -1)
 				{
-					ssize_t bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf)); //buf needs to be cleared every time
-					if (bytesRead == -1)
-					{
-						close(response_fd[0]);
-						std::cerr << "CGI response read failed\n";
-						waitpid(_pid, &status, WNOHANG);
-						return("");
-					}
-					if (bytesRead == 0)
-					{
-						fds[0].fd = -1;
-						break ;
-					}
-					responseOutput.append(responseBuf, bytesRead);
+					close(response_fd[0]);
+					std::cerr << "CGI response read failed\n";
+					waitpid(_pid, &status, WNOHANG);
+					return("");
 				}
+				if (bytesRead == 0)
+				{
+					close(response_fd[0]);
+					fds[0].fd = -1;
+					continue ;
+				}
+				responseOutput.append(responseBuf, bytesRead);
 			}
 		}
 		close(response_fd[0]);
 		waitpid(_pid, &status, 0);
-		if (WIFEXITED(status))
-		{
-			if (WEXITSTATUS(status) != 0) //check correct exit status
-				return  ("");
-		}
+		if (!WIFEXITED(status))
+			return ("");
+		if (WEXITSTATUS(status) != 0) //check correct exit status
+			return  ("");
 		return(responseOutput);
 	}
 }
