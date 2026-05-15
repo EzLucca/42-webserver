@@ -87,9 +87,7 @@ const RouteConfig*  ServerConfig::getRoute(const std::string& key) const
 
     if (it != _routes.end())
     {
-        // std::cout << "Route found" << std::endl;
         return &it->second;
     }
-    // std::cout << "Route not found" << std::endl;
-    return NULL; // TODO: returning null will break the stuff
+    return NULL;
 }

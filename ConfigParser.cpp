@@ -1,60 +1,116 @@
 #include "ConfigParser.hpp"
-#include "ServerConfig.hpp"
-#include "HttpParser.hpp"
-#include <cctype>
-#include <fstream> //For ile manipulation
-#include <sstream> //For ile manipulation
-#include <string>
-#include <vector>
-#include <filesystem>
-#include <arpa/inet.h>
 
-static int checkExistance(std::string filePath)
+/**
+ * @brief Checks if a file or directory exists.
+ *
+ * This function uses std::filesystem to verify whether the given file path
+ * exists. If the path is invalid, it prints an error message and terminates
+ * the program.
+ *
+ * @param filePath Path to the file or directory to check.
+ */
+void validatePath(const std::string& filePath)
 {
-    if(!std::filesystem::exists(filePath))
-    {
-        std::cout << filePath << std::endl; 
-        std::cout << "The path is invalid!" << std::endl;
-        exit(2);
-    }
-    return 0;
+    if (!std::filesystem::exists(filePath))
+        throw std::invalid_argument("path does not exist: " + filePath);
 }
 
-void    setDirectives(ServerConfig &config, std::map<std::string, std::string> &values)
+int validateBodySize(const std::map<std::string, std::string>& values)
 {
-    // TODO: port validation
-    if(values["listen"].empty())
-        std::cerr << "port empty." << std::endl;
-    int port = stoi(values["listen"]);
-    if (port < 1024 || port > 49151)
-    {
-        std::cerr << "port out of range." << std::endl;
-        exit(2);
-    }
-    config.setPort(port);
+    auto it = values.find("client_max_body_size");
+    if (it == values.end() || it->second.empty())
+        return 0;
 
-    // TODO: host validation
-    std::string host = values["host"];
+    std::string val = it->second;
+
+    if (val.back() == 'M')
+    {
+        int size = std::stoi(val.substr(0, val.size() - 1));
+        return size * 1024 * 1024;
+    }
+    return std::stoi(val);
+}
+
+std::string validateHost(std::string hostValue)
+{
     struct sockaddr_in sa;
 
-    if(inet_pton(AF_INET, host.c_str(), &(sa.sin_addr)) == 1)
-        config.setHost(host);
-    else
-        std::cerr << "host invalid" << std::endl;
-
-    // TODO: server name validation
-    config.setServerName(values["server_name"]);
-
-    // TODO: client max body size validation
-    if (values["client_max_body_size"].find("M") != std::string::npos)
-    {
-        config.setClientMaxBodySize(stoi(values["client_max_body_size"]));
-    }
-    else
-        config.setClientMaxBodySize(0);
-
+    if(inet_pton(AF_INET, hostValue.c_str(), &(sa.sin_addr)) != 1)
+        throw std::invalid_argument("host invalid");
+    return hostValue;
 }
 
+int validatePort(std::map<std::string, std::string> &input)
+{
+    if (input.find("listen") == input.end())
+        throw std::invalid_argument("missing listen key");
+    if (input.empty())
+        throw std::invalid_argument("port is empty");
+
+    size_t idx = 0;
+    int port = 0;
+
+    // check for "a8080"
+    port = std::stoi(input["listen"], &idx);
+
+    // Ensure full string was consumed (no "8080abc")
+    if (idx != input["listen"].size())
+        throw std::invalid_argument("port contains invalid characters");
+
+    // Range check (typical user-space ports)
+    if (port < 1024 || port > 49151)
+        throw std::out_of_range("port out of allowed range (1024–49151)");
+
+    return port;
+}
+
+/**
+ * @brief Applies parsed configuration values to a ServerConfig object.
+ *
+ * This function validates and assigns global server configuration directives
+ * such as port, host, server name, and client max body size.
+ *
+ * Basic validation is performed:
+ * - Port must be within valid range (1024–49151)
+ * - Host must be a valid IPv4 address
+ * - Client max body size is parsed from string
+ *
+ * @param config Reference to the ServerConfig to populate.
+ * @param values Map containing raw configuration key-value pairs.
+ */
+void    setDirectives(ServerConfig &config, std::map<std::string, std::string> &values)
+{
+    try
+    {
+        int port = validatePort(values);
+        config.setPort(port);
+
+        std::string host = validateHost(values["host"]);
+        config.setHost(host);
+
+        auto nameIt = values.find("server_name");
+        if (nameIt == values.end() || nameIt->second.empty())
+            throw std::invalid_argument("missing server_name");
+        config.setServerName(values["server_name"]);
+
+        int ClientMaxBodySize = validateBodySize(values);
+        config.setClientMaxBodySize(ClientMaxBodySize);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Config error: " << e.what() << std::endl;
+        std::exit(2);
+    }
+}
+
+/**
+ * @brief Removes leading and trailing whitespace characters from a string.
+ *
+ * Whitespace includes spaces, tabs, carriage returns, and newlines.
+ *
+ * @param str Input string to trim.
+ * @return std::string Trimmed string.
+ */
 std::string ConfigParser::trim(const std::string& str)
 {
     size_t start = str.find_first_not_of(" \t\n\r");
@@ -66,6 +122,20 @@ std::string ConfigParser::trim(const std::string& str)
     return str.substr(start, end - start + 1);
 }
 
+/**
+ * @brief Parses a location block inside the configuration file.
+ *
+ * This function reads directives inside a location block until it encounters
+ * a closing brace ('}'). Each directive is parsed into key-value pairs and
+ * stored in the RouteConfig structure.
+ *
+ * Special handling:
+ * - allowed_methods are split into multiple values
+ * - trailing semicolons are removed
+ *
+ * @param stream Input stream positioned inside a location block.
+ * @param config RouteConfig object to populate with parsed values.
+ */
 void ConfigParser::parselocation(std::istream &stream, RouteConfig &config)
 {
     std::string key;
@@ -83,6 +153,10 @@ void ConfigParser::parselocation(std::istream &stream, RouteConfig &config)
         if (!value.empty() && value.back() == ';')
             value.pop_back();
 
+        if (key == "root" || key == "cgi_pass")
+        {
+            validatePath(value);
+        }
         if (key == "allowed_methods")
         {
             std::stringstream ss(value);
@@ -96,21 +170,55 @@ void ConfigParser::parselocation(std::istream &stream, RouteConfig &config)
     }
 }
 
+/**
+ * @brief Determines whether a configuration line should be ignored.
+ *
+ * Currently, only empty lines are considered skippable.
+ *
+ * @param line Input line from configuration file.
+ * @return true if the line should be ignored, false otherwise.
+ */
 bool ConfigParser::shouldSkipLine(const std::string& line)
 {
     return line.empty();
 }
 
+/**
+ * @brief Checks whether a line represents the end of a block.
+ *
+ * The function detects closing braces used in configuration syntax.
+ *
+ * @param line Input line.
+ * @return true if the line is a block terminator ("}"), false otherwise.
+ */
 bool ConfigParser::isBlockEnd(const std::string& line)
 {
     return line == "}";
 }
 
+/**
+ * @brief Checks whether a line marks the start of a server block.
+ *
+ * Detects the keyword that begins a server configuration block.
+ *
+ * @param line Input line.
+ * @return true if the line is "server {", false otherwise.
+ */
 bool ConfigParser::isServerStart(const std::string& line)
 {
     return line == "server {";
 }
 
+/**
+ * @brief Parses an error_page directive and stores it in the server config.
+ *
+ * This function extracts an HTTP error code and its associated file path
+ * from the provided directive value. It validates that the error page path
+ * exists before assigning it to the ServerConfig object.
+ *
+ * @param value  String containing the error code and file path.
+ * @param config ServerConfig object where the error page mapping is stored.
+ */
 void ConfigParser::parseErrorPage( const std::string& value, ServerConfig& config)
 {
     std::istringstream iss(value);
@@ -120,11 +228,10 @@ void ConfigParser::parseErrorPage( const std::string& value, ServerConfig& confi
 
     iss >> errorCode >> errorPath;
 
-    checkExistance(errorPath);
+    validatePath(errorPath);
     config.setErrorPage(errorCode, errorPath);
 }
 
-// TODO: validate location, root, cig_pass and methods.
 void ConfigParser::parseLocationBlock( const std::string& value, std::istream& stream, ServerConfig& config)
 {
     RouteConfig nestedLocation;
@@ -135,13 +242,31 @@ void ConfigParser::parseLocationBlock( const std::string& value, std::istream& s
     size_t locationPos = value.find(" ");
 
     std::string locationValue = value.substr(0, locationPos);
-    // checkExistance(locationValue);
 
     parselocation(stream, nestedLocation);
 
     config.setRoute(locationValue, nestedLocation);
 }
 
+/**
+ * @brief Parses a single configuration directive line.
+ *
+ * This function extracts a key-value pair from a configuration line and
+ * processes it according to the directive type.
+ *
+ * - If the directive is `error_page`, it is forwarded to `parseErrorPage()`.
+ * - If the directive is `location`, it triggers parsing of a nested location block.
+ * - Otherwise, the key-value pair is stored in the provided `values` map
+ *   for later assignment to the ServerConfig object.
+ *
+ * The function also trims whitespace and removes trailing semicolons
+ * from directive values.
+ *
+ * @param line    A single line from the configuration file.
+ * @param stream  Input stream (used for parsing nested blocks like location).
+ * @param config  ServerConfig object being populated.
+ * @param values  Temporary storage for simple key-value directives.
+ */
 void ConfigParser::parseDirective( const std::string& line, std::istream& stream, ServerConfig& config, std::map<std::string, std::string>& values)
 {
     std::istringstream linestream(line);
@@ -170,6 +295,23 @@ void ConfigParser::parseDirective( const std::string& line, std::istream& stream
     values[key] = value;
 }
 
+/**
+ * @brief Parses a server configuration block from an input stream.
+ *
+ * This function reads lines from the provided input stream and processes
+ * them to extract server configuration directives. It skips irrelevant
+ * lines, detects the beginning and end of a server block, and delegates
+ * directive parsing to helper functions.
+ *
+ * Parsed directive values are stored in a temporary map and later applied
+ * to the provided ServerConfig object.
+ *
+ * @param config Reference to the ServerConfig object to be filled.
+ * @param stream Input stream containing the configuration file data.
+ *
+ * @return true if a valid server block was found and successfully parsed,
+ *         false if no server block was detected.
+ */
 bool ConfigParser::parseConfig(ServerConfig& config, std::istream& stream)
 {
     std::map<std::string, std::string> values;
@@ -206,6 +348,11 @@ ConfigParser::~ConfigParser() {
     std::cout << "ConfigParser destructor called." << std::endl;
 }
 
+/**
+ * @param file_path contain the path of the config file
+ * @param fstream file stream
+ * Return a int 
+ */
 static int openFile(const std::string &file_path, std::fstream *fstream) {
     if (fstream->is_open())
         fstream->close();
@@ -225,19 +372,24 @@ void ConfigParser::setConfigBuffer(std::string line) {
 
 std::string ConfigParser::getConfigBuffer() { return (_configBuffer); }
 
-// IMPORTANT: Parse should receive the manager object
+/**
+ * @param configFile contain the path of the config file
+ * @param server The main object to contain all the servers objects
+ * Return a int 
+ */
 int ConfigParser::parse(std::string configFile, ServerManager& server) 
 {
     // TODO: check if file is open and permissions
     std::fstream fstream;
     if (configFile.empty() || openFile(configFile, &fstream)) {
+        // throw std::invalid_argument("Config file error");
         std::cerr << "Config file name is not correct." << std::endl;
-        return (0);
+        return (1);
     }
     std::string line;
 
     std::ifstream file(configFile);
-    while (std::getline(file, line)) // Write everything to our string object
+    while (std::getline(file, line))
     {
         size_t pos = line.find("#");
         if (pos != std::string::npos)
@@ -245,16 +397,15 @@ int ConfigParser::parse(std::string configFile, ServerManager& server)
             line = line.substr(0, pos);
         }
         setConfigBuffer(line);
-        // buffer with everything by append line
     }
-    // workingBuffer now have all the configfile
     const std::string &workingBuffer = getConfigBuffer();
 
     // TEST:
     try{
         std::istringstream stream(workingBuffer);
 
-        while (stream)
+        // while (stream)
+        while (true)
         {
             ServerConfig config;
 
@@ -266,9 +417,8 @@ int ConfigParser::parse(std::string configFile, ServerManager& server)
     }
     catch (const std::exception& e) 
     {
-        std::cout << e.what() << " (testing)";
+        std::cout << e.what() << " (testing)" << std::endl;
     }
-    exit(1);
     // ~TEST:
 
     return 0;

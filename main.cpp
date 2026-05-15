@@ -66,7 +66,6 @@ int main(int argc, char **argv) {
     std::string configFile;
     ConfigParser config;
     ServerManager server;
-    // ServerConfig server;
 
     configFile = argv[1];
 
@@ -74,17 +73,29 @@ int main(int argc, char **argv) {
     if (config.parse(configFile, server))
         exit(1);
 
-    // TEST:
-    // std::string error = server.getErrorPage(404);
-    // std::cout << error << std::endl;
-    //
-    // test(server);
-    // std::cout << example->path << std::endl;
-    // exit(1);
-    // server.printServers();
-    // exit(2);
 
-    // std::cout << config.getConfigBuffer() << std::endl;
+    exit(2);
+    std::string root;
+    std::string method;
+    int listening = stoi(server.getServerValues("mysite2.com", "listen"));
+    std::string host = server.getServerValues("mysite2.com", "host");
+    std::string server_name = server.getServerValues("mysite2.com", "server_name");
+    int client_max_body_size = stoi(server.getServerValues("mysite2.com", "client_max_body_size"));
+    root = server.getServerLocation("mysite2.com", "/", "allowed_methods");
+    method = server.getServerLocationMethods("mysite2.com", "/cgi-bin", "allowed_methods", 1);
+    std::string error404 = server.getServerErrorPages("mysite.com", 404);
+
+    std::cout << listening << std::endl;
+    std::cout << host << std::endl;
+    std::cout << server_name << std::endl;
+    std::cout << client_max_body_size << std::endl;
+    std::cout << error404 << std::endl;
+
+    std::cout << root << std::endl;
+    std::cout << method << std::endl;
+
+    exit(2);
+
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -124,7 +135,7 @@ int main(int argc, char **argv) {
         std::cerr << "Listen failed" << std::endl;
         return (1);
     }
-    
+
     //prepare poll struct
     struct pollfd fds[MAX_CLIENTS];
 
@@ -213,7 +224,7 @@ int main(int argc, char **argv) {
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
 
-                
+
                 if (valRead <= 0)
                 {
                     close(fds[i].fd);
@@ -224,9 +235,9 @@ int main(int argc, char **argv) {
                 }
                 else
                 {
-                    
+
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-                    
+
                     try
                     {
                         httpParser.parse(activeClient);
@@ -254,11 +265,11 @@ int main(int argc, char **argv) {
                 /*
                 // Hardcoded mock response
                 std::string mock_response = 
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Content-Length: 13\r\n"
-                    "\r\n"
-                    "Hello, World!";
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 13\r\n"
+                "\r\n"
+                "Hello, World!";
 
 
                 //lets use write or send to send the mock response to the client
@@ -266,15 +277,15 @@ int main(int argc, char **argv) {
 
                 if (bytesSent < 0)
                 {
-                    std::cerr << "Failed to send response" << std::endl;
+                std::cerr << "Failed to send response" << std::endl;
                 }
                 */
                 //close the connections, and set the fd back to -1
                 if (activeClient.getState() == PROCESSING || activeClient.getState() == ERROR)
                 {
-                clients.erase(currentFd); // DUNNO IF THIS WORKS
-                close(fds[i].fd);
-                fds[i].fd = -1;
+                    clients.erase(currentFd); // DUNNO IF THIS WORKS
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
                 }
             }
         }

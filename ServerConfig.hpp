@@ -9,11 +9,6 @@
 # include <stdbool.h>
 # include <unordered_map>
 
-
-// This file should store the values from the config file after the configParser.
-
-// This holds the rules that apply ONLY to a specific route (like /upload or /cgi).
-// TODO: What variables do you need here based on your .conf file?
 struct RouteConfig 
 {
     // TODO: check if unordered is necessary
@@ -21,7 +16,6 @@ struct RouteConfig
 };
 
 // Server config will hold the parsed rules from the conf file
-// TODO: Add variables for server_name and client_max_body_size
 class ServerConfig 
 {
     private:
