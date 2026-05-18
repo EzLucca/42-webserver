@@ -4,6 +4,7 @@
 #include <iostream>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include <vector>
 
 //these are possible states (these can change still)
 enum ClientState {
@@ -33,6 +34,7 @@ class Client
 
             HttpRequest     _request;
             // HttpResponse    _response;
+            std::vector<std::string> *_servers;
 
     public:
             Client();
