@@ -202,6 +202,8 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi)
  	ssize_t	bytesRead = read(cgi.bodyFileFd, bodyBuf, sizeof(bodyBuf));
  	if (bytesRead == -1)
  	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return (CGI_IO_OK);
  		close(cgi.requestFd);
  		close(cgi.responseFd);
 		cgi.requestFd = -1;
@@ -266,6 +268,8 @@ CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
  	ssize_t		bytesRead = read(cgi.responseFd, responseBuf, sizeof(responseBuf));
  	if (bytesRead == -1)
  	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return (CGI_IO_OK);
  		close(cgi.responseFd);
 		cgi.responseFd = -1;
 		cgi.responseClosed = true;
@@ -293,6 +297,7 @@ CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
 			return  (CGI_IO_ERROR);
 		return(CGI_IO_DONE);
  	}
+	return (CGI_IO_ERROR);
 }
 
  CgiHandler::~CgiHandler()

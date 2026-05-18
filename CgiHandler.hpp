@@ -64,7 +64,7 @@ class CgiHandler
 		script filename, path info, content type, server name, redirect status */
 	public:
 		CgiHandler();
-		CgiHandler(HttpRequest &request, ServerConfig &location);
+		CgiHandler(HttpRequest &request, ServerManager &server);
 		CgiProcess	CgiStart(HttpRequest &request);
 		CgiIoStatus	CgiWriteToChild(CgiProcess &cgi);
 		CgiIoStatus	CgiReadResponse(CgiProcess &cgi);
