@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
-
+                
                 /*
                 // Hardcoded mock response
                 std::string mock_response = 

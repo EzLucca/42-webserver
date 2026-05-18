@@ -6,7 +6,9 @@ _isChunked(false),
 _contentLength(0),
 _currentChunkSize(-1),
 _fullChunkBodySize(0),
-_bodyFilePath("not-set")
+_bodyFilePath("not-set"),
+_bytesWritten(0),
+_keepAlive(true)
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -48,7 +50,13 @@ void HttpRequest::setHeader(std::string key, std::string value)
 
 void HttpRequest::setContentLength(std::string& value)
 {
-    _contentLength = std::stoi(value);
+    int parsedLength = std::stoi(value);
+    
+    // We need to check manually minus values
+    if (parsedLength < 0) {
+        throw std::invalid_argument("Negative Content-Length"); 
+    }
+    _contentLength = static_cast<size_t>(parsedLength);
 }
 
 void HttpRequest::setIsChunked()
@@ -132,4 +140,24 @@ std::string HttpRequest::getBodyFilePath()
 long HttpRequest::getFullChunkBodySize()
 {
     return (_fullChunkBodySize);
+}
+
+size_t HttpRequest::getBytesWritten()
+{
+    return (_bytesWritten);
+}
+
+void HttpRequest::addBytesWritten(size_t bytes)
+{
+    _bytesWritten =+ bytes;
+}
+
+void HttpRequest::setKeepAlive(bool keepAlive)
+{
+    _keepAlive = keepAlive;
+}
+
+bool HttpRequest::getKeepAlive()
+{
+    return (_keepAlive);
 }
