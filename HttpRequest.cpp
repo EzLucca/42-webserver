@@ -79,12 +79,10 @@ long    HttpRequest::getCurrentChunkSize()
     return (_currentChunkSize);
 }
 
-
 void    HttpRequest::setCurrentChunkSize(std::string chunkLine)
 {
     _currentChunkSize = std::stoi(chunkLine, 0, 16);
 }
-
 
 std::string HttpRequest::getMethod()
 {

@@ -26,3 +26,7 @@ void    HttpResponse::setStatusMessage(std::string statusMessage)
 {
     _statusMessage = statusMessage;
 }
+
+HttpResponse::~HttpResponse()
+{
+}

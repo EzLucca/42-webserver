@@ -17,7 +17,6 @@ class HttpRequest
             std::map<std::string, std::string>  _headers;
             bool                                _isChunked;
             size_t                              _contentLength;
-            std::string                         _body;
             long                                _currentChunkSize;
             long                                _fullChunkBodySize;
             std::string                         _bodyFilePath;
