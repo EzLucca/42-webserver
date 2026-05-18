@@ -26,7 +26,7 @@ class ConfigParser
         void        parseDirective( const std::string& line, std::istream& stream, ServerConfig& config, std::map<std::string, std::string>& values);
         void        parseErrorPage( const std::string& value, ServerConfig& config);
         void        parseLocationBlock( const std::string& value, std::istream& stream, ServerConfig& config);
-        void        parselocation(std::istream &stream, RouteConfig &config);
+        void        parselocation(std::istream &stream, RouteConfig &nestedLocation, ServerConfig &config);
         void        setConfigBuffer(std::string line);
 };
 

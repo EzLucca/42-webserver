@@ -15,6 +15,24 @@ void validatePath(const std::string& filePath)
         throw std::invalid_argument("path does not exist: " + filePath);
 }
 
+/**
+ * @brief Validates and converts the configured client body size.
+ *
+ * Reads the value associated with the `client_max_body_size` key
+ * from the provided map and converts it into bytes.
+ *
+ * Supported formats:
+ * - Plain integer (e.g. `"1024"`) interpreted as bytes
+ * - Integer followed by `'M'` (e.g. `"10M"`) interpreted as megabytes
+ *
+ * If the key is missing or the value is empty, the function returns `0`.
+ *
+ * @param values Map containing configuration key-value pairs.
+ * @return int Body size in bytes.
+ *
+ * @throws std::invalid_argument If the numeric portion cannot be parsed.
+ * @throws std::out_of_range If the parsed value exceeds integer limits.
+ */
 int validateBodySize(const std::map<std::string, std::string>& values)
 {
     auto it = values.find("client_max_body_size");
@@ -31,6 +49,17 @@ int validateBodySize(const std::map<std::string, std::string>& values)
     return std::stoi(val);
 }
 
+/**
+ * @brief Validates an IPv4 host address.
+ *
+ * Uses `inet_pton()` to verify that the provided string is a valid
+ * IPv4 address.
+ *
+ * @param hostValue Host address string to validate.
+ * @return std::string The validated host string.
+ *
+ * @throws std::invalid_argument If the host string is not a valid IPv4 address.
+ */
 std::string validateHost(std::string hostValue)
 {
     struct sockaddr_in sa;
@@ -40,6 +69,22 @@ std::string validateHost(std::string hostValue)
     return hostValue;
 }
 
+/**
+ * @brief Validates and parses the server listen port.
+ *
+ * Ensures that:
+ * - The `listen` key exists in the configuration map
+ * - The value is a valid numeric string
+ * - The entire string is numeric
+ * - The port falls within the allowed range (1024–49151)
+ *
+ * @param input Map containing configuration key-value pairs.
+ * @return int Parsed port number.
+ *
+ * @throws std::invalid_argument If the `listen` key is missing,
+ *         contains non-numeric characters, or input is empty.
+ * @throws std::out_of_range If the port is outside the allowed range.
+ */
 int validatePort(std::map<std::string, std::string> &input)
 {
     if (input.find("listen") == input.end())
@@ -136,15 +181,19 @@ std::string ConfigParser::trim(const std::string& str)
  * @param stream Input stream positioned inside a location block.
  * @param config RouteConfig object to populate with parsed values.
  */
-void ConfigParser::parselocation(std::istream &stream, RouteConfig &config)
+void ConfigParser::parselocation(std::istream &stream, RouteConfig &nestedLocation, ServerConfig &config)
 {
     std::string key;
     std::string value;
 
     while (stream >> key)
     {
-        if (key == "}")
+        if (key == "}"|| key == "location")
+        {
+            if (key == "}")
+                config.pos--;
             break;
+        }
 
         std::getline(stream, value);
 
@@ -163,10 +212,10 @@ void ConfigParser::parselocation(std::istream &stream, RouteConfig &config)
             std::string word;
 
             while (ss >> word)
-                config.vectorRoute[key].push_back(word);
+                nestedLocation.vectorRoute[key].push_back(word);
             continue;
         }
-        config.vectorRoute[key].push_back(value);
+        nestedLocation.vectorRoute[key].push_back(value);
     }
 }
 
@@ -232,18 +281,36 @@ void ConfigParser::parseErrorPage( const std::string& value, ServerConfig& confi
     config.setErrorPage(errorCode, errorPath);
 }
 
+/**
+ * @brief Parses a location block from the configuration file.
+ *
+ * Extracts the location path from the provided line, validates the
+ * presence of the opening brace `{`, and parses the nested location
+ * directives into a RouteConfig object.
+ *
+ * The parsed route configuration is then stored in the provided
+ * ServerConfig instance.
+ *
+ * @param value  Raw location declaration line containing the route path
+ *               and opening brace.
+ * @param stream Input stream used to continue parsing nested directives.
+ * @param config Server configuration object receiving the parsed route.
+ *
+ * @throws std::runtime_error If the opening brace `{` is missing.
+ */
 void ConfigParser::parseLocationBlock( const std::string& value, std::istream& stream, ServerConfig& config)
 {
     RouteConfig nestedLocation;
 
     if (value.find("{") == std::string::npos)
         throw std::runtime_error("{ location not found");
+    config.pos++;
 
     size_t locationPos = value.find(" ");
 
     std::string locationValue = value.substr(0, locationPos);
 
-    parselocation(stream, nestedLocation);
+    parselocation(stream, nestedLocation, config);
 
     config.setRoute(locationValue, nestedLocation);
 }
@@ -318,6 +385,7 @@ bool ConfigParser::parseConfig(ServerConfig& config, std::istream& stream)
 
     std::string line;
     bool foundServer = false;
+    config.pos = 0;
 
     while (std::getline(stream, line))
     {
@@ -326,9 +394,13 @@ bool ConfigParser::parseConfig(ServerConfig& config, std::istream& stream)
         if (shouldSkipLine(line))
             continue;
         if (isBlockEnd(line))
+        {
+            config.pos--;
             break;
+        }
         if (isServerStart(line))
         {
+            config.pos++;
             foundServer = true;
             continue;
         }
@@ -410,7 +482,14 @@ int ConfigParser::parse(std::string configFile, ServerManager& server)
             ServerConfig config;
 
             if(!parseConfig(config, stream))
+            {
+                if (config.pos != 0)
+                    throw std::runtime_error("Brackets unclosed.");
                 break;
+            }
+            std::cout << config.pos << std::endl;
+            if (config.pos != 0)
+                throw std::runtime_error("Brackets unclosed.");
             server.addServer(config);
         }
         server.printServers();

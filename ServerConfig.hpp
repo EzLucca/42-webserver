@@ -32,7 +32,7 @@ class ServerConfig
         ServerConfig();
         ~ServerConfig();
 
-        size_t pos;
+        int pos;
 
         // setters
         void    setPort(int port);

@@ -69,32 +69,8 @@ int main(int argc, char **argv) {
 
     configFile = argv[1];
 
-    // TODO: initial parsing
     if (config.parse(configFile, server))
-        exit(1);
-
-
-    exit(2);
-    std::string root;
-    std::string method;
-    int listening = stoi(server.getServerValues("mysite2.com", "listen"));
-    std::string host = server.getServerValues("mysite2.com", "host");
-    std::string server_name = server.getServerValues("mysite2.com", "server_name");
-    int client_max_body_size = stoi(server.getServerValues("mysite2.com", "client_max_body_size"));
-    root = server.getServerLocation("mysite2.com", "/", "allowed_methods");
-    method = server.getServerLocationMethods("mysite2.com", "/cgi-bin", "allowed_methods", 1);
-    std::string error404 = server.getServerErrorPages("mysite.com", 404);
-
-    std::cout << listening << std::endl;
-    std::cout << host << std::endl;
-    std::cout << server_name << std::endl;
-    std::cout << client_max_body_size << std::endl;
-    std::cout << error404 << std::endl;
-
-    std::cout << root << std::endl;
-    std::cout << method << std::endl;
-
-    exit(2);
+        exit(1); // TODO: handle errors properly on finish version
 
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
