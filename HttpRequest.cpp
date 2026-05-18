@@ -149,7 +149,7 @@ size_t HttpRequest::getBytesWritten()
 
 void HttpRequest::addBytesWritten(size_t bytes)
 {
-    _bytesWritten =+ bytes;
+    _bytesWritten += bytes;
 }
 
 void HttpRequest::setKeepAlive(bool keepAlive)

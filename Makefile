@@ -14,7 +14,6 @@ SRC       = main.cpp \
 			ConfigParser.cpp \
 			ServerConfig.cpp \
 			ServerManager.cpp \
-			HttpResponse.cpp \
 			CgiHandler.cpp \
 
 OBJ       = $(SRC:.cpp=.o)

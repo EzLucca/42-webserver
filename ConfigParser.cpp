@@ -487,12 +487,11 @@ int ConfigParser::parse(std::string configFile, ServerManager& server)
                     throw std::runtime_error("Brackets unclosed.");
                 break;
             }
-            std::cout << config.pos << std::endl;
             if (config.pos != 0)
                 throw std::runtime_error("Brackets unclosed.");
             server.addServer(config);
         }
-        server.printServers();
+        // server.printServers(); // TEST:
     }
     catch (const std::exception& e) 
     {

@@ -38,13 +38,6 @@ bool validateConfigFile(std::string_view &fileName)
     return (true);
 }
 
-// void test(ServerConfig &server)
-// {
-//     const RouteConfig *example = server.getRoute("/cgi-bin");
-//     std::string example2 = example->root;
-//     std::cout << example2 << std::endl;
-// }
-
 int main(int argc, char **argv) {
 
     if (argc != 2)
@@ -73,6 +66,7 @@ int main(int argc, char **argv) {
     if (config.parse(configFile, server))
         exit(1); // TODO: handle errors properly on finish version
 
+    // exit(2);
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -235,7 +229,7 @@ int main(int argc, char **argv) {
 						
 						//TEST************************************************************
 
-						CgiHandler(activeClient.getRequest(), server);
+						// CgiHandler(activeClient.getRequest(), server);
 
 						//****************************************************************
 
@@ -264,7 +258,7 @@ int main(int argc, char **argv) {
                 }
                 */
                 //close the connections, and set the fd back to -1
-                if (activeClient.getState() == PROCESSING || activeClient.getState() == ERROR)
+                if (/*activeClient.getState() == PROCESSING  || */ activeClient.getState() == ERROR)
                 {
                     clients.erase(currentFd); // DUNNO IF THIS WORKS
                     close(fds[i].fd);
