@@ -1,5 +1,5 @@
-#ifndef CGIHANDLER_HPP
-# define CGIHANDLER_HPP
+#ifndef CGI_HPP
+# define CGI_HPP
 
 #include <iostream>
 #include <sys/wait.h>
@@ -12,6 +12,36 @@
 #include "HttpRequest.hpp"
 #include "ServerConfig.hpp"
 
+enum	CgiIoStatus
+{
+	CGI_IO_OK,
+	CGI_IO_DONE,
+	CGI_IO_ERROR
+}
+
+struct	CgiProcess
+{
+	bool		valid;
+	pid_t		pid;
+	int			requestFd;
+	int			responseFd;
+	int			bodyFileFd;
+	std::string	output;
+	bool		requestClosed;
+	bool		responseClosed;
+	time_t		startedAt;
+
+	CgiProcess()
+		: valid(false),
+		pid(-1),
+		requestFd(-1),
+		responseFd(-1),
+		bodyFileFd(-1),
+		requestClosed(true),
+		responseClosed(true)
+		{
+		}
+};
 
 // takes the httprequest object, sets up pipes, forks the process, executes the script
 class CgiHandler
@@ -35,10 +65,10 @@ class CgiHandler
 	public:
 		CgiHandler();
 		CgiHandler(HttpRequest &request, ServerConfig &location);
-		std::string	cgiProcess(HttpRequest &request);
+		CgiProcess	CgiStart(HttpRequest &request);
+		CgiIoStatus	CgiWriteToChild(CgiProcess &cgi);
+		CgiIoStatus	CgiReadResponse(CgiProcess &cgi);
 		~CgiHandler();
-
-
 };
 
 #endif

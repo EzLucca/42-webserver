@@ -1,4 +1,4 @@
-#include "CgiHandler.hpp"
+#include "Cgi.hpp"
 
  //****************************************************
   // static void printconfig(ServerConfig config) // DEBUG:
@@ -87,15 +87,17 @@
  	//***********************************
  }
 
- std::string	CgiHandler::cgiProcess(HttpRequest &request)
+ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
  {
  	int	request_fd[2];
  	int	response_fd[2];
+	CgiProcess	cgi;
 
+	cgi.startedAt = time(NULL); //to track timeout in main
  	if (pipe(request_fd) == -1 || pipe(response_fd) == -1)
  	{
  		std::cerr << "CGI pipe failed\n";
- 		return ("");
+ 		return (cgi);
  	}
  	pid_t	_pid = fork();
  	if (_pid == -1)
@@ -105,7 +107,7 @@
  		close(response_fd[0]);
  		close(response_fd[1]);
  		std::cerr << "CGI fork failed\n";
- 		return ("");
+ 		return (cgi);
  	}
  	else if (_pid == 0)
  	{
@@ -147,158 +149,128 @@
  	{
  		close(request_fd[0]);
  		close(response_fd[1]);
- 		struct pollfd	fds[2];
- 		fds[0].fd = response_fd[0];
- 		fds[0].events = POLLIN;
- 		fds[0].revents = 0;
+		fcntl(response_fd[0], F_SETFL, O_NONBLOCK);
+		fcntl(request_fd[1], F_SETFL, O_NONBLOCK);
+		cgi.valid = true;
+		cgi.pid = _pid;
+		cgi.requestFd = request_fd[1];
+		cgi.responseFd = response_fd[0];
+		cgi.bodyFileFd = -1;
+		cgi.output = "";
+		cgi.requestClosed = false;
+		cgi.responseClosed = false;
+		if (_method == "POST" && _bodyFilePath != "not-set")
+		{
+			cgi.bodyFileFd = open(_bodyFilePath.c_str(), O_RDONLY);
+			if (bodyFileFd < 0)
+			{
+				close(request_fd[1]);
+				close(response_fd[0]);
+				cgi.requestClosed = true;
+				cgi.responseClosed = true;
+				std::cerr << "CGI failed to open body file\n";
+				waitpid(_pid, &status, 0);
+				return(cgi);
+			}
+		}
+		else
+		{
+			close(request_fd[1]);
+			fds[1].fd = -1;
+			cgi.requestClosed = true;
+		}
+		return (cgi);
+	}
+ }
 
- 		fds[1].fd = request_fd[1];
- 		fds[1].events = POLLOUT;
- 		fds[1].revents = 0;
- 		int			status;
- 		std::string	responseOutput;
- 		char		responseBuf[4096];
- 		int	opennedBodyFile = -1;
- 		if (_method == "POST" && _bodyFilePath != "not-set")
+/*
+ 	struct pollfd	fds[2];
+ 	fds[0].fd = response_fd[0];
+ 	fds[0].events = POLLIN;
+ 	fds[0].revents = 0;
+
+ 	fds[1].fd = request_fd[1];
+ 	fds[1].events = POLLOUT;
+ 	fds[1].revents = 0;*/
+
+CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
+{
+ 	int			status;
+ 	char		bodyBuf[4096];
+ 	ssize_t	bytesRead = read(cgi.bodyFileFd, bodyBuf, sizeof(bodyBuf));
+ 	if (bytesRead == -1)
+ 	{
+ 		close(request_fd[1]);
+ 		close(response_fd[0]);
+ 		if (cgi.bodyFileFd != -1)
  		{
- 			opennedBodyFile = open(_bodyFilePath.c_str(), O_RDONLY);
- 			if (opennedBodyFile < 0)
- 			{
- 				close(request_fd[1]);
- 				close(response_fd[0]);
- 				std::cerr << "CGI failed to open body file\n";
- 				waitpid(_pid, &status, 0);
- 				return("");
- 			}
+ 			close(cgi.bodyFileFd);
+ 			cgi.bodyFileFd = -1;
  		}
- 		else
+ 		std::cerr << "CGI body file read failed\n";
+ 		waitpid(_pid, &status, WNOHANG);
+ 		return(CGI_IO_ERROR);
+ 	}
+ 	if (bytesRead == 0)
+ 	{
+ 		if (cgi.bodyFileFd != -1)
+ 		{
+ 			close(cgi.bodyFileFd);
+ 			cgi.bodyFileFd = -1;
+ 		}
+ 		close(request_fd[1]);
+ 		fds[1].fd = -1;
+ 	}
+ 	ssize_t	totalWritten = 0;
+ 	while (totalWritten < bytesRead)
+ 	{
+ 		ssize_t	bytesWritten = write(request_fd[1], bodyBuf + totalWritten, bytesRead - totalWritten);
+ 		if (bytesWritten == -1)
  		{
  			close(request_fd[1]);
- 			fds[1].fd = -1;
- 		}
- 		while (fds[0].fd != -1 || fds[1].fd != -1)
- 		{
- 			char	bodyBuf[4096];
- 			int	timeout = 5000;
- 			int	ready = poll(fds, 2, timeout);
- 			if (ready == -1)
- 			{
- 				close(request_fd[1]);
- 				close(response_fd[0]);
- 				if (opennedBodyFile != -1)
- 				{
- 					close(opennedBodyFile);
- 					opennedBodyFile = -1;
- 				}
- 				std::cerr << "Error in CGI poll()\n";
- 				waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
- 				return("");
- 			}
- 			else if (ready == 0)
- 			{
- 				close(request_fd[1]);
- 				close(response_fd[0]);
- 				if (opennedBodyFile != -1)
- 				{
- 					close(opennedBodyFile);
- 					opennedBodyFile = -1;
- 				}
- 				std::cerr << "CGI poll timeout\n";
- 				waitpid(_pid, &status, WNOHANG);
- 				return("");
- 			}
- 			if (fds[1].revents & POLLOUT)
- 			{
- 				ssize_t	bytesRead = read(opennedBodyFile, bodyBuf, sizeof(bodyBuf));
- 				if (bytesRead == -1)
- 				{
- 					close(request_fd[1]);
- 					close(response_fd[0]);
- 					if (opennedBodyFile != -1)
- 					{
- 						close(opennedBodyFile);
- 						opennedBodyFile = -1;
- 					}
- 					std::cerr << "CGI body file read failed\n";
- 					waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
- 					return("");
- 				}
- 				if (bytesRead == 0)
- 				{
- 					if (opennedBodyFile != -1)
- 					{
- 						close(opennedBodyFile);
- 						opennedBodyFile = -1;
- 					}
- 					close(request_fd[1]);
- 					fds[1].fd = -1;
- 					continue ;
- 				}
- 				ssize_t	totalWritten = 0;
- 				while (totalWritten < bytesRead)
- 				{
- 					ssize_t	bytesWritten = write(request_fd[1], bodyBuf + totalWritten, bytesRead - totalWritten);
- 					if (bytesWritten == -1)
- 					{
- 						close(request_fd[1]);
- 						close(response_fd[0]);
- 						if (opennedBodyFile != -1)
- 						{
- 							close(opennedBodyFile);
- 							opennedBodyFile = -1;
- 						}
- 						std::cerr << "CGI body file write to child failed\n";
- 						waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
- 						return("");
- 					}
- 					totalWritten += bytesWritten;
- 				}
- 			}
- 			if (fds[0].revents & POLLIN)
- 			{
- 				ssize_t bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf)); //buf needs to be cleared every time
- 				if (bytesRead == -1)
- 				{
- 					close(response_fd[0]);
- 					std::cerr << "CGI response read failed\n";
- 					waitpid(_pid, &status, WNOHANG); //replace with reliable child cleanup
- 					return("");
- 				}
- 				if (bytesRead == 0)
- 				{
- 					close(response_fd[0]);
- 					fds[0].fd = -1;
- 					continue ;
- 				}
- 				responseOutput.append(responseBuf, bytesRead);
- 			}
- 		}
- 		if (fds[0].fd != -1)
  			close(response_fd[0]);
- 		waitpid(_pid, &status, 0);
- 		if (!WIFEXITED(status))
- 			return ("");
- 		if (WEXITSTATUS(status) != 0) //check correct exit status
- 			return  ("");
- 		return(responseOutput);
+ 			if (cgi.bodyFileFd != -1)
+ 			{
+ 				close(cgi.bodyFileFd);
+ 				cgi.bodyFileFd = -1;
+ 			}
+ 			std::cerr << "CGI body file write to child failed\n";
+ 			waitpid(_pid, &status, WNOHANG);
+ 			return(CGI_IO_ERROR);
+ 		}
+ 		totalWritten += bytesWritten;
  	}
- }
+	return (CGI_IO_DONE);
+}
+
+CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
+{
+	int			status;
+ 	char		responseBuf[4096];
+ 	ssize_t		bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf));
+ 	if (bytesRead == -1)
+ 	{
+ 		close(response_fd[0]);
+ 		std::cerr << "CGI response read failed\n";
+ 		waitpid(_pid, &status, WNOHANG);
+ 		return(CGI_IO_ERROR);
+ 	}
+ 	if (bytesRead == 0)
+ 	{
+ 		close(response_fd[0]);
+ 		fds[0].fd = -1;
+ 	}
+ 	cgi.output.append(responseBuf, bytesRead);
+ 	if (fds[0].fd != -1)
+ 		close(response_fd[0]);
+ 	waitpid(_pid, &status, 0);
+ 	if (!WIFEXITED(status))
+ 		return (CGI_IO_ERROR);
+ 	if (WEXITSTATUS(status) != 0)
+ 		return  (CGI_IO_ERROR);
+ 	return(CGI_IO_OK);
+}
 
  CgiHandler::~CgiHandler()
  {
- /*
- 	for (unsigned long i = 0; i < _envs.size(); i++){
- 		delete _envs[i];
- 	}
- 	delete[] _envs;
-
- 	for (unsigned long i = 0; i < _envp.size(); i++){
- 		delete _envp[i];
- 	}
- 	delete[] _envp;
-
- 	for (unsigned long i = 0; i < 3; i++){
- 		delete _args[i];
- 	}
- 	delete[] _args;*/
  }
