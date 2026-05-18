@@ -17,7 +17,7 @@ enum	CgiIoStatus
 	CGI_IO_OK,
 	CGI_IO_DONE,
 	CGI_IO_ERROR
-}
+};
 
 struct	CgiProcess
 {

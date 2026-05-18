@@ -162,21 +162,23 @@
 		if (_method == "POST" && _bodyFilePath != "not-set")
 		{
 			cgi.bodyFileFd = open(_bodyFilePath.c_str(), O_RDONLY);
-			if (bodyFileFd < 0)
+			if (cgi.bodyFileFd < 0)
 			{
-				close(request_fd[1]);
-				close(response_fd[0]);
+				close(cgi.requestFd);
+				close(cgi.responseFd);
+				cgi.requestFd = -1;
+				cgi.responseFd = -1;
 				cgi.requestClosed = true;
 				cgi.responseClosed = true;
 				std::cerr << "CGI failed to open body file\n";
-				waitpid(_pid, &status, 0);
+				waitpid(cgi.pid, &status, 0);
 				return(cgi);
 			}
 		}
 		else
 		{
-			close(request_fd[1]);
-			fds[1].fd = -1;
+			close(cgi.requestFd);
+			cgi.requestFd = -1;
 			cgi.requestClosed = true;
 		}
 		return (cgi);
@@ -200,15 +202,17 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
  	ssize_t	bytesRead = read(cgi.bodyFileFd, bodyBuf, sizeof(bodyBuf));
  	if (bytesRead == -1)
  	{
- 		close(request_fd[1]);
- 		close(response_fd[0]);
+ 		close(cgi.requestFd);
+ 		close(cgi.responseFd);
+		cgi.requestFd = -1;
+		cgi.responseFd = -1;
  		if (cgi.bodyFileFd != -1)
  		{
  			close(cgi.bodyFileFd);
  			cgi.bodyFileFd = -1;
  		}
  		std::cerr << "CGI body file read failed\n";
- 		waitpid(_pid, &status, WNOHANG);
+ 		waitpid(cgi.pid, &status, WNOHANG);
  		return(CGI_IO_ERROR);
  	}
  	if (bytesRead == 0)
@@ -218,24 +222,26 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
  			close(cgi.bodyFileFd);
  			cgi.bodyFileFd = -1;
  		}
- 		close(request_fd[1]);
- 		fds[1].fd = -1;
+ 		close(cgi.requestFd);
+ 		cgi.requestFd = -1;
  	}
  	ssize_t	totalWritten = 0;
  	while (totalWritten < bytesRead)
  	{
- 		ssize_t	bytesWritten = write(request_fd[1], bodyBuf + totalWritten, bytesRead - totalWritten);
+ 		ssize_t	bytesWritten = write(cgi.requestFd, bodyBuf + totalWritten, bytesRead - totalWritten);
  		if (bytesWritten == -1)
  		{
- 			close(request_fd[1]);
- 			close(response_fd[0]);
+ 			close(cgi.requestFd);
+ 			close(cgi.responseFd);
+			cgi.requestFd = -1;
+			cgi.responseFd = -1;
  			if (cgi.bodyFileFd != -1)
  			{
  				close(cgi.bodyFileFd);
  				cgi.bodyFileFd = -1;
  			}
  			std::cerr << "CGI body file write to child failed\n";
- 			waitpid(_pid, &status, WNOHANG);
+ 			waitpid(cgi.pid, &status, WNOHANG);
  			return(CGI_IO_ERROR);
  		}
  		totalWritten += bytesWritten;
@@ -247,23 +253,24 @@ CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
 {
 	int			status;
  	char		responseBuf[4096];
- 	ssize_t		bytesRead = read(response_fd[0], responseBuf, sizeof(responseBuf));
+ 	ssize_t		bytesRead = read(cgi.responseFd, responseBuf, sizeof(responseBuf));
  	if (bytesRead == -1)
  	{
- 		close(response_fd[0]);
+ 		close(cgi.responseFd);
+		cgi.responseFd = -1;
  		std::cerr << "CGI response read failed\n";
- 		waitpid(_pid, &status, WNOHANG);
+ 		waitpid(cgi.pid, &status, WNOHANG);
  		return(CGI_IO_ERROR);
  	}
  	if (bytesRead == 0)
  	{
- 		close(response_fd[0]);
- 		fds[0].fd = -1;
+ 		close(cgi.responseFd);
+ 		cgi.responseFd = -1;
  	}
  	cgi.output.append(responseBuf, bytesRead);
- 	if (fds[0].fd != -1)
- 		close(response_fd[0]);
- 	waitpid(_pid, &status, 0);
+ 	if (cgi.responseFd != -1)
+ 		close(cgi.responseFd);
+ 	waitpid(cgi.pid, &status, 0);
  	if (!WIFEXITED(status))
  		return (CGI_IO_ERROR);
  	if (WEXITSTATUS(status) != 0)
