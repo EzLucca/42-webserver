@@ -14,6 +14,7 @@
 #include "HttpRequest.hpp"
 #include "HttpException.hpp"
 #include "HttpResponse.hpp"
+#include "CgiHandler.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100
@@ -231,13 +232,19 @@ int main(int argc, char **argv) {
                     if (activeClient.getState() == PROCESSING)
                     {
                         //here we process the request and build response on the fly
+						
+						//TEST************************************************************
+
+						CgiHandler(activeClient.getRequest(), server);
+
+						//****************************************************************
 
                         // after processing and after sending the response, check the buffer, if another request, start the loop again
                     }
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
-
+                
                 /*
                 // Hardcoded mock response
                 std::string mock_response = 

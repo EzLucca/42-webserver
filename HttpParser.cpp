@@ -114,10 +114,26 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         value = trimSpaces(value);
         //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
         key = stringToLower(key); // DOESNT WORK, FIX!
-        if (key == "content-length")
+
+        if (key == "connection")
         {
+            if (value == "closed")
+                request.setKeepAlive(false);
+        }
+        if (key == "content-length")
+        {   try
+            {
             // extract the key and value (value into number) and save to request object
             request.setContentLength(value); // Maybe we should try catch this, need somekind of validation check
+            }
+            catch (const std::invalid_argument& e) {
+                // catching characaters
+                throw HttpException(400, "Bad Request: Invalid Content-Length format");
+            } 
+            catch (const std::out_of_range& e) {
+                // catching too big numbers 
+                throw HttpException(400, "Bad Request: Content-Length is astronomically large");
+            }
         }
         if (key == "transfer-encoding" && value == "chunked")
         {
@@ -131,24 +147,45 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     else if (colonPos == std::string::npos)
     {
         // ERROR HANDLING, if we cant find :, that means its a bad request
+        throw HttpException(400, "Bad Request: Malformed header (missing colon)");
     }
 }
 
-/*
+
 void HttpParser::validateHeaders(HttpRequest& request)
 {
     //we need to validate 3 things.  host is mandatory, so if we have multiple sites, we know which config block to use
-
+    const std::map<std::string, std::string>& headers = request.getHeaders();
     //check for host from the map
+    //try to find the key host
+    std::map<std::string, std::string>::const_iterator it = headers.find("host");
+    if (it == headers.end())
+    {
+        //couldnt find a key, whole map searched through
+        throw HttpException(400, "Bad Request: Missing host header.");
+    }
 
-    //then we need to validate that if we have post, we need to have content length or transfer encopding.
-    // also if content length is around, we need to validate the value, that its valid number, not minus number, or characters inside of it
+    bool hasContentHeader = false;
+    bool hasTransferEncodingHeader = false;
+
+    it = headers.find("content-length");
+    if (it != headers.end())
+        hasContentHeader = true;
+    it = headers.find("transfer-encoding");
+    if (it != headers.end())
+        hasTransferEncodingHeader = true;
 
     //check transfer encoding value, if its something else than chunked, for example gzip. return 501 Not implemented: Unsupported transfer-encoding
+    if (hasTransferEncodingHeader == true)
+    {
+        if (it->second != "chunked")
+            throw HttpException(501, "Not implemented.");
+    }
+    if (hasContentHeader && hasTransferEncodingHeader)
+        throw HttpException(400, "Bad Request: Content-Length and Transfer-Encoding conflict (Smuggling attempt detected)");
 
-    //also if we find transfer encoding and content length both around (we shouldnt have both),  -->400, "Bad Request: Content-Length and Transfer-Encoding conflict".
 }
-*/
+
 
 void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequest& request)
 {
@@ -160,8 +197,11 @@ void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequ
     // in case of keep alive connection, check if there is already temp file from previous request. if there is, remove the old before creating new
 
     request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
-    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary); 
-    outFile.write(bodyData.data(), request.getCurrentChunkSize()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
+    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary);
+    if (!outFile.is_open())
+        throw HttpException(500, "Internal Server Error: Could not open temp file for writing");
+    
+    outFile.write(bodyData.data(), bodyData.size()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
     
     //also remember the filepath 
     //we better to open and close file between writings. (this will also flush the fstream internal buffer), and this will protect us from fd limits.
@@ -309,25 +349,30 @@ void HttpParser::parse(Client& client)
     if (client.getState() == READING_BODY)
     {
         const std::string& bodyBuffer = client.getBuffer();
-        size_t expectedBodySize = client.getRequest().getContentLength();
-
-        // we check if there is all the body data inside the buffer again
-        if (bodyBuffer.size() >= expectedBodySize)
-        {
-            // we parse the body 
-            std::string bodyData = bodyBuffer.substr(0, expectedBodySize);
-            client.getRequest().setBodyFilePath("temp_body_" + std::to_string(client.getFd()) + ".bin");
-            std::ofstream outFile(client.getRequest().getBodyFilePath(), std::ios::out | std::ios::binary); 
-            outFile.write(bodyData.data(), expectedBodySize);
-            //std::cout << "Printing bodyData variable: " << bodyData << std::endl; 
-            // we save the body in the request object
-            //client.getRequest().setBody(bodyData);
-            //erase it from the buffer
-            client.eraseFromBuffer(expectedBodySize);
-            client.setState(PROCESSING);
-            //client.getRequest().printBody();
-
+    
+    // fd 
+    if (!bodyBuffer.empty()) {
+        size_t bytesToWrite = bodyBuffer.size();
+        size_t bytesRemaining = client.getRequest().getContentLength() - client.getRequest().getBytesWritten();
+        
+        // make sure we dont accidentally write from new request
+        if (bytesToWrite > bytesRemaining) {
+            bytesToWrite = bytesRemaining; 
         }
+
+        std::string chunkToWrite = bodyBuffer.substr(0, bytesToWrite);
+        parseBodyIntoFile(client.getFd(), chunkToWrite, client.getRequest());
+        
+        // update state, free ram
+        client.getRequest().addBytesWritten(bytesToWrite);
+        client.eraseFromBuffer(bytesToWrite);
+    }
+
+    // Check if ready
+    if (client.getRequest().getBytesWritten() >= client.getRequest().getContentLength()) 
+    {
+        client.setState(PROCESSING);
+    }
 
     }
     else 

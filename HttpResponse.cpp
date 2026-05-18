@@ -12,7 +12,7 @@ int HttpResponse::getStatusCode() const
     return (_statusCode);
 }
 
-const std::string HttpResponse::getStatusMessage() const
+std::string HttpResponse::getStatusMessage() const
 {
     return (_statusMessage);
 }
@@ -29,5 +29,4 @@ void    HttpResponse::setStatusMessage(std::string statusMessage)
 
 HttpResponse::~HttpResponse()
 {
-    std::cout << "HttpResponse destructor called." << std::endl;
 }

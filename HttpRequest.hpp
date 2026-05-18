@@ -17,10 +17,11 @@ class HttpRequest
             std::map<std::string, std::string>  _headers;
             bool                                _isChunked;
             size_t                              _contentLength;
-            std::string                         _body;
             long                                _currentChunkSize;
             long                                _fullChunkBodySize;
             std::string                         _bodyFilePath;
+            size_t                              _bytesWritten;
+            bool                                _keepAlive;
 
     public:
             HttpRequest();
@@ -35,13 +36,12 @@ class HttpRequest
             void setHeader(std::string key, std::string value);
             void setContentLength(std::string& value);
             void setIsChunked();
-            void setBody(std::string body);
             void setCurrentChunkSize(std::string chunkLine);
             void setFullChunkBodySize(size_t amount);
-            void appendToBody(std::string bodydata);
             void printHeaders();
             //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);
+            void setKeepAlive(bool keepAlive);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
@@ -53,6 +53,10 @@ class HttpRequest
             std::string                         getUri();
             std::string                         getVersion();
             std::string                         getBodyFilePath();
+            size_t                              getBytesWritten();
+            bool                                getKeepAlive();
+
+            void                                addBytesWritten(size_t bytes);
   
         
 
