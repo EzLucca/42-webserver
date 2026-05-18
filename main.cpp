@@ -206,7 +206,6 @@ int main(int argc, char **argv) {
                 }
                 else
                 {
-
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
 
                     try
@@ -225,6 +224,8 @@ int main(int argc, char **argv) {
                     // if parse is completed so if state is processing we start to execute the request
                     if (activeClient.getState() == PROCESSING)
                     {
+                        //check for request method
+
                         //here we process the request and build response on the fly
 						
 						//TEST************************************************************
