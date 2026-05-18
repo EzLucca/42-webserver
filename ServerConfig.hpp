@@ -5,26 +5,17 @@
 # include <vector>
 # include <map>
 # include <ostream>
+# include <iostream>
 # include <stdbool.h>
+# include <unordered_map>
 
-
-// This file should store the values from the config file after the configParser.
-
-// This holds the rules that apply ONLY to a specific route (like /upload or /cgi).
-// TODO: What variables do you need here based on your .conf file?
 struct RouteConfig 
 {
-    std::string                 path;              // e.g. "/kapouet"
-    std::vector<std::string>    allowedMethods;    // GET, POST, etc.
-    bool                        autoIndex;         // directory listing on/off
-    std::string                 root;              // filesystem root for this route
-    std::string                 index;             // default file (e.g. index.html)
-    std::string                 redirect;          // if not empty → HTTP redirection
-    std::string                 uploadPath;        // where uploads go
+    // TODO: check if unordered is necessary
+    std::unordered_map<std::string, std::vector<std::string>> vectorRoute;
 };
 
 // Server config will hold the parsed rules from the conf file
-// TODO: Add variables for server_name and client_max_body_size
 class ServerConfig 
 {
     private:
@@ -41,7 +32,7 @@ class ServerConfig
         ServerConfig();
         ~ServerConfig();
 
-        size_t pos;
+        int pos;
 
         // setters
         void    setPort(int port);

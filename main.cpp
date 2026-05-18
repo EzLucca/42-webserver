@@ -38,6 +38,13 @@ bool validateConfigFile(std::string_view &fileName)
     return (true);
 }
 
+// void test(ServerConfig &server)
+// {
+//     const RouteConfig *example = server.getRoute("/cgi-bin");
+//     std::string example2 = example->root;
+//     std::cout << example2 << std::endl;
+// }
+
 int main(int argc, char **argv) {
 
     if (argc != 2)
@@ -59,19 +66,13 @@ int main(int argc, char **argv) {
     // Start parsing the config file
     std::string configFile;
     ConfigParser config;
-    // ServerManager server;
-    ServerConfig server;
+    ServerManager server;
 
     configFile = argv[1];
 
-    // TODO: initial parsing
     if (config.parse(configFile, server))
-        exit(1);
+        exit(1); // TODO: handle errors properly on finish version
 
-    // server.printServers();
-    // exit(2);
-
-    // std::cout << config.getConfigBuffer() << std::endl;
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
         std::cerr << "Listen failed" << std::endl;
         return (1);
     }
-    
+
     //prepare poll struct
     struct pollfd fds[MAX_CLIENTS];
 
@@ -200,7 +201,7 @@ int main(int argc, char **argv) {
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
 
-                
+
                 if (valRead <= 0)
                 {
                     close(fds[i].fd);
@@ -211,9 +212,9 @@ int main(int argc, char **argv) {
                 }
                 else
                 {
-                    
+
                     activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-                    
+
                     try
                     {
                         httpParser.parse(activeClient);
@@ -247,11 +248,11 @@ int main(int argc, char **argv) {
                 /*
                 // Hardcoded mock response
                 std::string mock_response = 
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Content-Length: 13\r\n"
-                    "\r\n"
-                    "Hello, World!";
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 13\r\n"
+                "\r\n"
+                "Hello, World!";
 
 
                 //lets use write or send to send the mock response to the client
@@ -259,15 +260,15 @@ int main(int argc, char **argv) {
 
                 if (bytesSent < 0)
                 {
-                    std::cerr << "Failed to send response" << std::endl;
+                std::cerr << "Failed to send response" << std::endl;
                 }
                 */
                 //close the connections, and set the fd back to -1
                 if (activeClient.getState() == PROCESSING || activeClient.getState() == ERROR)
                 {
-                clients.erase(currentFd); // DUNNO IF THIS WORKS
-                close(fds[i].fd);
-                fds[i].fd = -1;
+                    clients.erase(currentFd); // DUNNO IF THIS WORKS
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
                 }
             }
         }
