@@ -1,4 +1,4 @@
-#include "Cgi.hpp"
+#include "CgiHandler.hpp"
 
  //****************************************************
   // static void printconfig(ServerConfig config) // DEBUG:
@@ -91,6 +91,7 @@
  {
  	int	request_fd[2];
  	int	response_fd[2];
+	int	status;
 	CgiProcess	cgi;
 
 	cgi.startedAt = time(NULL); //to track timeout in main
@@ -195,7 +196,7 @@
  	fds[1].events = POLLOUT;
  	fds[1].revents = 0;*/
 
-CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
+CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi)
 {
  	int			status;
  	char		bodyBuf[4096];
@@ -206,6 +207,9 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
  		close(cgi.responseFd);
 		cgi.requestFd = -1;
 		cgi.responseFd = -1;
+		cgi.requestClosed = true;
+		cgi.responseClosed = true;
+		cgi.valid = false;
  		if (cgi.bodyFileFd != -1)
  		{
  			close(cgi.bodyFileFd);
@@ -224,6 +228,8 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
  		}
  		close(cgi.requestFd);
  		cgi.requestFd = -1;
+		cgi.requestClosed = true;
+		return (CGI_IO_DONE);
  	}
  	ssize_t	totalWritten = 0;
  	while (totalWritten < bytesRead)
@@ -235,6 +241,9 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
  			close(cgi.responseFd);
 			cgi.requestFd = -1;
 			cgi.responseFd = -1;
+			cgi.responseClosed = true;
+			cgi.requestClosed = true;
+			cgi.valid = false;
  			if (cgi.bodyFileFd != -1)
  			{
  				close(cgi.bodyFileFd);
@@ -246,7 +255,7 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi);
  		}
  		totalWritten += bytesWritten;
  	}
-	return (CGI_IO_DONE);
+	return (CGI_IO_OK);
 }
 
 CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
@@ -258,6 +267,8 @@ CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
  	{
  		close(cgi.responseFd);
 		cgi.responseFd = -1;
+		cgi.responseClosed = true;
+		cgi.valid = false;
  		std::cerr << "CGI response read failed\n";
  		waitpid(cgi.pid, &status, WNOHANG);
  		return(CGI_IO_ERROR);
@@ -266,11 +277,11 @@ CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
  	{
  		close(cgi.responseFd);
  		cgi.responseFd = -1;
+		cgi.responseClosed = true;
+		return (CGI_IO_DONE);
  	}
- 	cgi.output.append(responseBuf, bytesRead);
- 	if (cgi.responseFd != -1)
- 		close(cgi.responseFd);
- 	waitpid(cgi.pid, &status, 0);
+	cgi.output.append(responseBuf, bytesRead);
+ 	waitpid(cgi.pid, &status, WNOHANG);
  	if (!WIFEXITED(status))
  		return (CGI_IO_ERROR);
  	if (WEXITSTATUS(status) != 0)

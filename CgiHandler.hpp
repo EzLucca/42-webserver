@@ -1,5 +1,5 @@
-#ifndef CGI_HPP
-# define CGI_HPP
+#ifndef CGIHANDLER_HPP
+# define CGIHANDLER_HPP
 
 #include <iostream>
 #include <sys/wait.h>
