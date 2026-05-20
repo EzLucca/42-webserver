@@ -229,7 +229,29 @@ int main(int argc, char **argv) {
 						
 						//TEST************************************************************
 
-						// CgiHandler(activeClient.getRequest(), server);
+						CgiHandler(activeClient.getRequest(), server);
+						CgiProcess	cgi = CgiStart(activeClient.getRequest());
+						if (cgi.valid == true)
+						{
+							for (int j = 0; j < MAX_CLIENTS; j++)
+							{
+								if (fds[j].fd == -1)
+								{
+								//	fds[j].fd = new_client_fd;
+								//	fds[j].events = POLLIN; //  activate pollin
+								//	clients.insert(std::make_pair(new_client_fd, Client(new_client_fd))); // add the client to the map
+									added = true;
+
+								//	std::cout << "New CGI process connected on FD: "<< new_client_fd << std::endl;
+									break;
+								}
+							}
+							if (!added) 
+							{
+								std::cerr << "Server full, rejecting CGI process." << std::endl;
+								close(new_client_fd); // close the connection because server full
+							}
+						}
 
 						//****************************************************************
 

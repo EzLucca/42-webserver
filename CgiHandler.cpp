@@ -170,6 +170,7 @@
 				cgi.responseFd = -1;
 				cgi.requestClosed = true;
 				cgi.responseClosed = true;
+				cgi.valid = false;
 				std::cerr << "CGI failed to open body file\n";
 				waitpid(cgi.pid, &status, 0);
 				return(cgi);

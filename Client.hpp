@@ -26,7 +26,7 @@ class Client
 {
     // What do we need to store in client object? 
     private:
-            int             _fd;            // Client socker
+            int             _fd;            // Client socket
             ClientState     _state;         // Store the client state
             
             std::string     _requestBuffer; //where we append the request
@@ -36,7 +36,7 @@ class Client
 
     public:
             Client();
-            Client(int fd); // constructor sets state = Reading headears on default
+            Client(int fd); // constructor sets state = Reading headers on default
             ~Client();
 
             void setState(ClientState state);
