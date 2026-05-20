@@ -8,8 +8,8 @@ Client::Client()
 }
 
 Client::Client(int fd) :
-_fd(fd),
-_state(READING_REQUESTLINE)
+    _fd(fd),
+    _state(READING_REQUESTLINE)
 {
     std::cout << "Client object created." << std::endl; 
 }
@@ -17,12 +17,12 @@ _state(READING_REQUESTLINE)
 Client::~Client()
 {
     //if connection drops out, we delete tmp file/
-    
+
     if (_request.getBodyFilePath() != "not-set")
     {
         std::remove(_request.getBodyFilePath().c_str());
     }
-    
+
     std::cout << "Client object destroyed." << std::endl; 
 }
 
@@ -62,3 +62,7 @@ int    Client::getFd() const
     return (_fd);
 }
 
+HttpResponse& Client::getResponse()
+{
+    return (_response);
+}

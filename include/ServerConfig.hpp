@@ -1,12 +1,9 @@
-#ifndef SERVERCONFIG_HPP
-# define SERVERCONFIG_HPP
+#pragma once
 
 # include <string>
 # include <vector>
 # include <map>
 # include <ostream>
-# include <iostream>
-# include <stdbool.h>
 # include <unordered_map>
 
 struct RouteConfig 
@@ -57,4 +54,3 @@ class ServerConfig
 };
 
 std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m);
-#endif

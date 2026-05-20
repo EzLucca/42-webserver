@@ -1,13 +1,6 @@
-#ifndef SERVERMANAGER_HPP
-# define SERVERMANAGER_HPP
+#pragma once
 
-# include <iostream>
 # include "ServerConfig.hpp"
-#include <fstream> //For ile manipulation
-#include <vector>
-#include <filesystem>
-#include <arpa/inet.h>
-
 
 // grand conductor, our waiter! all the poll logic will be here 
 class ServerManager
@@ -31,5 +24,3 @@ class ServerManager
         std::string getServerErrorPages( const std::string& serverName,
                 int errorCode) const;
 };
-
-#endif

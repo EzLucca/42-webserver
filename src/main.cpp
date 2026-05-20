@@ -1,13 +1,14 @@
-#include <iostream>
-#include <string>
-#include <sys/socket.h> // For socket(), bind(), listen(), accept()
-#include <netinet/in.h> // For struct sockaddr_in
-#include <poll.h>       // For poll() and struct pollfd
-#include <fcntl.h>      // For fcntl() and O_NONBLOCK
-#include <unistd.h>     // For close(), read(), write()
-#include <cstring>      // For memset()
-#include <fstream>      //For ile manipulation
+// #include <iostream>
+// #include <string>
+// #include <sys/socket.h> // For socket(), bind(), listen(), accept()
+// #include <netinet/in.h> // For struct sockaddr_in
+// #include <poll.h>       // For poll() and struct pollfd
+// #include <fcntl.h>      // For fcntl() and O_NONBLOCK
+// #include <unistd.h>     // For close(), read(), write()
+// #include <cstring>      // For memset()
+// #include <fstream>      //For ile manipulation
 
+#include "server.hpp"
 #include "HttpParser.hpp" // For parsing
 #include "ConfigParser.hpp" // For parsing
 #include "Client.hpp"
@@ -15,6 +16,7 @@
 #include "HttpException.hpp"
 #include "HttpResponse.hpp"
 #include "CgiHandler.hpp"
+#include "getMethod.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100
@@ -90,7 +92,8 @@ int main(int argc, char **argv) {
     std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
-    address.sin_port = htons(PORT);       // hton transforms port to understand the byte order
+    address.sin_port = htons(stoi(server.getServerValues("mysite.com", "listen")));       // hton transforms port to understand the byte order
+    // TODO: check how to save this with multiple servers
 
     // once executed succesfully, os registers that any it traffic that arrives at port 8080
     // must be routed directly to this specific c++ program
@@ -119,11 +122,10 @@ int main(int argc, char **argv) {
     fds[0].fd = server_fd;
     fds[0].events = POLLIN; // POLLIN means tell me when there is data to read 
 
-    std::cout << "Server listening on port " << PORT << "..." << std::endl;
+    std::cout << "Server listening on port " << server.getServerValues("mysite.com", "listen") << "..." << std::endl;
 
     std::map<int, Client> clients;
     HttpParser            httpParser; // create one http parser for the server
-    HttpResponse          httpResponse;
 
     // Main event loop
     while (true) {
@@ -217,29 +219,39 @@ int main(int argc, char **argv) {
                     {
                         activeClient.setState(ERROR);
                         std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
-                        httpResponse.setStatusCode(e.getStatusCode());
-                        httpResponse.setStatusMessage(e.getStatusMessage());
+                        activeClient.getResponse().setStatusCode(e.getStatusCode());
+                        activeClient.getResponse().setStatusMessage(e.getStatusMessage());
 
                     }
                     // if parse is completed so if state is processing we start to execute the request
                     if (activeClient.getState() == PROCESSING)
                     {
                         //check for request method
+                        // redirections for methods
+
+                        activeClient.getResponse().setStatusCode(200);
+                        // activeClient.getResponse().setStatusCode(404);
+                        returnPage(activeClient, activeClient.getResponse().getStatusCode());
+                        // returnPage(activeClient, 404);
+                        if (activeClient.getRequest().getMethod() == "POST")
+                        {
+                            std::cout << activeClient.getRequest().getMethod() << std::endl;
+                        }
 
                         //here we process the request and build response on the fly
-						
-						//TEST************************************************************
 
-						// CgiHandler(activeClient.getRequest(), server);
+                        //TEST************************************************************
 
-						//****************************************************************
+                        // CgiHandler(activeClient.getRequest(), server);
+
+                        //****************************************************************
 
                         // after processing and after sending the response, check the buffer, if another request, start the loop again
                     }
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
-                
+
                 /*
                 // Hardcoded mock response
                 std::string mock_response = 
@@ -259,7 +271,7 @@ int main(int argc, char **argv) {
                 }
                 */
                 //close the connections, and set the fd back to -1
-                if (/*activeClient.getState() == PROCESSING  || */ activeClient.getState() == ERROR)
+                if (activeClient.getState() == PROCESSING  ||  activeClient.getState() == ERROR)
                 {
                     clients.erase(currentFd); // DUNNO IF THIS WORKS
                     close(fds[i].fd);

@@ -33,8 +33,7 @@ class Client
             std::string     _requestBuffer; //where we append the request
 
             HttpRequest     _request;
-            // HttpResponse    _response;
-            std::vector<std::string> *_servers;
+            HttpResponse    _response;
 
     public:
             Client();
@@ -48,6 +47,7 @@ class Client
 
 
             HttpRequest& getRequest();
+            HttpResponse& getResponse();
             ClientState getState() const;
             int getFd() const;
 
