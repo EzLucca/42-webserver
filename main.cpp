@@ -17,7 +17,7 @@
 #include "CgiHandler.hpp"
 
 #define PORT 8080
-#define MAX_CLIENTS 100
+#define MAX_FDS 100
 
 bool validateConfigFile(std::string_view &fileName)
 {
@@ -108,10 +108,10 @@ int main(int argc, char **argv) {
     }
 
     //prepare poll struct
-    struct pollfd fds[MAX_CLIENTS];
+    struct pollfd fds[MAX_FDS];
 
     // Initialize, -1 means untouched
-    for (int i = 0; i < MAX_CLIENTS; ++i) {
+    for (int i = 0; i < MAX_FDS; ++i) {
         fds[i].fd = -1; 
     }
 
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
     // Main event loop
     while (true) {
         // poll() waits here, timeout -1 means that it waits infinitely that somethin happpens
-        int poll_count = poll(fds, MAX_CLIENTS, -1);
+        int poll_count = poll(fds, MAX_FDS, -1);
 
         if (poll_count < 0) {
             std::cerr << "Poll error" << std::endl;
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
         }
 
         // go through structs, and see who woke up poll():n
-        for (int i = 0; i < MAX_CLIENTS; i++) {
+        for (int i = 0; i < MAX_FDS; i++) {
             // did this specific socket actually ring? if not, continue
             if (!(fds[i].revents & POLLIN)) 
                 continue;
@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
 
 
                 // Save the client fd, and insert into our array
-                for (int j = 0; j < MAX_CLIENTS; j++)
+                for (int j = 0; j < MAX_FDS; j++)
                 {
                     if (fds[j].fd == -1)
                     {
@@ -233,23 +233,75 @@ int main(int argc, char **argv) {
 						CgiProcess	cgi = CgiStart(activeClient.getRequest());
 						if (cgi.valid == true)
 						{
-							for (int j = 0; j < MAX_CLIENTS; j++)
+							for (int j = 0; j < MAX_FDS; j++)
 							{
 								if (fds[j].fd == -1)
 								{
-								//	fds[j].fd = new_client_fd;
-								//	fds[j].events = POLLIN; //  activate pollin
-								//	clients.insert(std::make_pair(new_client_fd, Client(new_client_fd))); // add the client to the map
-									added = true;
-
-								//	std::cout << "New CGI process connected on FD: "<< new_client_fd << std::endl;
+									fds[j].fd = cgi.responseFd;
+									fds[j].events = POLLIN; //  activate pollin
 									break;
 								}
 							}
 							if (!added) 
 							{
 								std::cerr << "Server full, rejecting CGI process." << std::endl;
-								close(new_client_fd); // close the connection because server full
+								close(cgi.responseFd); // close the connection because server full
+								close(cgi.requestFd); // close the connection because server full
+								fds[j].fd = -1;
+							}
+							for (int j = 0; j < MAX_FDS; j++)
+							{
+								if (fds[j].fd == -1)
+								{
+									fds[j].fd = cgi.requestFd;
+									fds[j].events = POLLOUT; //  activate pollin
+									break;
+								}
+							}
+							if (!added) 
+							{
+								std::cerr << "Server full, rejecting CGI process." << std::endl;
+								close(cgi.requestFd); // close the connection because server full
+								close(cgi.responseFd); // close the connection because server full
+								fds[j].fd = -1;
+							}
+						}
+						if (fds[i].revents && POLLOUT)
+						{
+							enum	CgiIoStatus = CgiWriteToChild(&cgi);
+							switch (CgiIoStatus)
+							{
+								case (CGI_IO_OK)
+								{
+									//process ok but not done
+								}
+								case (CGI_IO_DONE)
+								{
+									//process done
+								}
+								case (CGI_IO_ERROR)
+								{
+									//error during process
+								}
+							}
+						}
+						if (fds[i].revents && POLLIN)
+						{
+							CgiIoStatus = CgiReadResponse(&cgi);
+							switch (CgiIoStatus)
+							{
+								case (CGI_IO_OK)
+								{
+									//process ok but not done
+								}
+								case (CGI_IO_DONE)
+								{
+									//process done
+								}
+								case (CGI_IO_ERROR)
+								{
+									//error during process
+								}
 							}
 						}
 
