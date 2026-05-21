@@ -121,15 +121,15 @@ int main(int argc, char **argv) {
 
     std::cout << "Server listening on port " << PORT << "..." << std::endl;
 
-    std::map<int, Client> clients;
-    HttpParser            httpParser; // create one http parser for the server
-    HttpResponse          httpResponse;
+    std::map<int, Client>	clients;
+	std::map<int, int>		fdRegistry;
+    HttpParser				httpParser; // create one http parser for the server
+    HttpResponse			httpResponse;
 
     // Main event loop
     while (true) {
         // poll() waits here, timeout -1 means that it waits infinitely that somethin happpens
         int poll_count = poll(fds, MAX_FDS, -1);
-
         if (poll_count < 0) {
             std::cerr << "Poll error" << std::endl;
             break;
@@ -140,7 +140,13 @@ int main(int argc, char **argv) {
             // did this specific socket actually ring? if not, continue
             if (!(fds[i].revents & POLLIN)) 
                 continue;
-
+			std::map<int, int>::iterator	it = fdRegistry.find(fds[i].fd);
+			if (it != fdRegistry.end())
+			{
+				int	cgiPipeFd = it->first;
+				int	originalClientFd = it->second;
+				Client	&activeClient = clients[originalClientFd];
+			}
             // Master socket wokeup, some1 wants to connect, what kind of socket is this?
             if (fds[i].fd == server_fd) 
             {
@@ -246,44 +252,9 @@ int main(int argc, char **argv) {
 							{
 								std::cerr << "Server full, rejecting CGI process." << std::endl;
 								close(cgi.responseFd); // close the connection because server full
-								close(cgi.requestFd); // close the connection because server full
 								fds[j].fd = -1;
 							}
-							for (int j = 0; j < MAX_FDS; j++)
-							{
-								if (fds[j].fd == -1)
-								{
-									fds[j].fd = cgi.requestFd;
-									fds[j].events = POLLOUT; //  activate pollin
-									break;
-								}
-							}
-							if (!added) 
-							{
-								std::cerr << "Server full, rejecting CGI process." << std::endl;
-								close(cgi.requestFd); // close the connection because server full
-								close(cgi.responseFd); // close the connection because server full
-								fds[j].fd = -1;
-							}
-						}
-						if (fds[i].revents && POLLOUT)
-						{
-							enum	CgiIoStatus = CgiWriteToChild(&cgi);
-							switch (CgiIoStatus)
-							{
-								case (CGI_IO_OK)
-								{
-									//process ok but not done
-								}
-								case (CGI_IO_DONE)
-								{
-									//process done
-								}
-								case (CGI_IO_ERROR)
-								{
-									//error during process
-								}
-							}
+							fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
 						}
 						if (fds[i].revents && POLLIN)
 						{

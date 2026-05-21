@@ -88,13 +88,12 @@
 
  CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
  {
- 	int	request_fd[2];
  	int	response_fd[2];
 	int	status;
 	CgiProcess	cgi;
 
 	cgi.startedAt = time(NULL); //to track timeout in main
- 	if (pipe(request_fd) == -1 || pipe(response_fd) == -1)
+ 	if (pipe(response_fd) == -1)
  	{
  		std::cerr << "CGI pipe failed\n";
  		return (cgi);
@@ -102,8 +101,6 @@
  	pid_t	_pid = fork();
  	if (_pid == -1)
  	{
- 		close(request_fd[0]);
- 		close(request_fd[1]);
  		close(response_fd[0]);
  		close(response_fd[1]);
  		std::cerr << "CGI fork failed\n";
@@ -112,13 +109,21 @@
  	else if (_pid == 0)
  	{
  		close(response_fd[0]);
- 		close(request_fd[1]);
- 		if (dup2(request_fd[0], STDIN_FILENO) < 0 || (dup2(response_fd[1], STDOUT_FILENO) < 0))
+		cgi.bodyFileFd = open(_bodyFilePath.c_str(), O_RDONLY);
+		if (cgi.bodyFileFd < 0)
+		{
+			close(cgi.responseFd);
+			cgi.responseFd = -1;
+			cgi.responseClosed = true;
+			cgi.valid = false;
+			std::cerr << "CGI failed to open body file\n";
+			return (cgi);
+		}
+ 		if (dup2(cgi.bodyFileFd, STDIN_FILENO) < 0 || (dup2(response_fd[1], STDOUT_FILENO) < 0))
  		{
  			std::cerr << "CGI dup2 failed\n";
  			_exit(1);
  		}
- 		close(request_fd[0]);
  		close(response_fd[1]);
  //		std::vector<std::string>	_envs;
  		_envs.push_back("REQUEST_METHOD=" + _method);
@@ -147,41 +152,14 @@
  	}
  	else
  	{
- 		close(request_fd[0]);
  		close(response_fd[1]);
 		fcntl(response_fd[0], F_SETFL, O_NONBLOCK);
-		fcntl(request_fd[1], F_SETFL, O_NONBLOCK);
 		cgi.valid = true;
 		cgi.pid = _pid;
-		cgi.requestFd = request_fd[1];
 		cgi.responseFd = response_fd[0];
 		cgi.bodyFileFd = -1;
 		cgi.output = "";
-		cgi.requestClosed = false;
 		cgi.responseClosed = false;
-		if (_method == "POST" && _bodyFilePath != "not-set")
-		{
-			cgi.bodyFileFd = open(_bodyFilePath.c_str(), O_RDONLY);
-			if (cgi.bodyFileFd < 0)
-			{
-				close(cgi.requestFd);
-				close(cgi.responseFd);
-				cgi.requestFd = -1;
-				cgi.responseFd = -1;
-				cgi.requestClosed = true;
-				cgi.responseClosed = true;
-				cgi.valid = false;
-				std::cerr << "CGI failed to open body file\n";
-				waitpid(cgi.pid, &status, 0);
-				return(cgi);
-			}
-		}
-		else
-		{
-			close(cgi.requestFd);
-			cgi.requestFd = -1;
-			cgi.requestClosed = true;
-		}
 		return (cgi);
 	}
  }
@@ -194,7 +172,7 @@
 
  	fds[1].fd = request_fd[1];
  	fds[1].events = POLLOUT;
- 	fds[1].revents = 0;*/
+ 	fds[1].revents = 0;
 
 CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi)
 {
@@ -260,7 +238,7 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi)
  		totalWritten += bytesWritten;
  	}
 	return (CGI_IO_OK);
-}
+}*/
 
 CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
 {

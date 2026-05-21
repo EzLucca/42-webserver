@@ -23,21 +23,17 @@ struct	CgiProcess
 {
 	bool		valid;
 	pid_t		pid;
-	int			requestFd;
 	int			responseFd;
 	int			bodyFileFd;
 	std::string	output;
-	bool		requestClosed;
 	bool		responseClosed;
 	time_t		startedAt;
 
 	CgiProcess()
 		: valid(false),
 		pid(-1),
-		requestFd(-1),
 		responseFd(-1),
 		bodyFileFd(-1),
-		requestClosed(true),
 		responseClosed(true)
 		{
 		}
