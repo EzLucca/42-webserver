@@ -32,7 +32,7 @@ class Client
             std::string     _requestBuffer; //where we append the request
 
             HttpRequest     _request;
-            // HttpResponse    _response;
+            HttpResponse    _response;
 
     public:
             Client();
@@ -46,13 +46,9 @@ class Client
 
 
             HttpRequest& getRequest();
+            HttpRequest& getResponse();
             ClientState getState() const;
             int getFd() const;
-
-
-            
-
-
 };
 
 #endif

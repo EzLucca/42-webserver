@@ -62,7 +62,7 @@ class CgiHandler
 		CgiHandler();
 		CgiHandler(HttpRequest &request, ServerManager &server);
 		CgiProcess	CgiStart(HttpRequest &request);
-		CgiIoStatus	CgiWriteToChild(CgiProcess &cgi);
+//		CgiIoStatus	CgiWriteToChild(CgiProcess &cgi);
 		CgiIoStatus	CgiReadResponse(CgiProcess &cgi);
 		~CgiHandler();
 };

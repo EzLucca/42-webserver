@@ -121,10 +121,11 @@ int main(int argc, char **argv) {
 
     std::cout << "Server listening on port " << PORT << "..." << std::endl;
 
-    std::map<int, Client>	clients;
-	std::map<int, int>		fdRegistry;
-    HttpParser				httpParser; // create one http parser for the server
-    HttpResponse			httpResponse;
+    std::map<int, Client>		clients;
+	std::map<int, CgiProcess>	cgiProcesses;
+	std::map<int, int>			fdRegistry;
+    HttpParser					httpParser; // create one http parser for the server
+    HttpResponse				httpResponse;
 
     // Main event loop
     while (true) {
@@ -141,11 +142,39 @@ int main(int argc, char **argv) {
             if (!(fds[i].revents & POLLIN)) 
                 continue;
 			std::map<int, int>::iterator	it = fdRegistry.find(fds[i].fd);
+			std::map<int, int>::iterator	cgiIt = cgiProcesses.find(fds[i].fd);
 			if (it != fdRegistry.end())
 			{
 				int	cgiPipeFd = it->first;
 				int	originalClientFd = it->second;
 				Client	&activeClient = clients[originalClientFd];
+				if (cgiIt != cgiProcesses.end())
+				{
+					CgiProcess	cgi = cgiIt->second;
+					CgiIoStatus = CgiReadResponse(&cgi);
+					switch (CgiIoStatus)
+					{
+						case (CGI_IO_OK)
+						{
+							continue ;
+						}
+						case (CGI_IO_DONE)
+						{
+							activeClient.getResponse().setResponseBody(cgi.output);
+							//cleanup cgi object from cgiProcesses
+							//cleanup cgi fd from fdRegistry and poll loop
+							//destroy the temp file
+						}
+						case (CGI_IO_ERROR)
+						{
+							//error handling
+							//cleanup cgi object from cgiProcesses
+							//cleanup cgi fd from fdRegistry and poll loop
+							//destroy the temp file
+						}
+					}
+
+				}
 			}
             // Master socket wokeup, some1 wants to connect, what kind of socket is this?
             if (fds[i].fd == server_fd) 
@@ -255,25 +284,7 @@ int main(int argc, char **argv) {
 								fds[j].fd = -1;
 							}
 							fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
-						}
-						if (fds[i].revents && POLLIN)
-						{
-							CgiIoStatus = CgiReadResponse(&cgi);
-							switch (CgiIoStatus)
-							{
-								case (CGI_IO_OK)
-								{
-									//process ok but not done
-								}
-								case (CGI_IO_DONE)
-								{
-									//process done
-								}
-								case (CGI_IO_ERROR)
-								{
-									//error during process
-								}
-							}
+							cgiProcesses.insert(std::make_pair(fds[j].fd, cgi));
 						}
 
 						//****************************************************************
