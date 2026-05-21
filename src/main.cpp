@@ -229,9 +229,9 @@ int main(int argc, char **argv) {
                         //check for request method
                         // redirections for methods
 
-                        activeClient.getResponse().setStatusCode(200);
-                        // activeClient.getResponse().setStatusCode(404);
-                        returnPage(activeClient, activeClient.getResponse().getStatusCode());
+                        // activeClient.getResponse().setStatusCode(200);
+                        activeClient.getResponse().setStatusCode(404);
+                        returnPage(activeClient, server);
                         // returnPage(activeClient, 404);
                         if (activeClient.getRequest().getMethod() == "POST")
                         {

@@ -1,20 +1,25 @@
 #include "getMethod.hpp"
 
-void returnPage(Client activeClient, int statuscode)
+void returnPage(Client activeClient, ServerManager server)
 {
     std::string filepath;
     std::string statusText;
 
-    switch (statuscode)
+    // TODO: check where the header referer value is stored and validade.
+    std::string uriRequest = activeClient.getRequest().getUri();
+    std::cout << uriRequest << std::endl; 
+
+    switch (activeClient.getResponse().getStatusCode())
     {
         // TODO:change for the config values
         case 200:
-            filepath = "var/www/html/index.html";
+            filepath = server.getServerLocation("mysite.com", "/", "root")
+            + '/' + server.getServerLocation("mysite.com", "/", "index");
             statusText = "200 OK";
             break;
 
         case 404:
-            filepath = "var/www/errorpages/dino.html";
+            filepath = server.getServerErrorPages("mysite.com",404);
             statusText = "404 Not Found";
             break;
 
