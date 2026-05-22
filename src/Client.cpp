@@ -4,12 +4,14 @@ Client::Client()
 {
     _fd = -1;
     _state = READING_REQUESTLINE;
+    _config = NULL;
     std::cout << "Client default constructor called." << std::endl;
 }
 
-Client::Client(int fd) :
+Client::Client(int fd, const ServerConfig* config) :
     _fd(fd),
-    _state(READING_REQUESTLINE)
+    _state(READING_REQUESTLINE),
+    _config(config)
 {
     std::cout << "Client object created." << std::endl; 
 }
@@ -66,3 +68,14 @@ HttpResponse& Client::getResponse()
 {
     return (_response);
 }
+
+const ServerConfig* Client::getConfig()
+{
+    return (_config);
+}
+/*
+void Client::setConfig(ServerConfig config)
+{
+    _config = config;
+}
+    */
