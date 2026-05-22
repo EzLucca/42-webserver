@@ -5,12 +5,19 @@
 #include <arpa/inet.h>
 
 /**
-  * @param server the object to add
-  * Add the server object to the server manager pairing it with the name of the server
-  */
+ * @param server the object to add
+ * Add the server object to the server manager pairing it with the name of the server
+ */
 void    ServerManager::addServer(const ServerConfig & server)
 {
     _servers[server.getServerName()].push_back(server);
+    _servercount++;
+    // _servers.push_back(server);
+}
+
+std::map<std::string, std::vector<ServerConfig>> ServerManager::getServers()
+{
+    return (_servers);
 }
 
 // TEST:
@@ -59,10 +66,10 @@ void ServerManager::printServers() const
 }
 
 /**
-  * @param serverName Name of the server to search
-  * @param errorCode specifing the error code
-  * Return a string with the path to the errorPage
-  */
+ * @param serverName Name of the server to search
+ * @param errorCode specifing the error code
+ * Return a string with the path to the errorPage
+ */
 std::string ServerManager::getServerErrorPages( const std::string& serverName,
         int errorCode) const
 {
@@ -72,10 +79,10 @@ std::string ServerManager::getServerErrorPages( const std::string& serverName,
 }
 
 /**
-  * @param serverName Name of the server to search
-  * @param location key specifing the neste location on the server
-  * Return a string of with the pair value of the key excluded errorPages
-  */
+ * @param serverName Name of the server to search
+ * @param location key specifing the neste location on the server
+ * Return a string of with the pair value of the key excluded errorPages
+ */
 std::string ServerManager::getServerValues( const std::string& serverName,
         const std::string& key) const
 {
@@ -98,11 +105,11 @@ std::string ServerManager::getServerValues( const std::string& serverName,
 // std::string root;
 // root = server.getServerLocation("mysite.com", "/", "root");
 /** 
-  * @param serverName Name of the server to search
-  * @param location key specifing the neste location on the server
-  * @param locationKey the specific key to search
-  * Return a string of any location key excluded allowed_methods
-  */
+ * @param serverName Name of the server to search
+ * @param location key specifing the neste location on the server
+ * @param locationKey the specific key to search
+ * Return a string of any location key excluded allowed_methods
+ */
 std::string ServerManager::getServerLocation( const std::string& serverName,
         const std::string& location,
         const std::string& locationKey) const
@@ -119,12 +126,12 @@ std::string ServerManager::getServerLocation( const std::string& serverName,
 // post = server.getServerLocation("mysite.com", "/", "allowed_methods", int value);
 // return a string o
 /**
-  * @param serverName Name of the server to search
-  * @param location key specifing the neste location on the server
-  * @param locationKey the specific key to search
-  * @param method integer correspondig to the method. They are stored in vector.
-  * Return a string of any location key excluded allowed_methods
-  */
+ * @param serverName Name of the server to search
+ * @param location key specifing the neste location on the server
+ * @param locationKey the specific key to search
+ * @param method integer correspondig to the method. They are stored in vector.
+ * Return a string of any location key excluded allowed_methods
+ */
 std::string ServerManager::getServerLocationMethods( const std::string& serverName,
         const std::string& location,
         const std::string& locationKey,
@@ -136,3 +143,69 @@ std::string ServerManager::getServerLocationMethods( const std::string& serverNa
 
     return route.vectorRoute.at(locationKey).at(method);
 }
+
+int ServerManager::getServerCount() const
+{
+    return (_servercount);
+}
+
+// // TEST: version 3
+// const ServerConfig* ServerManager::findServer(
+//     const std::string& host,
+//     int port) const
+// {
+//     // exact match: host + port
+//     for (std::vector<ServerConfig>::const_iterator it = _servers2.begin();
+//          it != _servers2.end();
+//          ++it)
+//     {
+//         if (it->getServerName() == host &&
+//             it->getPort() == port)
+//         {
+//             return &(*it);
+//         }
+//     }
+//
+//     // fallback: first server with matching port
+//     for (std::vector<ServerConfig>::const_iterator it = _servers2.begin();
+//          it != _servers2.end();
+//          ++it)
+//     {
+//         if (it->getPort() == port)
+//             return &(*it);
+//     }
+//     return NULL;
+// }
+//
+// const RouteConfig* ServerManager::findLocation(
+//     const ServerConfig& server,
+//     const std::string& uri) const
+// {
+//     const RouteConfig* bestMatch = NULL;
+//     size_t longestMatch = 0;
+//
+//     const std::map<std::string, RouteConfig>& routes =
+//         server.getRoutes();
+//
+//     for (std::map<std::string, RouteConfig>::const_iterator it =
+//             routes.begin();
+//          it != routes.end();
+//          ++it)
+//     {
+//         const std::string& path = it->first;
+//
+//         // check if URI starts with route path
+//         if (uri.compare(0, path.size(), path) == 0)
+//         {
+//             // keep longest matching route
+//             if (path.size() > longestMatch)
+//             {
+//                 longestMatch = path.size();
+//                 bestMatch = &(it->second);
+//             }
+//         }
+//     }
+//
+//     return bestMatch;
+// }
+// // ~TEST:

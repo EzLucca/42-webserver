@@ -6,6 +6,27 @@
 # include <ostream>
 # include <unordered_map>
 
+// TEST:
+# include <set>
+
+enum HttpMethod
+{
+    GET,
+    POST,
+    DELETE_
+};
+
+class LocationConfig
+{
+    public:
+        std::string path;
+
+        std::map<std::string, std::string> values;
+
+        std::set<HttpMethod> methods;
+};
+// ~TEST:
+
 struct RouteConfig 
 {
     // TODO: check if unordered is necessary
@@ -23,6 +44,8 @@ class ServerConfig
         size_t                              _clientMaxBodySize;
         std::map<int, std::string>          _errorPages;        // indexed error pages
         std::map<std::string, RouteConfig>  _routes;            // routing tables
+        // TEST:
+        // ~TEST:
 
     public:
         // Constructors & Destructors

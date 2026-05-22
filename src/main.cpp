@@ -61,13 +61,21 @@ int main(int argc, char **argv) {
     // Start parsing the config file
     std::string configFile;
     ConfigParser config;
-    ServerManager server;
+    ServerManager manager;
 
     configFile = argv[1];
 
-    if (config.parse(configFile, server))
+    if (config.parse(configFile, manager))
         exit(1); // TODO: handle errors properly on finish version
 
+    std::map<std::string, std::vector<ServerConfig> >::iterator it;
+    std::map<std::string, std::vector<ServerConfig> > varname;
+    varname = manager.getServers();
+    for (it = varname.begin(); it != varname.end(); ++it)
+    {
+        std::cout << it->first << std::endl;
+        std::string servername = it->first;
+    }
     // exit(2);
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
@@ -92,11 +100,8 @@ int main(int argc, char **argv) {
     std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
-    address.sin_port = htons(stoi(server.getServerValues("mysite.com", "listen")));       // hton transforms port to understand the byte order
-    // TODO: check how to save this with multiple servers
-
-    // once executed succesfully, os registers that any it traffic that arrives at port 8080
-    // must be routed directly to this specific c++ program
+    address.sin_port = htons(stoi(manager.getServerValues("mysite2.com","listen")));       // hton transforms port to understand the byte order
+                                                                                          // must be routed directly to this specific c++ program
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0)
     {
         std::cerr << "Bind failed. Is the port already in use?" << std::endl;
@@ -122,7 +127,7 @@ int main(int argc, char **argv) {
     fds[0].fd = server_fd;
     fds[0].events = POLLIN; // POLLIN means tell me when there is data to read 
 
-    std::cout << "Server listening on port " << server.getServerValues("mysite.com", "listen") << "..." << std::endl;
+    std::cout << "Server listening on port " << manager.getServerValues("mysite.com", "listen") << "..." << std::endl;
 
     std::map<int, Client> clients;
     HttpParser            httpParser; // create one http parser for the server
@@ -231,7 +236,7 @@ int main(int argc, char **argv) {
 
                         // activeClient.getResponse().setStatusCode(200);
                         activeClient.getResponse().setStatusCode(404);
-                        returnPage(activeClient, server);
+                        returnPage(activeClient, manager);
                         // returnPage(activeClient, 404);
                         if (activeClient.getRequest().getMethod() == "POST")
                         {
