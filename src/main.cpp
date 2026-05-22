@@ -1,13 +1,14 @@
-#include <iostream>
-#include <string>
-#include <sys/socket.h> // For socket(), bind(), listen(), accept()
-#include <netinet/in.h> // For struct sockaddr_in
-#include <poll.h>       // For poll() and struct pollfd
-#include <fcntl.h>      // For fcntl() and O_NONBLOCK
-#include <unistd.h>     // For close(), read(), write()
-#include <cstring>      // For memset()
-#include <fstream>      //For ile manipulation
+// #include <iostream>
+// #include <string>
+// #include <sys/socket.h> // For socket(), bind(), listen(), accept()
+// #include <netinet/in.h> // For struct sockaddr_in
+// #include <poll.h>       // For poll() and struct pollfd
+// #include <fcntl.h>      // For fcntl() and O_NONBLOCK
+// #include <unistd.h>     // For close(), read(), write()
+// #include <cstring>      // For memset()
+// #include <fstream>      //For ile manipulation
 
+#include "server.hpp"
 #include "HttpParser.hpp" // For parsing
 #include "ConfigParser.hpp" // For parsing
 #include "Client.hpp"
@@ -15,6 +16,7 @@
 #include "HttpException.hpp"
 #include "HttpResponse.hpp"
 #include "CgiHandler.hpp"
+#include "getMethod.hpp"
 
 #define PORT 8080
 #define MAX_CLIENTS 100
@@ -57,16 +59,38 @@ int main(int argc, char **argv) {
     }
 
     // Start parsing the config file
-    std::string configFile;
-    ConfigParser config;
-    ServerManager server;
+    std::string             configFile;
+    ConfigParser            config;
+    ServerManager           manager;
+    std::map<int, Client>   clients;
+    HttpParser              httpParser; // create one http parser for the server
 
     configFile = argv[1];
 
-    if (config.parse(configFile, server))
+    if (config.parse(configFile, manager))
         exit(1); // TODO: handle errors properly on finish version
 
-    // exit(2);
+    //catch all the servers.
+    const std::vector<ServerConfig>& allServers = manager.getServers();
+    std::map<int, const ServerConfig*> masterSocketRegistry;
+
+
+    //prepare poll struct
+    struct pollfd fds[MAX_CLIENTS];
+
+    // Initialize, -1 means untouched
+    for (int i = 0; i < MAX_CLIENTS; ++i) 
+    {
+        fds[i].fd = -1; 
+    }
+
+
+
+    //make loop here and go through all servers and set up the networks
+    for (int i = 0; i < manager.getServerCount(); i++)
+    {
+        std::cout << "Setting up Master Socket for port: " << allServers[i].getPort() <<  std::endl;
+
     // create master socket
     // AF_INET = IPv4, SOCK_STREAM = TCP
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -90,10 +114,8 @@ int main(int argc, char **argv) {
     std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
-    address.sin_port = htons(PORT);       // hton transforms port to understand the byte order
-
-    // once executed succesfully, os registers that any it traffic that arrives at port 8080
-    // must be routed directly to this specific c++ program
+    address.sin_port = htons(allServers[i].getPort());// hardcoded
+                                                                                          // must be routed directly to this specific c++ program
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0)
     {
         std::cerr << "Bind failed. Is the port already in use?" << std::endl;
@@ -107,24 +129,19 @@ int main(int argc, char **argv) {
         return (1);
     }
 
-    //prepare poll struct
-    struct pollfd fds[MAX_CLIENTS];
-
-    // Initialize, -1 means untouched
-    for (int i = 0; i < MAX_CLIENTS; ++i) {
-        fds[i].fd = -1; 
-    }
-
     // set master socket in the first index
-    fds[0].fd = server_fd;
-    fds[0].events = POLLIN; // POLLIN means tell me when there is data to read 
+    fds[i].fd = server_fd;
+    fds[i].events = POLLIN; // POLLIN means tell me when there is data to read 
+    masterSocketRegistry[server_fd] = &allServers[i];
 
-    std::cout << "Server listening on port " << PORT << "..." << std::endl;
 
-    std::map<int, Client> clients;
-    HttpParser            httpParser; // create one http parser for the server
-    HttpResponse          httpResponse;
+    }
+    manager.printServers();
+    
+    // exit(2);
 
+
+    //std::cout << "Server listening on port " << manager.getServerValues("mysite.com", "listen") << "..." << std::endl;
     // Main event loop
     while (true) {
         // poll() waits here, timeout -1 means that it waits infinitely that somethin happpens
@@ -140,19 +157,19 @@ int main(int argc, char **argv) {
             // did this specific socket actually ring? if not, continue
             if (!(fds[i].revents & POLLIN)) 
                 continue;
-
+            
+            int triggered_fd = fds[i].fd;
             // Master socket wokeup, some1 wants to connect, what kind of socket is this?
-            if (fds[i].fd == server_fd) 
+            std::map<int, const ServerConfig*>::iterator it = masterSocketRegistry.find(triggered_fd);
+            if (it != masterSocketRegistry.end()) 
             {
-                // Create empty struct to store client information
+               
+                const ServerConfig* matchedConfig = it->second; 
                 struct sockaddr_in client_address;
-
-                // We need to save the size of the storage
-                // type is socklen_t, coz accept() demands this type
                 socklen_t client_len = sizeof(client_address);
 
                 // Call accept DOUBLE  CHECK ACCEPT FUNCTION
-                int new_client_fd = accept(server_fd, (struct sockaddr*)&client_address, &client_len);
+                int new_client_fd = accept(triggered_fd, (struct sockaddr*)&client_address, &client_len);
                 if (new_client_fd == -1)
                 {
                     std::cerr << "Failure in accepting" << std::endl;
@@ -160,6 +177,7 @@ int main(int argc, char **argv) {
                 }
 
                 fcntl(new_client_fd, F_SETFL, O_NONBLOCK); //set file status flags to nonblocking
+
                 bool added = false; //flag if adding client succesfull
 
 
@@ -170,10 +188,10 @@ int main(int argc, char **argv) {
                     {
                         fds[j].fd = new_client_fd;
                         fds[j].events = POLLIN; //  activate pollin
-                        clients.insert(std::make_pair(new_client_fd, Client(new_client_fd))); // add the client to the map
+                        clients[new_client_fd] = Client(new_client_fd, matchedConfig);
+        
+                        std::cout << "Link created! Client " << new_client_fd << " bound to port " << matchedConfig->getPort() << std::endl;
                         added = true;
-
-                        std::cout << "New client connected on FD: "<< new_client_fd << std::endl;
                         break;
                     }
                 }
@@ -182,7 +200,8 @@ int main(int argc, char **argv) {
                     std::cerr << "Server full, rejecting client." << std::endl;
                     close(new_client_fd); // close the connection because server full
                 }
-            } 
+            }
+        
             // Already existing client woke up and sent us data
             else {
 
@@ -217,29 +236,39 @@ int main(int argc, char **argv) {
                     {
                         activeClient.setState(ERROR);
                         std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
-                        httpResponse.setStatusCode(e.getStatusCode());
-                        httpResponse.setStatusMessage(e.getStatusMessage());
+                        activeClient.getResponse().setStatusCode(e.getStatusCode());
+                        activeClient.getResponse().setStatusMessage(e.getStatusMessage());
 
                     }
                     // if parse is completed so if state is processing we start to execute the request
                     if (activeClient.getState() == PROCESSING)
                     {
                         //check for request method
+                        // redirections for methods
+
+                        // activeClient.getResponse().setStatusCode(200);
+                        activeClient.getResponse().setStatusCode(404);
+                        //returnPage(activeClient, manager);
+                        // returnPage(activeClient, 404);
+                        if (activeClient.getRequest().getMethod() == "POST")
+                        {
+                            std::cout << activeClient.getRequest().getMethod() << std::endl;
+                        }
 
                         //here we process the request and build response on the fly
-						
-						//TEST************************************************************
 
-						// CgiHandler(activeClient.getRequest(), server);
+                        //TEST************************************************************
 
-						//****************************************************************
+                        // CgiHandler(activeClient.getRequest(), server);
+
+                        //****************************************************************
 
                         // after processing and after sending the response, check the buffer, if another request, start the loop again
                     }
                 }
                 // Print the buffuer to the output stream
                 //std::cout << shovelBuffer << std::endl;
-                
+
                 /*
                 // Hardcoded mock response
                 std::string mock_response = 
@@ -259,7 +288,7 @@ int main(int argc, char **argv) {
                 }
                 */
                 //close the connections, and set the fd back to -1
-                if (/*activeClient.getState() == PROCESSING  || */ activeClient.getState() == ERROR)
+                if (/*activeClient.getState() == PROCESSING  || */  activeClient.getState() == ERROR)
                 {
                     clients.erase(currentFd); // DUNNO IF THIS WORKS
                     close(fds[i].fd);

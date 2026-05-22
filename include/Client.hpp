@@ -4,6 +4,8 @@
 #include <iostream>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "ServerConfig.hpp"
+#include <vector>
 
 //these are possible states (these can change still)
 enum ClientState {
@@ -26,27 +28,31 @@ class Client
 {
     // What do we need to store in client object? 
     private:
-            int             _fd;            // Client socker
-            ClientState     _state;         // Store the client state
+            int                     _fd;            // Client socker
+            ClientState             _state;         // Store the client state
             
-            std::string     _requestBuffer; //where we append the request
+            std::string             _requestBuffer; //where we append the request
 
-            HttpRequest     _request;
-            // HttpResponse    _response;
+            HttpRequest             _request;
+            HttpResponse            _response;
+            const ServerConfig*            _config;
 
     public:
             Client();
-            Client(int fd); // constructor sets state = Reading headears on default
+            Client(int fd, const ServerConfig* config); // constructor sets state = Reading headears on default
             ~Client();
 
             void setState(ClientState state);
+            void setConfig(ServerConfig config);
             void appendToBuffer(const char* data, ssize_t size);
             const std::string getBuffer() const;
             void eraseFromBuffer(size_t length);
 
 
             HttpRequest& getRequest();
+            HttpResponse& getResponse();
             ClientState getState() const;
+            const ServerConfig* getConfig();
             int getFd() const;
 
 

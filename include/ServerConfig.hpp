@@ -1,13 +1,31 @@
-#ifndef SERVERCONFIG_HPP
-# define SERVERCONFIG_HPP
+ #pragma once
 
 # include <string>
 # include <vector>
 # include <map>
 # include <ostream>
-# include <iostream>
-# include <stdbool.h>
 # include <unordered_map>
+
+// TEST:
+# include <set>
+
+enum HttpMethod
+{
+    GET,
+    POST,
+    DELETE_
+};
+
+class LocationConfig
+{
+    public:
+        std::string path;
+
+        std::map<std::string, std::string> values;
+
+        std::set<HttpMethod> methods;
+};
+// ~TEST:
 
 struct RouteConfig 
 {
@@ -26,6 +44,8 @@ class ServerConfig
         size_t                              _clientMaxBodySize;
         std::map<int, std::string>          _errorPages;        // indexed error pages
         std::map<std::string, RouteConfig>  _routes;            // routing tables
+        // TEST:
+        // ~TEST:
 
     public:
         // Constructors & Destructors
@@ -57,4 +77,3 @@ class ServerConfig
 };
 
 std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m);
-#endif

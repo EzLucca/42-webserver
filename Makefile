@@ -1,42 +1,39 @@
-# Program name
-NAME      = webserv
+NAME = webserv
 
-# Compiler and flags
-CXX       = c++
-CXXFLAGS  = -Wall -Wextra -Werror -std=c++20
+CXX = c++
+CXXFLAGS = -Wall -Wextra -Werror -std=c++20 -Iinclude
 
-# Files
-SRC       = main.cpp \
-			Client.cpp \
-			HttpParser.cpp \
-			HttpRequest.cpp \
-			HttpResponse.cpp \
-			ConfigParser.cpp \
-			ServerConfig.cpp \
-			ServerManager.cpp \
-			CgiHandler.cpp \
+SRC = \
+	src/main.cpp \
+	src/Client.cpp \
+	src/HttpParser.cpp \
+	src/HttpRequest.cpp \
+	src/HttpResponse.cpp \
+	src/ConfigParser.cpp \
+	src/ServerConfig.cpp \
+	src/ServerManager.cpp \
+	src/CgiHandler.cpp \
+	src/getMethod.cpp
 
-OBJ       = $(SRC:.cpp=.o)
+OBJ_DIR = obj
 
-# Default
+OBJ = $(SRC:src/%.cpp=$(OBJ_DIR)/%.o)
+
 all: $(NAME)
 
-# Linking
 $(NAME): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
-# Compile
-%.o: %.cpp
+$(OBJ_DIR)/%.o: src/%.cpp
+	mkdir -p $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Cleanup
 clean:
-	rm -f $(OBJ)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
 	rm -f $(NAME)
 
-# Rebuild
 re: fclean all
 
 .PHONY: all clean fclean re
