@@ -58,11 +58,11 @@ int main(int argc, char **argv) {
         return (1);
     }
 
-    // Start parsing the config file
+    
     std::string             configFile;
     ConfigParser            config;
     ServerManager           manager;
-    std::map<int, Client>   clients;
+    std::map<int, Client>   clients; 
     HttpParser              httpParser; // create one http parser for the server
 
     configFile = argv[1];
@@ -83,8 +83,6 @@ int main(int argc, char **argv) {
     {
         fds[i].fd = -1; 
     }
-
-
 
     //make loop here and go through all servers and set up the networks
     for (int i = 0; i < manager.getServerCount(); i++)
@@ -133,8 +131,6 @@ int main(int argc, char **argv) {
     fds[i].fd = server_fd;
     fds[i].events = POLLIN; // POLLIN means tell me when there is data to read 
     masterSocketRegistry[server_fd] = &allServers[i];
-
-
     }
     manager.printServers();
     
@@ -233,7 +229,7 @@ int main(int argc, char **argv) {
                     }
 
                     catch (const HttpException& e) 
-                    {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    {
                         activeClient.setState(ERROR);
                         std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
                         activeClient.getResponse().setStatusCode(e.getStatusCode());
@@ -290,7 +286,8 @@ int main(int argc, char **argv) {
                 //close the connections, and set the fd back to -1
                 if (/*activeClient.getState() == PROCESSING  || */  activeClient.getState() == ERROR)
                 {
-                    clients.erase(currentFd); // DUNNO IF THIS WORKS
+                    
+                    clients.erase(currentFd);
                     close(fds[i].fd);
                     fds[i].fd = -1;
                 }
