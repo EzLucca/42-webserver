@@ -15,10 +15,8 @@ class ServerEngine {
        //runtime registries
         std::map<int, Client> _clients;
         struct pollfd         _fds[MAX_FDS];
-        
-        
-        void acceptNewClient(int master_fd);
-        void readFromClient(int client_fd);
+        //void acceptNewClient(int master_fd);
+        //void readFromClient(int client_fd);
 
     public:
 
