@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
         return (1);
     }
 
-    
+
     std::string             configFile;
     ConfigParser            config;
     ServerManager           manager;
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
 
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
-
+                
 
                 if (valRead <= 0)
                 {

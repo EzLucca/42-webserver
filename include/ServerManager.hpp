@@ -22,9 +22,9 @@ class ServerManager
 
 
         //void setupNetwork(); // TODO
-        const ServerConfig* getServerByFd(int fd); //TODO THIS
-
+        const ServerConfig* getServerByFd(int fd);
         std::vector<ServerConfig> getServers();
+        std::vector<int> getMasterFds() const;
         // TEST: version 3
         // const ServerConfig* findServer(
         //     const std::string& host,
