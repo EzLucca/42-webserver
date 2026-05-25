@@ -10,8 +10,7 @@ class ServerManager
         std::vector<ServerConfig> _servers;
         // std::vector<ServerConfig> _servers2; // TODO: simplify the structures
         int _servercount;
-        // probably all registries will lie here
-        // fd as key and port as value
+        std::map<int, const ServerConfig*> _masterSocketRegistry;
 
     public:
 
@@ -23,9 +22,9 @@ class ServerManager
 
 
         //void setupNetwork(); // TODO
-        //ServerConfig* getServerByFd(int fd); //TODO THIS
-
+        const ServerConfig* getServerByFd(int fd);
         std::vector<ServerConfig> getServers();
+        std::vector<int> getMasterFds() const;
         // TEST: version 3
         // const ServerConfig* findServer(
         //     const std::string& host,

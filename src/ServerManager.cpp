@@ -3,6 +3,7 @@
 #include <fstream>
 #include <filesystem>
 #include <arpa/inet.h>
+#include <vector>
 
 /**
  * @param server the object to add
@@ -80,3 +81,26 @@ int    ServerManager::getServerCount() const
     return (_servercount);
 }
 
+const ServerConfig* ServerManager::getServerByFd(int fd)
+{
+    std::map<int, const ServerConfig*>::iterator it = _masterSocketRegistry.find(fd);
+            if (it != _masterSocketRegistry.end()) 
+            {
+                const ServerConfig* matchedConfig = it->second;
+                return (matchedConfig);
+            }
+    return (NULL); // check for the null if it cant find the server
+}
+
+std::vector<int> ServerManager::getMasterFds() const
+{
+    std::vector<int> masterFds;
+
+    for (std::map<int, const ServerConfig*>::const_iterator it = _masterSocketRegistry.begin(); 
+     it != _masterSocketRegistry.end(); 
+     ++it)
+     {
+        masterFds.push_back(it->first);
+     }
+     return masterFds;
+}

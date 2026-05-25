@@ -1,14 +1,14 @@
-// #include <iostream>
-// #include <string>
-// #include <sys/socket.h> // For socket(), bind(), listen(), accept()
-// #include <netinet/in.h> // For struct sockaddr_in
-// #include <poll.h>       // For poll() and struct pollfd
-// #include <fcntl.h>      // For fcntl() and O_NONBLOCK
-// #include <unistd.h>     // For close(), read(), write()
-// #include <cstring>      // For memset()
-// #include <fstream>      //For ile manipulation
+#include <iostream>
+#include <string>
+#include <sys/socket.h> // For socket(), bind(), listen(), accept()
+#include <netinet/in.h> // For struct sockaddr_in
+#include <poll.h>       // For poll() and struct pollfd
+#include <fcntl.h>      // For fcntl() and O_NONBLOCK
+#include <unistd.h>     // For close(), read(), write()
+#include <cstring>      // For memset()
+#include <fstream>      //For ile manipulation
 
-#include "server.hpp"
+
 #include "HttpParser.hpp" // For parsing
 #include "ConfigParser.hpp" // For parsing
 #include "Client.hpp"
@@ -58,11 +58,11 @@ int main(int argc, char **argv) {
         return (1);
     }
 
-    // Start parsing the config file
+
     std::string             configFile;
     ConfigParser            config;
     ServerManager           manager;
-    std::map<int, Client>   clients;
+    std::map<int, Client>   clients; 
     HttpParser              httpParser; // create one http parser for the server
 
     configFile = argv[1];
@@ -83,8 +83,6 @@ int main(int argc, char **argv) {
     {
         fds[i].fd = -1; 
     }
-
-
 
     //make loop here and go through all servers and set up the networks
     for (int i = 0; i < manager.getServerCount(); i++)
@@ -133,8 +131,6 @@ int main(int argc, char **argv) {
     fds[i].fd = server_fd;
     fds[i].events = POLLIN; // POLLIN means tell me when there is data to read 
     masterSocketRegistry[server_fd] = &allServers[i];
-
-
     }
     manager.printServers();
     
@@ -213,7 +209,7 @@ int main(int argc, char **argv) {
 
                 // read data to the buffer 
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
-
+                
 
                 if (valRead <= 0)
                 {
@@ -233,7 +229,7 @@ int main(int argc, char **argv) {
                     }
 
                     catch (const HttpException& e) 
-                    {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    {
                         activeClient.setState(ERROR);
                         std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
                         activeClient.getResponse().setStatusCode(e.getStatusCode());
@@ -290,7 +286,8 @@ int main(int argc, char **argv) {
                 //close the connections, and set the fd back to -1
                 if (/*activeClient.getState() == PROCESSING  || */  activeClient.getState() == ERROR)
                 {
-                    clients.erase(currentFd); // DUNNO IF THIS WORKS
+                    
+                    clients.erase(currentFd);
                     close(fds[i].fd);
                     fds[i].fd = -1;
                 }
