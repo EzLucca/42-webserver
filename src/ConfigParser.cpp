@@ -1,4 +1,8 @@
 #include "ConfigParser.hpp"
+#include <filesystem>
+#include <iostream>
+#include <fstream>
+#include <arpa/inet.h>
 
 /**
  * @brief Checks if a file or directory exists.
@@ -472,11 +476,9 @@ int ConfigParser::parse(std::string configFile, ServerManager& server)
     }
     const std::string &workingBuffer = getConfigBuffer();
 
-    // TEST:
     try{
         std::istringstream stream(workingBuffer);
 
-        // while (stream)
         while (true)
         {
             ServerConfig config;
@@ -487,6 +489,7 @@ int ConfigParser::parse(std::string configFile, ServerManager& server)
                     throw std::runtime_error("Brackets unclosed.");
                 break;
             }
+            // TODO: review brackets unclosed
             if (config.pos != 0)
                 throw std::runtime_error("Brackets unclosed.");
             server.addServer(config);
@@ -495,9 +498,7 @@ int ConfigParser::parse(std::string configFile, ServerManager& server)
     }
     catch (const std::exception& e) 
     {
-        std::cout << e.what() << " (testing)" << std::endl;
+        std::cout << "Config parsing error: " << e.what() << std::endl;
     }
-    // ~TEST:
-
     return 0;
 }

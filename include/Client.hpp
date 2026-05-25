@@ -4,6 +4,8 @@
 #include <iostream>
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include "ServerConfig.hpp"
+#include <vector>
 
 //these are possible states (these can change still)
 enum ClientState {
@@ -14,7 +16,8 @@ enum ClientState {
     PARSING_REQUEST_LINE,   // Parsing request line
     PARSING_HEADERS,        // Parsing headers
     PARSING_BODY,           // Parsing body
-    PROCESSING,             // GET Master is matching routing rules / opening files
+    PROCESSING,
+    CGI_CALL,             // GET Master is matching routing rules / opening files
     WAITING_FOR_CGI,        // CGI Master is waiting for the pipe to have data
     WRITING_RESPONSE,       // Sending the formatted data back to the browser
     ERROR,
@@ -29,25 +32,28 @@ class Client
             int             _fd;            // Client socket
             ClientState     _state;         // Store the client state
             
-            std::string     _requestBuffer; //where we append the request
+            std::string             _requestBuffer; //where we append the request
 
-            HttpRequest     _request;
-            HttpResponse    _response;
+            HttpRequest             _request;
+            HttpResponse            _response;
+            const ServerConfig*            _config;
 
     public:
             Client();
-            Client(int fd); // constructor sets state = Reading headers on default
+            Client(int fd, const ServerConfig* config); // constructor sets state = Reading headears on default
             ~Client();
 
             void setState(ClientState state);
+            void setConfig(ServerConfig config);
             void appendToBuffer(const char* data, ssize_t size);
             const std::string getBuffer() const;
             void eraseFromBuffer(size_t length);
 
 
             HttpRequest& getRequest();
-            HttpRequest& getResponse();
+            HttpResponse& getResponse();
             ClientState getState() const;
+            const ServerConfig* getConfig();
             int getFd() const;
 };
 

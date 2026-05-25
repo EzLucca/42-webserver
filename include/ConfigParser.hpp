@@ -1,7 +1,5 @@
-#ifndef CONFIGPARSER_HPP
-# define CONFIGPARSER_HPP
+#pragma once
 
-#include <iostream>
 #include "ServerConfig.hpp"
 #include "ServerManager.hpp"
 
@@ -29,5 +27,3 @@ class ConfigParser
         void        parselocation(std::istream &stream, RouteConfig &nestedLocation, ServerConfig &config);
         void        setConfigBuffer(std::string line);
 };
-
-#endif
