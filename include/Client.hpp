@@ -16,7 +16,8 @@ enum ClientState {
     PARSING_REQUEST_LINE,   // Parsing request line
     PARSING_HEADERS,        // Parsing headers
     PARSING_BODY,           // Parsing body
-    PROCESSING,             // GET Master is matching routing rules / opening files
+    PROCESSING,
+    CGI_CALL,             // GET Master is matching routing rules / opening files
     WAITING_FOR_CGI,        // CGI Master is waiting for the pipe to have data
     WRITING_RESPONSE,       // Sending the formatted data back to the browser
     ERROR,
@@ -28,8 +29,8 @@ class Client
 {
     // What do we need to store in client object? 
     private:
-            int                     _fd;            // Client socker
-            ClientState             _state;         // Store the client state
+            int             _fd;            // Client socket
+            ClientState     _state;         // Store the client state
             
             std::string             _requestBuffer; //where we append the request
 
@@ -54,11 +55,6 @@ class Client
             ClientState getState() const;
             const ServerConfig* getConfig();
             int getFd() const;
-
-
-            
-
-
 };
 
 #endif

@@ -59,6 +59,11 @@ HttpRequest& Client::getRequest()
     return (_request);
 }
 
+HttpResponse& Client::getResponse()
+{
+    return (_response);
+}
+
 int    Client::getFd() const
 {
     return (_fd);

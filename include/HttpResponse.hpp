@@ -12,6 +12,7 @@ class HttpResponse
     private:
             int         _statusCode;
             std::string _statusMessage;
+			std::string	_responseBody;
 
     // HEADERS, Metadata about the response, such as content type and caching policies
     public:
@@ -21,9 +22,11 @@ class HttpResponse
             //setters
             void    setStatusCode(int statusCode);
             void    setStatusMessage(std::string statusMessage);
+			void	setResponseBody(std::string response);
             //getters
             int             getStatusCode() const;
-            std::string     getStatusMessage() const;  
+            std::string     getStatusMessage() const;
+			std::string		getResponseBody() const;
     // BODY -- The actual content returned , such as HTML, JSON, or text
 
 };
