@@ -50,11 +50,13 @@ int main(int argc, char **argv)
 	}
 	std::string_view fileName = argv[1];
 
-	try{
+	try
+	{
 		if(!validateConfigFile(fileName))
 			throw std::invalid_argument("Invalid configuration file.");
 	}
-	catch (const std::exception &e){
+	catch (const std::exception &e)
+	{
 		std::cerr << "Error: " << e.what() << std::endl;
 		return (1);
 	}
@@ -65,6 +67,9 @@ int main(int argc, char **argv)
 	ServerManager           manager;
 	std::map<int, Client>   clients; 
 	HttpParser              httpParser; // create one http parser for the server
+	std::map<int, CgiProcess>	cgiProcesses;
+	std::map<int, int>			fdRegistry;
+
 
 	configFile = argv[1];
 
@@ -139,11 +144,6 @@ int main(int argc, char **argv)
 	// exit(2);
 
 	std::cout << "Server listening on port " << PORT << "..." << std::endl;
-
-	std::map<int, CgiProcess>	cgiProcesses;
-	std::map<int, int>			fdRegistry;
-	HttpParser					httpParser; // create one http parser for the server
-
 	//std::cout << "Server listening on port " << manager.getServerValues("mysite.com", "listen") << "..." << std::endl;
 	// Main event loop
 	while (true)
@@ -163,6 +163,8 @@ int main(int argc, char **argv)
 			if (!(fds[i].revents & POLLIN)) 
 				continue;
 			int triggered_fd = fds[i].fd;
+
+
 			// Master socket wokeup, some1 wants to connect, what kind of socket is this?
 			std::map<int, const ServerConfig*>::iterator it = masterSocketRegistry.find(triggered_fd);
 			if (it != masterSocketRegistry.end()) 
@@ -204,167 +206,167 @@ int main(int argc, char **argv)
 					std::cerr << "Server full, rejecting client." << std::endl;
 					close(new_client_fd); // close the connection because server full
 				}
-				continue ;
+			}
+				
 
-				std::map<int, int>::iterator	it = fdRegistry.find(triggered_fd);
-				std::map<int, int>::iterator	cgiIt = cgiProcesses.find(triggered_fd);
-				if (it != fdRegistry.end())
+			std::map<int, int>::iterator	shit = fdRegistry.find(triggered_fd);
+			std::map<int, CgiProcess>::iterator	cgiIt = cgiProcesses.find(triggered_fd);
+			if (shit != fdRegistry.end())
+			{
+			//	int	cgiPipeFd = it->first;
+				int	originalClientFd = shit->second;
+				Client	&activeClient = clients[originalClientFd];
+				if (cgiIt != cgiProcesses.end())
 				{
-					int	cgiPipeFd = it->first;
-					int	originalClientFd = it->second;
-					Client	&activeClient = clients[originalClientFd];
-					if (cgiIt != cgiProcesses.end())
+					CgiProcess	cgi = cgiIt->second;
+					activeClient.getResponse().CgiReadResponse(cgi, activeClient);
+					switch (activeClient.getState())
 					{
-						CgiProcess	cgi = cgiIt->second;
-						CgiIoStatus = CgiReadResponse(&cgi);
-						switch (CgiIoStatus)
+						case CGI_IO_OK:
 						{
-							case (CGI_IO_OK)
-							{
-								continue ;
-							}
-							case (CGI_IO_DONE)
-							{
-								activeClient.getResponse().setResponseBody(cgi.output);
-								//cleanup cgi object from cgiProcesses
-								//cleanup cgi fd from fdRegistry and poll loop
-								//destroy the temp file
-							}
-							case (CGI_IO_ERROR)
-							{
-								//error handling
-								//cleanup cgi object from cgiProcesses
-								//cleanup cgi fd from fdRegistry and poll loop
-								//destroy the temp file
-							}
+							continue ;
 						}
-
+						case CGI_IO_DONE:
+						{
+							activeClient.getResponse().setResponseBody(cgi.output);
+							//cleanup cgi object from cgiProcesses
+							//cleanup cgi fd from fdRegistry and poll loop
+							//destroy the temp file
+						}
+						case CGI_IO_ERROR:
+						{
+							//error handling
+							//cleanup cgi object from cgiProcesses
+							//cleanup cgi fd from fdRegistry and poll loop
+							//destroy the temp file
+						}
+						default:
+						{
+							continue ;
+						}
 					}
 				}
 			}
-		}
-
-
 		// Already existing
-				else
+			else
+			{
+
+				int currentFd = fds[i].fd; // take the fd who called, this is our key
+				Client& activeClient = clients[currentFd]; // get the activeclient
+
+			// 8Kb is standardized  size for single read 
+				char shovelBuffer[1] = {0}; //intializing buffer with zeros
+
+			// read data to the buffer 
+				int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
+
+
+				if (valRead <= 0)
+				{	
+					close(fds[i].fd);
+					fds[i].fd = -1;
+					clients.erase(currentFd);
+					std::cerr << "Connection dropped out or unidentified error occured." << std::endl;
+					continue;
+				}
+
+				activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
+
+				try
 				{
+					httpParser.parse(activeClient);
+				}
 
-					int currentFd = fds[i].fd; // take the fd who called, this is our key
-					Client& activeClient = clients[currentFd]; // get the activeclient
+				catch (const HttpException& e) 
+				{
+					activeClient.setState(ERROR);
+					std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
+					activeClient.getResponse().setStatusCode(e.getStatusCode());
+					activeClient.getResponse().setStatusMessage(e.getStatusMessage());
 
-					// 8Kb is standardized  size for single read 
-					char shovelBuffer[1] = {0}; //intializing buffer with zeros
+				}
 
-					// read data to the buffer 
-					int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer)); 
+				// if parse is completed so if state is processing we start to execute the request
+				if (activeClient.getState() == PROCESSING)
+				{
+					//check for request method
+					// redirections for methods
 
-
-					if (valRead <= 0)
+					activeClient.getResponse().setStatusCode(200);
+					// activeClient.getResponse().setStatusCode(404);
+					returnPage(activeClient);
+					if (activeClient.getRequest().getMethod() == "POST")
 					{
-						close(fds[i].fd);
-						fds[i].fd = -1;
-						clients.erase(currentFd);
-						std::cerr << "Connection dropped out or unidentified error occured." << std::endl;
-						continue;
+						std::cout << activeClient.getRequest().getMethod() << std::endl;
 					}
-					else
-					{
-						activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
 
-						try
+					//here we process the request and build response on the fly
+					if (activeClient.getState() == CGI_CALL)
+					{	
+						CgiHandler	CgiObject(activeClient.getRequest(), activeClient.getConfig());
+						CgiProcess	cgi = CgiObject.CgiStart(activeClient.getRequest());
+						bool	added = false;
+						if (cgi.valid == true)
 						{
-							httpParser.parse(activeClient);
-						}
-
-						catch (const HttpException& e) 
-						{
-							activeClient.setState(ERROR);
-							std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
-							activeClient.getResponse().setStatusCode(e.getStatusCode());
-							activeClient.getResponse().setStatusMessage(e.getStatusMessage());
-
-						}
-					
-							// if parse is completed so if state is processing we start to execute the request
-							if (activeClient.getState() == PROCESSING)
+							for (int j = 0; j < MAX_FDS; j++)
 							{
-								//check for request method
-								// redirections for methods
-
-								activeClient.getResponse().setStatusCode(200);
-								// activeClient.getResponse().setStatusCode(404);
-								returnPage(activeClient);
-								if (activeClient.getRequest().getMethod() == "POST")
+								if (fds[j].fd == -1)
 								{
-									std::cout << activeClient.getRequest().getMethod() << std::endl;
-								}
-
-								//here we process the request and build response on the fly
-                                if (activeClient.getState() == CGI_CALL)
-                                {
-								CgiHandler(activeClient.getRequest(), server);
-								CgiProcess	cgi = CgiStart(activeClient.getRequest());
-								if (cgi.valid == true)
-								{
-									for (int j = 0; j < MAX_FDS; j++)
-									{
-										if (fds[j].fd == -1)
-										{
-											fds[j].fd = cgi.responseFd;
-											fds[j].events = POLLIN; //  activate pollin
-											break;
-										}
-									}
-									if (!added) 
-									{
-										std::cerr << "Server full, rejecting CGI process." << std::endl;
-										close(cgi.responseFd); // close the connection because server full
-										fds[j].fd = -1;
-									}
+									fds[j].fd = cgi.responseFd;
+									fds[j].events = POLLIN; //  activate pollin
+									added = true;
 									fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
 									cgiProcesses.insert(std::make_pair(fds[j].fd, cgi));
+									break;
 								}
-
-								// CgiHandler(activeClient.getRequest(), server);
-
-								//****************************************************************
-
-								// after processing and after sending the response, check the buffer, if another request, start the loop again
+								if (!added) 
+								{
+									std::cerr << "Server full, rejecting CGI process." << std::endl;
+									close(cgi.responseFd); // close the connection because server full
+									fds[j].fd = -1;
+								}
 							}
-                        }
 						}
-						// Print the buffuer to the output stream
-						//std::cout << shovelBuffer << std::endl;
 
-						/*
-						// Hardcoded mock response
-						std::string mock_response = 
-						"HTTP/1.1 200 OK\r\n"
-						"Content-Type: text/plain\r\n"
-						"Content-Length: 13\r\n"
-						"\r\n"
-						"Hello, World!";
+						// CgiHandler(activeClient.getRequest(), server);
 
+						//****************************************************************
 
-						//lets use write or send to send the mock response to the client
-						int bytesSent = write(fds[i].fd, mock_response.c_str(), mock_response.length());
-
-						if (bytesSent < 0)
-						{
-						std::cerr << "Failed to send response" << std::endl;
-						}
-						 */
-						//close the connections, and set the fd back to -1
-						if (activeClient.getState() == PROCESSING  || activeClient.getState() == ERROR)
-						{
-
-							clients.erase(currentFd);
-							close(fds[i].fd);
-							fds[i].fd = -1;
-						}
+						// after processing and after sending the response, check the buffer, if another request, start the loop again
 					}
 				}
-			
-			return 0;
+			// Print the buffuer to the output stream
+			//std::cout << shovelBuffer << std::endl;
+
+			/*
+			// Hardcoded mock response
+			std::string mock_response = 
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Type: text/plain\r\n"
+			"Content-Length: 13\r\n"
+			"\r\n"
+			"Hello, World!";
+
+
+			//lets use write or send to send the mock response to the client
+			int bytesSent = write(fds[i].fd, mock_response.c_str(), mock_response.length());
+
+			if (bytesSent < 0)
+			{
+			std::cerr << "Failed to send response" << std::endl;
+			}
+			 */
+			//close the connections, and set the fd back to -1
+				if (activeClient.getState() == PROCESSING  || activeClient.getState() == ERROR)
+				{
+
+					clients.erase(currentFd);
+					close(fds[i].fd);
+					fds[i].fd = -1;
+				}
+			}
 		}
-	
+	}
+	return 0;
+}
+

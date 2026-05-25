@@ -2,8 +2,10 @@
 # define HTTPRESPONSE_HPP
 
 #include <iostream>
+#include "CgiHandler.hpp"
 
 // Hold the status code and the final formatted body data
+class Client ;
 class HttpResponse
 {
     //Once the server processes request, it send back and HTTP response with following components
@@ -27,6 +29,7 @@ class HttpResponse
             int             getStatusCode() const;
             std::string     getStatusMessage() const;
 			std::string		getResponseBody() const;
+			void			CgiReadResponse(CgiProcess &cgi, Client &activeClient);
     // BODY -- The actual content returned , such as HTML, JSON, or text
 
 };

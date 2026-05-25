@@ -11,13 +11,8 @@
 #include <poll.h>
 #include "HttpRequest.hpp"
 #include "ServerConfig.hpp"
+#include "ServerManager.hpp"
 
-enum	CgiIoStatus
-{
-	CGI_IO_OK,
-	CGI_IO_DONE,
-	CGI_IO_ERROR
-};
 
 struct	CgiProcess
 {
@@ -60,10 +55,11 @@ class CgiHandler
 		script filename, path info, content type, server name, redirect status */
 	public:
 		CgiHandler();
-		CgiHandler(HttpRequest &request, ServerManager &server);
+		CgiHandler(HttpRequest &request, ServerConfig &server);
 		CgiProcess	CgiStart(HttpRequest &request);
 //		CgiIoStatus	CgiWriteToChild(CgiProcess &cgi);
-		CgiIoStatus	CgiReadResponse(CgiProcess &cgi);
+//		void		setStatus(CgiIoStatus status);
+//		CgiIoStatus	getStatus();
 		~CgiHandler();
 };
 

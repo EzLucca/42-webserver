@@ -69,11 +69,6 @@ int    Client::getFd() const
     return (_fd);
 }
 
-HttpResponse& Client::getResponse()
-{
-    return (_response);
-}
-
 const ServerConfig* Client::getConfig()
 {
     return (_config);

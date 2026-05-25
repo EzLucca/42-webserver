@@ -29,7 +29,7 @@
  {
  }
 
- CgiHandler::CgiHandler(HttpRequest &request, ServerManager &server) //location info for cgi scripts
+ CgiHandler::CgiHandler(HttpRequest &request, ServerConfig &server) //location info for cgi scripts
  :// _cgiPath(location.getRoute()), //cgiPass
  //_cgiExtention(location.getCgiExtention()), //for validation
  _method(request.getMethod()),
@@ -45,7 +45,7 @@
  	// printconfig(location);
  	//***************************
 
- 	std::string	root = server.getServerLocation(//servername from config, location, keyword);
+ 	std::string	root = "/cgi-bin/";//server.getServerLocation(//servername from config, location, keyword);
  	std::string	locationPath = cgiStruct->path;
  	if (root.ends_with("/"))
  		root.erase(root.size() - 1);
@@ -240,43 +240,14 @@ CgiIoStatus	CgiHandler::CgiWriteToChild(CgiProcess &cgi)
 	return (CGI_IO_OK);
 }*/
 
-CgiIoStatus	CgiHandler::CgiReadResponse(CgiProcess &cgi)
+void	CgiHandler::setStatus(CgiIoStatus status)
 {
-	int			status;
- 	char		responseBuf[4096];
- 	ssize_t		bytesRead = read(cgi.responseFd, responseBuf, sizeof(responseBuf));
- 	if (bytesRead == -1)
- 	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return (CGI_IO_OK);
- 		close(cgi.responseFd);
-		cgi.responseFd = -1;
-		cgi.responseClosed = true;
-		cgi.valid = false;
- 		std::cerr << "CGI response read failed\n";
- 		waitpid(cgi.pid, &status, WNOHANG);
- 		return(CGI_IO_ERROR);
- 	}
-	if (bytesRead > 0)
-	{
-		cgi.output.append(responseBuf, bytesRead);
-		return (CGI_IO_OK);
-	}
- 	if (bytesRead == 0)
- 	{
- 		close(cgi.responseFd);
- 		cgi.responseFd = -1;
-		cgi.responseClosed = true;
-		pid_t	result = waitpid(cgi.pid, &status, WNOHANG);
-		if (result == 0)
-			return (CGI_IO_OK);
-		if (result == -1)
-			return (CGI_IO_ERROR);
-		if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
-			return  (CGI_IO_ERROR);
-		return(CGI_IO_DONE);
- 	}
-	return (CGI_IO_ERROR);
+	_cgiStatus = status;
+}
+
+CgiIoStatus	CgiHandler::getStatus()
+{
+	return (_cgiStatus);
 }
 
  CgiHandler::~CgiHandler()

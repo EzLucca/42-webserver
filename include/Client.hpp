@@ -18,25 +18,30 @@ enum ClientState {
     PARSING_BODY,           // Parsing body
     PROCESSING,
     CGI_CALL,             // GET Master is matching routing rules / opening files
+	CGI_IO_OK,
+	CGI_IO_DONE,
+	CGI_IO_ERROR,
     WAITING_FOR_CGI,        // CGI Master is waiting for the pipe to have data
     WRITING_RESPONSE,       // Sending the formatted data back to the browser
     ERROR,
     FINISHED                // Flag to tell the main loop to close the socket
 };
 
+class   HttpResponse;
+class   HttpRequest;
 // Holds the connection state, the raw string, and owns its specific request/response objects
-class Client 
+class   Client 
 {
     // What do we need to store in client object? 
     private:
-            int             _fd;            // Client socket
-            ClientState     _state;         // Store the client state
+            int                     _fd;            // Client socket
+            ClientState             _state;         // Store the client state
             
             std::string             _requestBuffer; //where we append the request
 
             HttpRequest             _request;
             HttpResponse            _response;
-            const ServerConfig*            _config;
+            const ServerConfig*     _config;
 
     public:
             Client();
