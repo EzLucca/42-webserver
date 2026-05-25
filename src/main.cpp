@@ -242,10 +242,9 @@ int main(int argc, char **argv) {
                         //check for request method
                         // redirections for methods
 
-                        // activeClient.getResponse().setStatusCode(200);
-                        activeClient.getResponse().setStatusCode(404);
-                        //returnPage(activeClient, manager);
-                        // returnPage(activeClient, 404);
+                        activeClient.getResponse().setStatusCode(200);
+                        // activeClient.getResponse().setStatusCode(404);
+                        returnPage(activeClient);
                         if (activeClient.getRequest().getMethod() == "POST")
                         {
                             std::cout << activeClient.getRequest().getMethod() << std::endl;
@@ -284,7 +283,7 @@ int main(int argc, char **argv) {
                 }
                 */
                 //close the connections, and set the fd back to -1
-                if (/*activeClient.getState() == PROCESSING  || */  activeClient.getState() == ERROR)
+                if (activeClient.getState() == PROCESSING  || activeClient.getState() == ERROR)
                 {
                     
                     clients.erase(currentFd);

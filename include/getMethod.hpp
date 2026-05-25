@@ -5,4 +5,4 @@
 #include "ServerManager.hpp"
 #include <unistd.h>     // For close(), read(), write()
 
-void    returnPage(Client activeClient, ServerManager server);
+void    returnPage(Client &activeClient);
