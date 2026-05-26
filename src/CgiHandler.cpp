@@ -45,8 +45,8 @@
  	// printconfig(location);
  	//***************************
 
- 	std::string	root = "/cgi-bin/";//server.getServerLocation(//servername from config, location, keyword);
- 	std::string	locationPath = cgiStruct->path;
+ 	std::string	root = "var/cgi/cgi-bin/";//server.getServerLocation(//servername from config, location, keyword);
+ 	std::string	locationPath = "/cgi-bin/process.pl";//cgiStruct->path;
  	if (root.ends_with("/"))
  		root.erase(root.size() - 1);
  	std::string	raw = request.getUri();
