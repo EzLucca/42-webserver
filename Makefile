@@ -1,7 +1,7 @@
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++20 -Iinclude
+CXXFLAGS = -Wall -Wextra -Werror -std=c++20 -Iinclude -ggdb
 
 SRC = \
 	src/main.cpp \

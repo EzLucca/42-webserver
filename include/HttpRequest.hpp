@@ -10,7 +10,8 @@ class HttpRequest
 {
     private:
             std::string                         _method;
-            std::string                         _rawUri;       
+            std::string                         _rawUri;
+            std::string                         _uriPath;
             std::string                         _queryString;  
             std::string                         _version;
             std::map<std::string, std::string>  _headers;
@@ -21,6 +22,7 @@ class HttpRequest
             std::string                         _bodyFilePath;
             size_t                              _bytesWritten;
             bool                                _keepAlive;
+            std::string                         _filename;
 
     public:
             HttpRequest();
@@ -41,6 +43,7 @@ class HttpRequest
             //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);
             void setKeepAlive(bool keepAlive);
+            void setQueryString(HttpRequest &obj);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works

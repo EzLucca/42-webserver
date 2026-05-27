@@ -2,13 +2,13 @@
 
 
 HttpRequest::HttpRequest() :
-_isChunked(false),
-_contentLength(0),
-_currentChunkSize(-1),
-_fullChunkBodySize(0),
-_bodyFilePath("not-set"),
-_bytesWritten(0),
-_keepAlive(true)
+    _isChunked(false),
+    _contentLength(0),
+    _currentChunkSize(-1),
+    _fullChunkBodySize(0),
+    _bodyFilePath("not-set"),
+    _bytesWritten(0),
+    _keepAlive(true)
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -51,7 +51,7 @@ void HttpRequest::setHeader(std::string key, std::string value)
 void HttpRequest::setContentLength(std::string& value)
 {
     int parsedLength = std::stoi(value);
-    
+
     // We need to check manually minus values
     if (parsedLength < 0) {
         throw std::invalid_argument("Negative Content-Length"); 
@@ -109,19 +109,19 @@ void HttpRequest::printHeaders()
     {
         //first is header (key)
         //second is the value
-        
+
         std::cout << "Header: [" << it->first << "] " 
-                << "Value: [" << it->second << "]" << std::endl;
+            << "Value: [" << it->second << "]" << std::endl;
     }
 }
 
 /*
-void HttpRequest::printBody()
-{
-    std::cout << "Printing the body!" << std::endl;
-    std::cout << _body << std::endl;
-}
-*/
+   void HttpRequest::printBody()
+   {
+   std::cout << "Printing the body!" << std::endl;
+   std::cout << _body << std::endl;
+   }
+   */
 void HttpRequest::setFullChunkBodySize(size_t amount)
 {
     _fullChunkBodySize += amount;
@@ -160,4 +160,29 @@ void HttpRequest::setKeepAlive(bool keepAlive)
 bool HttpRequest::getKeepAlive()
 {
     return (_keepAlive);
+}
+
+void HttpRequest::setQueryString(HttpRequest &obj)
+{
+    std::string uriRequest = obj.getUri();
+    size_t	queryPos = uriRequest.find('?');
+    if (queryPos != std::string::npos)
+    {
+        _uriPath = uriRequest.substr(0, queryPos);
+        _queryString = uriRequest.substr(queryPos + 1);
+    }
+    else
+    {
+        _uriPath = uriRequest;
+        _queryString = "";
+    }
+    //uriPath = /cgi-bin/file.py  
+    // size_t pos = klist.find(uriPath)
+    // if(pos != std::string::npos)
+    // {
+    //         size_t finalpos;
+    //         if(pos > finalpos)
+    //             finalpos = pos;
+    // }
+    // uriPath = raw.substr(0, finalpos);
 }

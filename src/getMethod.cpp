@@ -6,7 +6,7 @@ void returnPage(Client& activeClient)
     std::string statusText;
 
     std::string uriRequest = activeClient.getRequest().getUri();
-    std::cout << "Requested URI: " << uriRequest << std::endl; 
+    std::cout << "Requested URI from inside return: " << uriRequest << std::endl; 
 
     // 2. Grab the direct pointer to the rulebook!
     const ServerConfig *config = activeClient.getConfig();
@@ -40,9 +40,11 @@ void returnPage(Client& activeClient)
 
                 if (route != NULL) {
                     // Fetch the root and index from your vectorRoute map
+                    // TODO: parsing
                     std::string root = route->vectorRoute.at("root").at(0);
-                    std::string index = route->vectorRoute.at("index").at(0);
-                    filepath = root + "/" + index;
+                    // std::string index = route->vectorRoute.at("index").at(0);
+                    // filepath = root + "/" + index;
+                    filepath = root + "/";
                 } else {
                     filepath = "var/www/html/index.html"; // Fallback if route not found
                 }
