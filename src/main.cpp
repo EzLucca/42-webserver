@@ -286,14 +286,17 @@ int main(int argc, char **argv) {
 
                     // 2. Grab the direct pointer to the rulebook!
                     const ServerConfig *activeConfig = activeClient.getConfig();
-                    // const RouteConfig *activeRoute =
-                    // activeConfig->getRoute(uriRequest);
 
                     std::vector<std::string> klist = activeConfig->getLocationList();
+                    activeClient.getRequest().setQueryString();
+                    
+                    std::cout << activeClient.getRequest().getUriPath() << std::endl;
+                    std::cout << activeClient.getRequest().getQueryString() << std::endl;
 
+                    std::string objstring = activeClient.getRequest().getUriPath();
                     size_t finalpos = 0;
                     for (const std::string &s : klist) {
-                        size_t pos = uriRequest.find(s);
+                        size_t pos = activeClient.getRequest().getUriPath().find(s);
                         if(pos != std::string::npos)
                         {
                             pos = s.size();
@@ -303,15 +306,16 @@ int main(int argc, char **argv) {
                         }
 
                     }
-                    std::string uriPath = uriRequest.substr(0, finalpos);
-                    std::string filename = uriRequest.substr(finalpos);
-                    if (filename != "")
-                    {
-                        filename = uriRequest.substr(finalpos + 1);
-                    }
-                    std::cout << uriPath << " the uripath" << std::endl;
-                    std::cout << filename << " the filename" << std::endl;
+                    activeClient.getRequest().setUriPath(objstring.substr(0, finalpos));
+                    activeClient.getRequest().setFilename(objstring.substr(finalpos));
 
+                    if (activeClient.getRequest().getFilename() != "")
+                    {
+                        activeClient.getRequest().setFilename(objstring.substr(finalpos + 1));
+                    }
+
+                    std::cout << activeClient.getRequest().getUriPath() << std::endl;
+                    std::cout << activeClient.getRequest().getFilename() << std::endl;
                     // if (uriRequest == s)
                     // {
                     //     returnPage(activeClient);

@@ -162,20 +162,20 @@ bool HttpRequest::getKeepAlive()
     return (_keepAlive);
 }
 
-void HttpRequest::setQueryString(HttpRequest &obj)
+void HttpRequest::setQueryString(void)
 {
-    std::string uriRequest = obj.getUri();
+    std::string uriRequest = getUri();
     size_t	queryPos = uriRequest.find('?');
     if (queryPos != std::string::npos)
     {
         _uriPath = uriRequest.substr(0, queryPos);
         _queryString = uriRequest.substr(queryPos + 1);
     }
-    else
-    {
-        _uriPath = uriRequest;
-        _queryString = "";
-    }
+    // else
+    // {
+    //     _uriPath = uriRequest;
+    //     _queryString = "";
+    // }
     //uriPath = /cgi-bin/file.py  
     // size_t pos = klist.find(uriPath)
     // if(pos != std::string::npos)
@@ -185,4 +185,29 @@ void HttpRequest::setQueryString(HttpRequest &obj)
     //             finalpos = pos;
     // }
     // uriPath = raw.substr(0, finalpos);
+}
+
+void HttpRequest::setUriPath(std::string uriPath)
+{
+    _uriPath = uriPath;
+}
+
+void HttpRequest::setFilename(std::string filename)
+{
+    _filename = filename;
+}
+
+std::string HttpRequest::getUriPath()
+{
+    return (_uriPath);
+}
+
+std::string HttpRequest::getFilename()
+{
+    return (_filename);
+}
+
+std::string HttpRequest::getQueryString()
+{
+    return (_queryString);
 }

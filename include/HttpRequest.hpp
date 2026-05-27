@@ -14,6 +14,7 @@ class HttpRequest
             std::string                         _uriPath;
             std::string                         _queryString;  
             std::string                         _version;
+            std::string                         _filename;
             std::map<std::string, std::string>  _headers;
             bool                                _isChunked;
             size_t                              _contentLength;
@@ -22,7 +23,6 @@ class HttpRequest
             std::string                         _bodyFilePath;
             size_t                              _bytesWritten;
             bool                                _keepAlive;
-            std::string                         _filename;
 
     public:
             HttpRequest();
@@ -43,7 +43,9 @@ class HttpRequest
             //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);
             void setKeepAlive(bool keepAlive);
-            void setQueryString(HttpRequest &obj);
+            void setQueryString(void);
+            void setUriPath(std::string uriPath);
+            void setFilename(std::string filename);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
@@ -55,6 +57,9 @@ class HttpRequest
             std::string                         getUri();
             std::string                         getVersion();
             std::string                         getBodyFilePath();
+            std::string                         getUriPath();
+            std::string                         getFilename();
+            std::string                         getQueryString();
             size_t                              getBytesWritten();
             bool                                getKeepAlive();
 
