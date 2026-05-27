@@ -316,6 +316,7 @@ void ConfigParser::parseLocationBlock( const std::string& value, std::istream& s
 
     parselocation(stream, nestedLocation, config);
 
+    config.setLocationlist(locationValue);
     config.setRoute(locationValue, nestedLocation);
 }
 

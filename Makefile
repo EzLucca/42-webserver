@@ -12,8 +12,8 @@ SRC = \
 	src/ConfigParser.cpp \
 	src/ServerConfig.cpp \
 	src/ServerManager.cpp \
-	src/CgiHandler.cpp \
-	src/getMethod.cpp
+	src/getMethod.cpp \
+	# src/CgiHandler.cpp \
 
 OBJ_DIR = obj
 

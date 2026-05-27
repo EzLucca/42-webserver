@@ -36,7 +36,6 @@ void returnPage(Client& activeClient)
     {
         case 200:
             {
-
                 const RouteConfig *route = config->getRoute(uriRequest); 
 
                 if (route != NULL) {
