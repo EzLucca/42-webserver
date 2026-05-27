@@ -1,4 +1,5 @@
 #include "HttpRequest.hpp"
+#include "Client.hpp"
 
 
 HttpRequest::HttpRequest() :
@@ -210,4 +211,54 @@ std::string HttpRequest::getFilename()
 std::string HttpRequest::getQueryString()
 {
     return (_queryString);
+}
+
+void HttpRequest::setLocation(std::string location)
+{
+    _location = location;
+}
+std::string HttpRequest::getLocation()
+{
+    return (_location);
+}
+
+void    HttpRequest::setupPathKeys(Client &activeClient)
+{
+    std::string uriRequest = activeClient.getRequest().getUri();
+    std::cout << "Requested URI: " << uriRequest << std::endl;
+
+    // 2. Grab the direct pointer to the rulebook!
+    const ServerConfig *activeConfig = activeClient.getConfig();
+
+    std::vector<std::string> klist = activeConfig->getLocationList();
+    // activeClient.getRequest().setQueryString();
+    setQueryString();
+
+    std::cout << getUriPath() << std::endl;
+    std::cout << getQueryString() << std::endl;
+
+    std::string objstring = getUriPath();
+    size_t finalpos = 0;
+    for (const std::string &s : klist) {
+        size_t pos = getUriPath().find(s);
+        if(pos != std::string::npos)
+        {
+            pos = s.size();
+            if(pos > finalpos)
+                finalpos = pos;
+            std::cout << finalpos << std::endl;
+        }
+
+    }
+    setLocation(objstring.substr(0, finalpos));
+    setFilename(objstring.substr(finalpos));
+
+    if (getFilename() != "")
+    {
+        setFilename(objstring.substr(finalpos + 1));
+    }
+
+    std::cout << getUriPath() << std::endl;
+    std::cout << getLocation() << std::endl;
+    std::cout << getFilename() << std::endl;
 }

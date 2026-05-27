@@ -6,6 +6,7 @@
 
 //HttpRequest consist of request line, headers (body and query optional)
 // Class holds the parsed URI, Method and headers
+class Client;
 class HttpRequest
 {
     private:
@@ -16,6 +17,7 @@ class HttpRequest
             std::string                         _version;
             std::string                         _filename;
             std::map<std::string, std::string>  _headers;
+            std::string                         _location;
             bool                                _isChunked;
             size_t                              _contentLength;
             long                                _currentChunkSize;
@@ -46,6 +48,7 @@ class HttpRequest
             void setQueryString(void);
             void setUriPath(std::string uriPath);
             void setFilename(std::string filename);
+            void setLocation(std::string location);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
@@ -60,11 +63,12 @@ class HttpRequest
             std::string                         getUriPath();
             std::string                         getFilename();
             std::string                         getQueryString();
+            std::string                         getLocation();
             size_t                              getBytesWritten();
             bool                                getKeepAlive();
 
             void                                addBytesWritten(size_t bytes);
-  
+            void                                setupPathKeys(Client &activeClient);
         
 
 };
