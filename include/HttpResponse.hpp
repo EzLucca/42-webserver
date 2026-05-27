@@ -1,5 +1,4 @@
-#ifndef HTTPRESPONSE_HPP
-# define HTTPRESPONSE_HPP
+# pragma once
 
 #include <iostream>
 #include "CgiHandler.hpp"
@@ -33,5 +32,3 @@ class HttpResponse
     // BODY -- The actual content returned , such as HTML, JSON, or text
 
 };
-
-#endif

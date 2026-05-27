@@ -1,9 +1,8 @@
-#ifndef SERVERENGINE_HPP
-#define SERVERENGINE_HPP
+# pragma once
 
+#include <poll.h>
 #include "ServerManager.hpp"
 #include "Client.hpp"
-#include <poll.h>
 
 #define MAX_FDS 100
 
@@ -27,5 +26,3 @@ class ServerEngine {
         // (this is the function that starts the infinite while(true) loop)
         void run(); 
 };
-
-#endif

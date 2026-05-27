@@ -1,5 +1,4 @@
-#ifndef CGIHANDLER_HPP
-# define CGIHANDLER_HPP
+#pragma once
 
 #include <iostream>
 #include <sys/wait.h>
@@ -62,8 +61,6 @@ class CgiHandler
 //		CgiIoStatus	getStatus();
 		~CgiHandler();
 };
-
-#endif
 
 /*
  * CGI meta-variables

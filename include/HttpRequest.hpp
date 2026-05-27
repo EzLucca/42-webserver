@@ -1,5 +1,4 @@
-#ifndef HTTPREQUEST_HPP
-# define HTTPREQUEST_HPP
+# pragma once
 
 #include <iostream>
 #include <map>
@@ -61,5 +60,3 @@ class HttpRequest
         
 
 };
-
-#endif
