@@ -101,3 +101,8 @@ std::vector<std::string>    ServerConfig::getLocationList() const
 {
     return (_locationList);
 }
+
+// const std::unordered_map<std::string, std::vector<std::string>> ServerConfig::getLocationBlock() const
+// {
+//     return (vectorRoute);
+// }

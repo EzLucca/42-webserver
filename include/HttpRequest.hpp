@@ -17,7 +17,7 @@ class HttpRequest
             std::string                         _version;
             std::string                         _filename;
             std::map<std::string, std::string>  _headers;
-            std::string                         _location;
+            std::string                         _locationKey;
             bool                                _isChunked;
             size_t                              _contentLength;
             long                                _currentChunkSize;
@@ -58,12 +58,12 @@ class HttpRequest
             long                                getFullChunkBodySize();
             std::string                         getMethod();
             std::string                         getUri();
+            std::string                         getUriPath();
             std::string                         getVersion();
             std::string                         getBodyFilePath();
-            std::string                         getUriPath();
             std::string                         getFilename();
             std::string                         getQueryString();
-            std::string                         getLocation();
+            std::string                         getLocationKey();
             size_t                              getBytesWritten();
             bool                                getKeepAlive();
 

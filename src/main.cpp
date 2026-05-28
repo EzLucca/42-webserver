@@ -283,14 +283,9 @@ int main(int argc, char **argv) {
                     // TEST:
                     activeClient.getRequest().setupPathKeys(activeClient);
 
-                    // if (uriRequest == s)
-                    // {
-                    //     returnPage(activeClient);
-                    // }
-                    // else
-                    // {
-                    //     //default fallback
-                    // }
+                    CgiHandler	CgiObject(activeClient);
+                    exit(3);
+
                     if (activeClient.getRequest().getMethod() == "POST") {
                         std::cout << activeClient.getRequest().getMethod() << std::endl;
                     }

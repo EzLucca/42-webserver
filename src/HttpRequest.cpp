@@ -215,11 +215,11 @@ std::string HttpRequest::getQueryString()
 
 void HttpRequest::setLocation(std::string location)
 {
-    _location = location;
+    _locationKey = location;
 }
-std::string HttpRequest::getLocation()
+std::string HttpRequest::getLocationKey()
 {
-    return (_location);
+    return (_locationKey);
 }
 
 void    HttpRequest::setupPathKeys(Client &activeClient)
@@ -259,6 +259,6 @@ void    HttpRequest::setupPathKeys(Client &activeClient)
     }
 
     std::cout << getUriPath() << std::endl;
-    std::cout << getLocation() << std::endl;
+    std::cout << getLocationKey() << std::endl;
     std::cout << getFilename() << std::endl;
 }

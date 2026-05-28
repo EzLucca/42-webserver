@@ -76,6 +76,10 @@ class ServerConfig
         // Useful helpers
         std::string         getErrorPage(int code) const;
         const RouteConfig*  getRoute(const std::string& location) const;
+        // const std::unordered_map<std::string, std::vector<std::string>> getLocationBlock() const;
 };
+
+
+
 
 std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m);
