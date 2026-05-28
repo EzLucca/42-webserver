@@ -214,13 +214,17 @@ int main(int argc, char **argv) {
                 Client &activeClient = clients[originalClientFd];
                 if (cgiIt != cgiProcesses.end()) {
                     CgiProcess cgi = cgiIt->second;
+                    std::cout << "It is stuck here6" << std::endl;
                     activeClient.getResponse().CgiReadResponse(cgi, activeClient);
+                    std::cout << "It is stuck here7" << std::endl;
                     switch (activeClient.getState()) {
                         case CGI_IO_OK: {
                                             continue;
                                         }
                         case CGI_IO_DONE: {
                                               activeClient.getResponse().setResponseBody(cgi.output);
+
+
                                               // cleanup cgi object from cgiProcesses
                                               // cleanup cgi fd from fdRegistry and poll loop
                                               // destroy the temp file
@@ -244,7 +248,7 @@ int main(int argc, char **argv) {
                 Client &activeClient = clients[currentFd]; // get the activeclient
 
                 // 8Kb is standardized  size for single read
-                char shovelBuffer[1] = {0}; // intializing buffer with zeros
+                char shovelBuffer[8192] = {0}; // intializing buffer with zeros
 
                 // read data to the buffer
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer));
@@ -284,11 +288,12 @@ int main(int argc, char **argv) {
                     activeClient.getRequest().setupPathKeys(activeClient);
 
                     CgiHandler	CgiObject(activeClient);
-                    exit(3);
+                    CgiObject.CgiStart(activeClient.getRequest());
+                    std::cout << "It is stuck here5" << std::endl;
 
-                    if (activeClient.getRequest().getMethod() == "POST") {
-                        std::cout << activeClient.getRequest().getMethod() << std::endl;
-                    }
+                    // if (activeClient.getRequest().getMethod() == "POST") {
+                    //     std::cout << activeClient.getRequest().getMethod() << std::endl;
+                    // }
 
                     // here we process the request and build response on the fly
                     //  if (activeClient.getState() == CGI_CALL)
@@ -350,7 +355,7 @@ int main(int argc, char **argv) {
                 }
                 */
                 // close the connections, and set the fd back to -1
-                if (activeClient.getState() == PROCESSING ||
+                if (activeClient.getState() == CGI_IO_DONE ||
                         activeClient.getState() == ERROR) {
 
                     clients.erase(currentFd);

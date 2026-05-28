@@ -45,6 +45,7 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
  	ssize_t		bytesRead = read(cgi.responseFd, responseBuf, sizeof(responseBuf));
  	if (bytesRead == -1)
  	{
+        std::cout << "It is stuck here1" << std::endl;
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 		{
 			activeClient.setState(CGI_IO_OK);
@@ -61,12 +62,14 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
  	}
 	if (bytesRead > 0)
 	{
+        std::cout << "It is stuck here2" << std::endl;
 		cgi.output.append(responseBuf, bytesRead);
 		activeClient.setState(CGI_IO_OK);
 		return ; 
 	}
  	if (bytesRead == 0)
  	{
+        std::cout << "It is stuck here3" << std::endl;
  		close(cgi.responseFd);
  		cgi.responseFd = -1;
 		cgi.responseClosed = true;

@@ -33,34 +33,50 @@ CgiHandler::CgiHandler()
 // CgiHandler::CgiHandler(HttpRequest &request, ServerConfig &server) //location info for cgi scripts
 CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     : _cgiPass(""), //cgiPass
-        _method(activeClient.getRequest().getMethod()),
-        _queryString(activeClient.getRequest().getQueryString()),
-        _contentType(""),
-        _serverName("")
+    _method(activeClient.getRequest().getMethod()),
+    // _queryString(activeClient.getRequest().getQueryString()),
+    _queryString(""),
+    _contentType(""),
+    _serverName("")
 {
     //SCRIPT PATH = ROOT FROM CONFIG + SCRIPT NAME FROM RAW URI(e.g. /cgi-bin/process.pl) + PATH_INFO FROM RAW URI BEFORE '?'
     _headers = activeClient.getRequest().getHeaders(); //TODO guard against malformed requests
     _bodyFilePath = activeClient.getRequest().getBodyFilePath();
+    _queryString = activeClient.getRequest().getQueryString();
 
+    std::cout << " ########" << std::endl;
     //***************************
     // printconfig(location);
     //***************************
 
     const RouteConfig *config;
     config = activeClient.getConfig()->getRoute(activeClient.getRequest().getLocationKey());
-
-    auto it = config->vectorRoute.find("root");
+    std::unordered_map<std::string, std::vector<std::string>> victorRoute;
+    victorRoute = config->vectorRoute;
+    std::unordered_map<std::string, std::vector<std::string>>::const_iterator it;
     std::string root;
-    if (it != config->vectorRoute.end() && !it->second.empty()) {
-        root = it->second[0];
+    for (it = victorRoute.begin(); it != victorRoute.end(); it++)
+    {
+        if (it->first == "root")
+            root = it->second[0];
+        if (it->first == "cgi_pass")
+            _cgiPass = it->second[0];
     }
-    std::cout << root << " ########" << std::endl;
 
-    auto shiit = config->vectorRoute.find("cgi_pass");
-    if (shiit != config->vectorRoute.end() && !shiit->second.empty()) {
-        _cgiPass = shiit->second[0];
-    }
+    std::cout << root << " #######3" << std::endl;
     std::cout << _cgiPass << " ########" << std::endl;
+    std::cout << " #######2" << std::endl;
+    // std::string::const_iterator it = config->vectorRoute.find("root");
+    std::cout << " #######3" << std::endl;
+    // if (it != config->vectorRoute.end() && !it->second.empty()) {
+    //     root = it->second[0];
+    //     std::cout << " #######4" << std::endl;
+    // }
+    //
+    // auto shiit = config->vectorRoute.find("cgi_pass");
+    // if (shiit != config->vectorRoute.end() && !shiit->second.empty()) {
+    //     _cgiPass = shiit->second[0];
+    // }
 
     _scriptPath = root + activeClient.getRequest().getUriPath(); 
     std::cout << _scriptPath << " ########" << std::endl;
@@ -118,6 +134,7 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
             _exit(1);
         }
         close(response_fd[1]);
+        // close(cgi.bodyFileFd);
         //		std::vector<std::string>	_envs;
         _envs.push_back("REQUEST_METHOD=" + _method);
         _envs.push_back("QUERY_STRING=" + _queryString);
@@ -139,13 +156,16 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
         //		_args.push_back(const_cast<char *>(_cgiPath.cstr()));
         _args.push_back(const_cast<char *>(_scriptPath.c_str()));
         _args.push_back(NULL);
+        std::cout << "It is stuck here4 from child" << std::endl;
         execve(_args[0], _args.data(), _envp.data()); // _path is cgiPath, argv consists of cgiPath, scriptpath and null 
         std::cerr << "CGI execve failed\n";
         _exit(1);
     }
     else
     {
+        std::cout << "It is stuck here4" << std::endl;
         close(response_fd[1]);
+        // close(cgi.bodyFileFd);
         fcntl(response_fd[0], F_SETFL, O_NONBLOCK);
         cgi.valid = true;
         cgi.pid = _pid;
@@ -243,6 +263,6 @@ return (CGI_IO_OK);
 //     return (_cgiStatus);
 // }
 //
-// CgiHandler::~CgiHandler()
-// {
-// }
+CgiHandler::~CgiHandler()
+{
+}

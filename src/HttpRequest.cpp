@@ -172,11 +172,11 @@ void HttpRequest::setQueryString(void)
         _uriPath = uriRequest.substr(0, queryPos);
         _queryString = uriRequest.substr(queryPos + 1);
     }
-    // else
-    // {
-    //     _uriPath = uriRequest;
-    //     _queryString = "";
-    // }
+    else
+    {
+        _uriPath = uriRequest;
+        _queryString = "";
+    }
     //uriPath = /cgi-bin/file.py  
     // size_t pos = klist.find(uriPath)
     // if(pos != std::string::npos)
