@@ -20,6 +20,27 @@
 #define PORT 8080
 #define MAX_FDS 100
 
+void printFdRegistry(const std::map<int, int>& fdRegistry)
+{
+    std::cout << "----- fdRegistry -----" << std::endl;
+
+    if (fdRegistry.empty()) {
+        std::cout << "fdRegistry is empty" << std::endl;
+        return;
+    }
+
+    for (std::map<int, int>::const_iterator it = fdRegistry.begin();
+            it != fdRegistry.end();
+            ++it)
+    {
+        std::cout << "key(fd): " << it->first
+            << " -> value(clientFd): " << it->second
+            << std::endl;
+    }
+
+    std::cout << "----------------------" << std::endl;
+}
+
 bool validateConfigFile(std::string_view &fileName) {
     size_t found;
 
@@ -158,8 +179,7 @@ int main(int argc, char **argv) {
 
             // Master socket wokeup, some1 wants to connect, what kind of socket is
             // this?
-            std::map<int, const ServerConfig *>::iterator it =
-                masterSocketRegistry.find(triggered_fd);
+            std::map<int, const ServerConfig *>::iterator it = masterSocketRegistry.find(triggered_fd);
             if (it != masterSocketRegistry.end()) {
 
                 const ServerConfig *matchedConfig = it->second;
@@ -167,8 +187,7 @@ int main(int argc, char **argv) {
                 socklen_t client_len = sizeof(client_address);
 
                 // Call accept DOUBLE  CHECK ACCEPT FUNCTION
-                int new_client_fd = accept(
-                        triggered_fd, (struct sockaddr *)&client_address, &client_len);
+                int new_client_fd = accept( triggered_fd, (struct sockaddr *)&client_address, &client_len);
                 if (new_client_fd < 0) {
                     std::cerr << "Accept failed on Master FD " << triggered_fd
                         << ". Error: " << strerror(errno) << std::endl;
@@ -179,8 +198,7 @@ int main(int argc, char **argv) {
                     break;
                 }
 
-                fcntl(new_client_fd, F_SETFL,
-                        O_NONBLOCK); // set file status flags to nonblocking
+                fcntl(new_client_fd, F_SETFL, O_NONBLOCK); // set file status flags to nonblocking
 
                 bool added = false; // flag if adding client succesfull
 
@@ -205,15 +223,19 @@ int main(int argc, char **argv) {
                 continue;
             }
             std::map<int, int>::iterator shit = fdRegistry.find(triggered_fd);
-            std::map<int, CgiProcess>::iterator cgiIt =
-                cgiProcesses.find(triggered_fd);
+            std::map<int, CgiProcess>::iterator cgiIt = cgiProcesses.find(triggered_fd);
+
+            // DEBUG: fdRegistry is empty. the fd is never included
+            std::cout << triggered_fd << " teste" << std::endl;
+            printFdRegistry(fdRegistry); // TEST:
 
             if (shit != fdRegistry.end()) {
                 //	int	cgiPipeFd = it->first;
                 int originalClientFd = shit->second;
                 Client &activeClient = clients[originalClientFd];
+                std::cout << "It is stuck here8" << std::endl;
                 if (cgiIt != cgiProcesses.end()) {
-                    CgiProcess cgi = cgiIt->second;
+                    CgiProcess &cgi = cgiIt->second;
                     std::cout << "It is stuck here6" << std::endl;
                     activeClient.getResponse().CgiReadResponse(cgi, activeClient);
                     std::cout << "It is stuck here7" << std::endl;
@@ -287,8 +309,8 @@ int main(int argc, char **argv) {
                     // TEST:
                     activeClient.getRequest().setupPathKeys(activeClient);
 
-                    CgiHandler	CgiObject(activeClient);
-                    CgiObject.CgiStart(activeClient.getRequest());
+                    // CgiHandler	CgiObject(activeClient);
+                    // CgiObject.CgiStart(activeClient.getRequest());
                     std::cout << "It is stuck here5" << std::endl;
 
                     // if (activeClient.getRequest().getMethod() == "POST") {
@@ -296,41 +318,41 @@ int main(int argc, char **argv) {
                     // }
 
                     // here we process the request and build response on the fly
-                    //  if (activeClient.getState() == CGI_CALL)
-                    //  {
-                    //  	CgiHandler	CgiObject(activeClient.getRequest(),
-                    //  activeClient.getConfig()); 	CgiProcess	cgi =
-                    //  CgiObject.CgiStart(activeClient.getRequest()); 	bool	added =
-                    //  false; 	if (cgi.valid == true)
-                    //  	{
-                    //  		for (int j = 0; j < MAX_FDS; j++)
-                    //  		{
-                    //  			if (fds[j].fd == -1)
-                    //  			{
-                    //  				fds[j].fd = cgi.responseFd;
-                    //  				fds[j].events = POLLIN; //  activate
-                    //  pollin 				added = true;
-                    //  				fdRegistry.insert(std::make_pair(cgi.responseFd,
-                    //  activeClient.getFd()));
-                    //  				cgiProcesses.insert(std::make_pair(fds[j].fd,
-                    //  cgi)); 				break;
-                    //  			}
-                    //  			if (!added)
-                    //  			{
-                    //  				std::cerr << "Server full, rejecting CGI
-                    //  process." << std::endl; 				close(cgi.responseFd); // close the
-                    //  connection because server full 				fds[j].fd = -1;
-                    //  			}
-                    //  		}
-                    //  	}
-                    //
-                    //  	// CgiHandler(activeClient.getRequest(), server);
-                    //
-                    //  	//****************************************************************
-                    //
-                    //  	// after processing and after sending the response, check the
-                    //  buffer, if another request, start the loop again
-                    //  }
+                    if (activeClient.getState() == CGI_CALL)
+                    {
+                        CgiHandler	CgiObject(activeClient);
+                        CgiProcess  cgi = CgiObject.CgiStart(activeClient.getRequest());
+                        bool	added = false;
+                        if (cgi.valid == true)
+                        {
+                            for (int j = 0; j < MAX_FDS; j++)
+                            {
+                                if (fds[j].fd == -1)
+                                {
+                                    fds[j].fd = cgi.responseFd;
+                                    fds[j].events = POLLIN; //  activate
+                                    pollin 				added = true;
+                                    fdRegistry.insert(std::make_pair(cgi.responseFd,
+                                                activeClient.getFd()));
+                                    cgiProcesses.insert(std::make_pair(fds[j].fd,
+                                                cgi)); 				break;
+                                }
+                                if (!added)
+                                {
+                                    std::cerr << "Server full, rejecting CGI
+                                        process." << std::endl; 				close(cgi.responseFd); // close the
+                                        connection because server full 				fds[j].fd = -1;
+                                }
+                            }
+                        }
+
+                        // CgiHandler(activeClient.getRequest(), server);
+
+                        //****************************************************************
+
+                        // after processing and after sending the response, check the
+                        buffer, if another request, start the loop again
+                    }
                 }
                 // Print the buffuer to the output stream
                 // std::cout << shovelBuffer << std::endl;

@@ -31,19 +31,18 @@ struct CgiProcess {
 class Client;
 class CgiHandler {
     private:
-        std::string _cgiPass; // where e.g. python interpreter lives e.g. usr/bin/python3
-        std::string _cgiExtention; // format to save the script
-        std::string _scriptPath;   // path where the script lives
-        std::string _method;       // request method
-        std::string _queryString;
-        std::string _bodyFilePath; // request body
-        std::string _contentType;  // type determines what form to convert to
-        std::map<std::string, std::string>
-            _headers; // std::map used to store key value pairs
-        std::string _serverName;
-        std::vector<std::string> _envs;
-        std::vector<char *> _envp;
-        std::vector<char *> _args;
+        std::string                         _cgiPass; // where e.g. python interpreter lives e.g. usr/bin/python3
+        std::string                         _cgiExtention; // format to save the script
+        std::string                         _scriptPath;   // path where the script lives
+        std::string                         _method;       // request method
+        std::string                         _queryString;
+        std::string                         _bodyFilePath; // request body
+        std::string                         _contentType;  // type determines what form to convert to
+        std::map<std::string, std::string>  _headers; // std::map used to store key value pairs
+        std::string                         _serverName;
+        std::vector<std::string>            _envs;
+        std::vector<char *>                 _envp;
+        std::vector<char *>                 _args;
 
         /* envp: query string, request method, content length, server protocol,
            script filename, path info, content type, server name, redirect status */
