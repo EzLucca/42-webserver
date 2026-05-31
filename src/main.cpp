@@ -247,6 +247,7 @@ int main(int argc, char **argv) {
                                             activeClient.getResponse().setResponseBody(cgi.output);
                                             //temp test to for the output
                                             std::cout << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n";
+                                            std::cout << "CGI OUTPUT: " << cgi.output << std::endl;
                                             std::cout << "\n------------------------------------\n";
 
                                             std::string final_response = "HTTP/1.1 200 OK\r\n" + cgi.output;
