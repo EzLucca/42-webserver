@@ -330,8 +330,8 @@ int main(int argc, char **argv) {
                                 if (fds[j].fd == -1)
                                 {
                                     fds[j].fd = cgi.responseFd;
-                                    fds[j].events = POLLIN; //  activate
-                                    pollin 				added = true;
+                                    fds[j].events = POLLIN; //  activate pollin 				
+                                    added = true;
                                     fdRegistry.insert(std::make_pair(cgi.responseFd,
                                                 activeClient.getFd()));
                                     cgiProcesses.insert(std::make_pair(fds[j].fd,
@@ -339,9 +339,9 @@ int main(int argc, char **argv) {
                                 }
                                 if (!added)
                                 {
-                                    std::cerr << "Server full, rejecting CGI
-                                        process." << std::endl; 				close(cgi.responseFd); // close the
-                                        connection because server full 				fds[j].fd = -1;
+                                    std::cerr << "Server full, rejecting CGI process." << std::endl; 				
+                                    close(cgi.responseFd); // close the connection because server full 				
+                                    fds[j].fd = -1;
                                 }
                             }
                         }
@@ -350,8 +350,7 @@ int main(int argc, char **argv) {
 
                         //****************************************************************
 
-                        // after processing and after sending the response, check the
-                        buffer, if another request, start the loop again
+                        // after processing and after sending the response, check the buffer, if another request, start the loop again
                     }
                 }
                 // Print the buffuer to the output stream
