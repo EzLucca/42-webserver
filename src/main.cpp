@@ -243,19 +243,44 @@ int main(int argc, char **argv) {
                         case CGI_IO_OK: {
                                             continue;
                                         }
-                        case CGI_IO_DONE: {
-                                              activeClient.getResponse().setResponseBody(cgi.output);
+                        case CGI_IO_DONE:   {
+                                            activeClient.getResponse().setResponseBody(cgi.output);
+                                            //temp test to for the output
+                                            std::cout << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n";
+                                            std::cout << "\n------------------------------------\n";
 
+                                            std::string final_response = "HTTP/1.1 200 OK\r\n" + cgi.output;
+                                            write(originalClientFd, final_response.c_str(), final_response.size());
 
-                                              // cleanup cgi object from cgiProcesses
-                                              // cleanup cgi fd from fdRegistry and poll loop
-                                              // destroy the temp file
-                                          }
+                                            // destroy cgi pipe
+                                            close(fds[i].fd);
+                                            fds[i].fd = -1;
+                                            fdRegistry.erase(triggered_fd);
+                                            cgiProcesses.erase(triggered_fd);
+
+                                            // close og client
+                                            close(originalClientFd);
+                                            clients.erase(originalClientFd);
+                                        
+                                            // find the client's FD in the poll array and reset it
+                                            for (int k = 0; k < MAX_FDS; k++) 
+                                            {
+                                                if (fds[k].fd == originalClientFd) 
+                                                {
+                                                    fds[k].fd = -1;
+                                                    break;
+                                                }
+                                            }
+                                            break;
+                                            }
                         case CGI_IO_ERROR: {
-                                               // error handling
-                                               // cleanup cgi object from cgiProcesses
-                                               // cleanup cgi fd from fdRegistry and poll loop
-                                               // destroy the temp file
+                                            std::cerr << "CGI Error encountered." << std::endl;
+                                            //(SAME CLEANUP GOES HERE!)
+                                            close(fds[i].fd);
+                                            fds[i].fd = -1;
+                                            fdRegistry.erase(triggered_fd);
+                                            cgiProcesses.erase(triggered_fd);
+                                            break;
                                            }
                         default: {
                                      continue;
@@ -311,7 +336,43 @@ int main(int argc, char **argv) {
 
                     // CgiHandler	CgiObject(activeClient);
                     // CgiObject.CgiStart(activeClient.getRequest());
-                    std::cout << "It is stuck here5" << std::endl;
+                    std::cout << "It is stuck here5 with client state: " << activeClient.getState() << std::endl;
+
+                    // take filename
+                    std::string filename = activeClient.getRequest().getFilename();
+                    bool isCgi = false;
+
+
+                    // fetchin the routing rules for the active client
+                    const ServerConfig *config = activeClient.getConfig();
+                    const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
+
+                    if (route != NULL) 
+                    {
+
+                        // search for the cgi_pass directive in this specific location block
+                        std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("cgi_pass");
+                        
+                    
+                        // THE DUAL CHECK: Was cgi_pass found AND does the file end in .py
+                        if (it != route->vectorRoute.end() && filename.find(".py") != std::string::npos) 
+                        {
+                            isCgi = true;
+                        }
+                    }
+
+                    // routin
+                    if (isCgi) 
+                    {
+                        std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
+                        activeClient.setState(CGI_CALL);
+                    } 
+                    else 
+                    {
+                        std::cout << "Static file request. Calling returnPage." << std::endl;
+                        returnPage(activeClient);
+                        activeClient.setState(FINISHED); 
+                    }
 
                     // if (activeClient.getRequest().getMethod() == "POST") {
                     //     std::cout << activeClient.getRequest().getMethod() << std::endl;
@@ -332,18 +393,16 @@ int main(int argc, char **argv) {
                                     fds[j].fd = cgi.responseFd;
                                     fds[j].events = POLLIN; //  activate pollin 				
                                     added = true;
-                                    fdRegistry.insert(std::make_pair(cgi.responseFd,
-                                                activeClient.getFd()));
-                                    cgiProcesses.insert(std::make_pair(fds[j].fd,
-                                                cgi)); 				break;
+                                    fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
+                                    cgiProcesses.insert(std::make_pair(fds[j].fd, cgi));
+                                    break;
                                 }
+                            }
                                 if (!added)
                                 {
                                     std::cerr << "Server full, rejecting CGI process." << std::endl; 				
-                                    close(cgi.responseFd); // close the connection because server full 				
-                                    fds[j].fd = -1;
+                                    close(cgi.responseFd); // close the connection because server full
                                 }
-                            }
                         }
 
                         // CgiHandler(activeClient.getRequest(), server);
@@ -377,7 +436,8 @@ int main(int argc, char **argv) {
                 */
                 // close the connections, and set the fd back to -1
                 if (activeClient.getState() == CGI_IO_DONE ||
-                        activeClient.getState() == ERROR) {
+                        activeClient.getState() == ERROR || activeClient.getState() == FINISHED) 
+                {
 
                     clients.erase(currentFd);
                     close(fds[i].fd);
