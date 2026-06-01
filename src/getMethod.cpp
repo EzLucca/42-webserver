@@ -42,9 +42,9 @@ void returnPage(Client& activeClient)
                     // Fetch the root and index from your vectorRoute map
                     // TODO: parsing
                     std::string root = route->vectorRoute.at("root").at(0);
-                    // std::string index = route->vectorRoute.at("index").at(0);
-                    // filepath = root + "/" + index;
-                    filepath = root + "/";
+                    std::string index = route->vectorRoute.at("index").at(0);
+                    filepath = root + "/" + index;
+                    // filepath = root + "/";
                 } else {
                     filepath = "var/www/html/index.html"; // Fallback if route not found
                 }

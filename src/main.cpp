@@ -171,10 +171,27 @@ int main(int argc, char **argv) {
             break;
         }
         // go through structs, and see who woke up poll():n
+        // for (int i = 0; i < MAX_FDS; i++) {
+        //     // did this specific socket actually ring? if not, continue
+        //     if (!(fds[i].revents & POLLIN))
+        //         continue;
+        // DEBUG:
+        // go through structs, and see who woke up poll():n
         for (int i = 0; i < MAX_FDS; i++) {
-            // did this specific socket actually ring? if not, continue
-            if (!(fds[i].revents & POLLIN))
+
+            // --- DIAGNOSTIC RADAR & BLINDFOLD REMOVAL ---
+
+            // 1. Print EXACTLY what signal the OS is sending to this socket!
+            if (fds[i].revents != 0) {
+                std::cout << ">>> POLL WOKE UP! FD: " << fds[i].fd 
+                    << " | Revents code: " << fds[i].revents << " <<<" << std::endl;
+            }
+
+            // 2. Let ALL signals pass through to your logic! Do not skip anything!
+            if (!(fds[i].revents & (POLLIN | POLLHUP))) {
                 continue;
+            }
+
             int triggered_fd = fds[i].fd;
 
             // Master socket wokeup, some1 wants to connect, what kind of socket is
@@ -233,55 +250,61 @@ int main(int argc, char **argv) {
                 //	int	cgiPipeFd = it->first;
                 int originalClientFd = shit->second;
                 Client &activeClient = clients[originalClientFd];
-                std::cout << "It is stuck here8" << std::endl;
                 if (cgiIt != cgiProcesses.end()) {
                     CgiProcess &cgi = cgiIt->second;
                     std::cout << "It is stuck here6" << std::endl;
                     activeClient.getResponse().CgiReadResponse(cgi, activeClient);
                     std::cout << "It is stuck here7" << std::endl;
+
+                    // activeClient.setState(CGI_IO_DONE);
                     switch (activeClient.getState()) {
                         case CGI_IO_OK: {
-                                            continue;
+                                            fds[i].events = POLLHUP; // POLLIN means tell me when there is data to read
+                                            break;
                                         }
                         case CGI_IO_DONE:   {
-                                            activeClient.getResponse().setResponseBody(cgi.output);
-                                            //temp test to for the output
-                                            std::cout << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n";
-                                            std::cout << "CGI OUTPUT: " << cgi.output << std::endl;
-                                            std::cout << "\n------------------------------------\n";
+                                                activeClient.getResponse().setResponseBody(cgi.output);
+                                                //temp test to for the output
+                                                std::cout << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n";
+                                                std::cout << "CGI OUTPUT: " << cgi.output << std::endl;
+                                                std::cout << "\n------------------------------------\n";
 
-                                            std::string final_response = "HTTP/1.1 200 OK\r\n" + cgi.output;
-                                            write(originalClientFd, final_response.c_str(), final_response.size());
+                                                std::string final_response = "HTTP/1.1 200 OK\r\n" + cgi.output;
+                                                write(originalClientFd, final_response.c_str(), final_response.size());
 
-                                            // destroy cgi pipe
-                                            close(fds[i].fd);
-                                            fds[i].fd = -1;
-                                            fdRegistry.erase(triggered_fd);
-                                            cgiProcesses.erase(triggered_fd);
+                                                // destroy cgi pipe
+                                                close(fds[i].fd);
+                                                fds[i].fd = -1;
+                                                fdRegistry.erase(triggered_fd);
+                                                cgiProcesses.erase(triggered_fd);
 
-                                            // close og client
-                                            close(originalClientFd);
-                                            clients.erase(originalClientFd);
-                                        
-                                            // find the client's FD in the poll array and reset it
-                                            for (int k = 0; k < MAX_FDS; k++) 
-                                            {
-                                                if (fds[k].fd == originalClientFd) 
+                                                std::cout << "CGI responseFd: " << cgi.responseFd << std::endl;
+                                                close(cgi.responseFd);
+                                                activeClient.setState(FINISHED);
+                                                // close og client
+                                                close(originalClientFd);
+                                                clients.erase(originalClientFd);
+
+                                                // find the client's FD in the poll array and reset it
+                                                for (int k = 0; k < MAX_FDS; k++) 
                                                 {
-                                                    fds[k].fd = -1;
-                                                    break;
+                                                    if (fds[k].fd == originalClientFd) 
+                                                    {
+                                                        fds[k].fd = -1;
+                                                        break;
+                                                    }
                                                 }
-                                            }
-                                            break;
+                                                break;
                                             }
                         case CGI_IO_ERROR: {
-                                            std::cerr << "CGI Error encountered." << std::endl;
-                                            //(SAME CLEANUP GOES HERE!)
-                                            close(fds[i].fd);
-                                            fds[i].fd = -1;
-                                            fdRegistry.erase(triggered_fd);
-                                            cgiProcesses.erase(triggered_fd);
-                                            break;
+                                               std::cerr << "CGI Error encountered." << std::endl;
+                                               //(SAME CLEANUP GOES HERE!)
+                                               close(fds[i].fd);
+                                               fds[i].fd = -1;
+                                               fdRegistry.erase(triggered_fd);
+                                               cgiProcesses.erase(triggered_fd);
+                                               clients.erase(originalClientFd);
+                                               break;
                                            }
                         default: {
                                      continue;
@@ -353,8 +376,8 @@ int main(int argc, char **argv) {
 
                         // search for the cgi_pass directive in this specific location block
                         std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("cgi_pass");
-                        
-                    
+
+
                         // THE DUAL CHECK: Was cgi_pass found AND does the file end in .py
                         if (it != route->vectorRoute.end() && filename.find(".py") != std::string::npos) 
                         {
@@ -392,18 +415,18 @@ int main(int argc, char **argv) {
                                 if (fds[j].fd == -1)
                                 {
                                     fds[j].fd = cgi.responseFd;
-                                    fds[j].events = POLLIN; //  activate pollin 				
+                                    fds[j].events = POLLIN | POLLHUP; //  activate pollin 				
                                     added = true;
                                     fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
                                     cgiProcesses.insert(std::make_pair(fds[j].fd, cgi));
                                     break;
                                 }
                             }
-                                if (!added)
-                                {
-                                    std::cerr << "Server full, rejecting CGI process." << std::endl; 				
-                                    close(cgi.responseFd); // close the connection because server full
-                                }
+                            if (!added)
+                            {
+                                std::cerr << "Server full, rejecting CGI process." << std::endl; 				
+                                close(cgi.responseFd); // close the connection because server full
+                            }
                         }
 
                         // CgiHandler(activeClient.getRequest(), server);
@@ -436,7 +459,7 @@ int main(int argc, char **argv) {
                 }
                 */
                 // close the connections, and set the fd back to -1
-                if (activeClient.getState() == CGI_IO_DONE ||
+                if (/*activeClient.getState() == CGI_IO_DONE ||*/
                         activeClient.getState() == ERROR || activeClient.getState() == FINISHED) 
                 {
 
@@ -448,4 +471,4 @@ int main(int argc, char **argv) {
         }
     }
     return 0;
-}
+    }

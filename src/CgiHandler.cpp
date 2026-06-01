@@ -44,7 +44,6 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     _bodyFilePath = activeClient.getRequest().getBodyFilePath();
     _queryString = activeClient.getRequest().getQueryString();
 
-    std::cout << " ########" << std::endl;
     //***************************
     // printconfig(location);
     //***************************
@@ -65,9 +64,7 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
 
     std::cout << root << " #######3" << std::endl;
     std::cout << _cgiPass << " ########" << std::endl;
-    std::cout << " #######2" << std::endl;
     // std::string::const_iterator it = config->vectorRoute.find("root");
-    std::cout << " #######3" << std::endl;
     // if (it != config->vectorRoute.end() && !it->second.empty()) {
     //     root = it->second[0];
     //     std::cout << " #######4" << std::endl;
@@ -79,7 +76,7 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     // }
 
     _scriptPath = root + activeClient.getRequest().getUriPath(); 
-    std::cout << _scriptPath << " ########" << std::endl;
+    std::cout << _scriptPath << " ########62384623" << std::endl;
 
     if  ((_method == "POST" && !_headers.count("content-type"))
             || !_headers.count("host"))
@@ -156,14 +153,14 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
         //		_args.push_back(const_cast<char *>(_cgiPath.cstr()));
         _args.push_back(const_cast<char *>(_scriptPath.c_str()));
         _args.push_back(NULL);
-        std::cout << "It is stuck here4 from child" << std::endl;
         execve(_args[0], _args.data(), _envp.data()); // _path is cgiPath, argv consists of cgiPath, scriptpath and null 
+        std::cout << "It is stuck here4 from child" << std::endl;
         std::cerr << "CGI execve failed\n";
         _exit(1);
     }
     else
     {
-        std::cout << "It is stuck here4" << std::endl;
+        std::cout << "This is the parent inside cgihandler" << std::endl;
         close(response_fd[1]);
         // close(cgi.bodyFileFd);
         fcntl(response_fd[0], F_SETFL, O_NONBLOCK);

@@ -2,8 +2,8 @@
 #include "Client.hpp"
 
 HttpResponse::HttpResponse() : 
-_statusCode(0),
-_statusMessage("not-set")
+    _statusCode(0),
+    _statusMessage("not-set")
 {
     std::cout << "HttpResponse constructor called." << std::endl;
 }
@@ -20,7 +20,7 @@ std::string HttpResponse::getStatusMessage() const
 
 std::string	HttpResponse::getResponseBody() const
 {
-	return (_responseBody);
+    return (_responseBody);
 }
 
 void    HttpResponse::setStatusCode(int statusCode)
@@ -35,21 +35,22 @@ void    HttpResponse::setStatusMessage(std::string statusMessage)
 
 void	HttpResponse::setResponseBody(std::string response)
 {
-	_responseBody = response;
+    _responseBody = response;
 }
 
 void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
 {
-	int			status;
+    int			status;
     char		responseBuf[4096];
-    
+
     //  try to read from pipe
     ssize_t		bytesRead = read(cgi.responseFd, responseBuf, sizeof(responseBuf));
-    
+
+    std::cout << "------------->>>>>>>> bytesRead: " << bytesRead << std::endl;
     // error or blockin
     if (bytesRead == -1)
     {
-        std::cout << "It is stuck here1" << std::endl;
+        std::cout << "This is bytes -1" << std::endl;
         // (If no data is ready yet, just keep waiting)
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         {
@@ -66,28 +67,29 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
         activeClient.setState(CGI_IO_ERROR);
         return ;
     }
-    
+
     // data received
     if (bytesRead > 0)
     {
-        std::cout << "It is stuck here2" << std::endl;
-        
+        std::cout << "bytes > 0" << std::endl;
+
         // append read data to output string
         cgi.output.append(responseBuf, bytesRead);
         activeClient.setState(CGI_IO_OK);
         return ; 
     }
-    
+
 
     if (bytesRead == 0)
     {
         // (Wait for child blocking, because we know it has closed the pipe)
         pid_t result = waitpid(cgi.pid, &status, 0);
-        
+
         // (DO NOT CLOSE FD HERE! main.cpp will handle it.)
         cgi.responseClosed = true;
-        
+
         // checkin if child process crashed 
+        std::cout << "bytes = 0" << std::endl;
         if (result == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0)
         {
             activeClient.setState(CGI_IO_ERROR);
@@ -97,8 +99,8 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
         activeClient.setState(CGI_IO_DONE);
         return ;
     }
-    
-    
+
+
     activeClient.setState(CGI_IO_ERROR);
     return ;
 }
