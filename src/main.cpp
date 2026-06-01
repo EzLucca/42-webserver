@@ -258,57 +258,72 @@ int main(int argc, char **argv) {
 
                     // activeClient.setState(CGI_IO_DONE);
                     switch (activeClient.getState()) {
-                        case CGI_IO_OK: {
-                                            fds[i].events = POLLHUP; // POLLIN means tell me when there is data to read
-                                            break;
-                                        }
-                        case CGI_IO_DONE:   {
-                                                activeClient.getResponse().setResponseBody(cgi.output);
-                                                //temp test to for the output
-                                                std::cout << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n";
-                                                std::cout << "CGI OUTPUT: " << cgi.output << std::endl;
-                                                std::cout << "\n------------------------------------\n";
 
-                                                std::string final_response = "HTTP/1.1 200 OK\r\n" + cgi.output;
-                                                write(originalClientFd, final_response.c_str(), final_response.size());
+                        case CGI_IO_OK:
+                            fds[i].events = POLLHUP;
+                            break;
 
-                                                // destroy cgi pipe
-                                                close(fds[i].fd);
-                                                fds[i].fd = -1;
-                                                fdRegistry.erase(triggered_fd);
-                                                cgiProcesses.erase(triggered_fd);
+                        case CGI_IO_DONE:
 
-                                                std::cout << "CGI responseFd: " << cgi.responseFd << std::endl;
-                                                close(cgi.responseFd);
-                                                activeClient.setState(FINISHED);
-                                                // close og client
-                                                close(originalClientFd);
-                                                clients.erase(originalClientFd);
+                            activeClient.getResponse()
+                                .setResponseBody(cgi.output);
 
-                                                // find the client's FD in the poll array and reset it
-                                                for (int k = 0; k < MAX_FDS; k++) 
-                                                {
-                                                    if (fds[k].fd == originalClientFd) 
-                                                    {
-                                                        fds[k].fd = -1;
-                                                        break;
-                                                    }
-                                                }
-                                                break;
-                                            }
-                        case CGI_IO_ERROR: {
-                                               std::cerr << "CGI Error encountered." << std::endl;
-                                               //(SAME CLEANUP GOES HERE!)
-                                               close(fds[i].fd);
-                                               fds[i].fd = -1;
-                                               fdRegistry.erase(triggered_fd);
-                                               cgiProcesses.erase(triggered_fd);
-                                               clients.erase(originalClientFd);
-                                               break;
-                                           }
-                        default: {
-                                     continue;
-                                 }
+                            std::cout
+                                << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n"
+                                << "CGI OUTPUT: "
+                                << cgi.output
+                                << std::endl
+                                << "\n------------------------------------\n";
+
+                            {
+                                std::string final_response =
+                                    "HTTP/1.1 200 OK\r\n" + cgi.output;
+
+                                write(originalClientFd,
+                                        final_response.c_str(),
+                                        final_response.size());
+                            }
+
+                            close(fds[i].fd);
+                            fds[i].fd = -1;
+
+                            fdRegistry.erase(triggered_fd);
+                            cgiProcesses.erase(triggered_fd);
+
+                            std::cout << "CGI responseFd: "
+                                << cgi.responseFd
+                                << std::endl;
+
+                            close(cgi.responseFd);
+
+                            activeClient.setState(FINISHED);
+
+                            close(originalClientFd);
+                            clients.erase(originalClientFd);
+
+                            for (int k = 0; k < MAX_FDS; k++) {
+                                if (fds[k].fd == originalClientFd) {
+                                    fds[k].fd = -1;
+                                    break;
+                                }
+                            }
+                            break;
+
+                        case CGI_IO_ERROR:
+
+                            std::cerr << "CGI Error encountered."
+                                << std::endl;
+
+                            close(fds[i].fd);
+                            fds[i].fd = -1;
+
+                            fdRegistry.erase(triggered_fd);
+                            cgiProcesses.erase(triggered_fd);
+                            clients.erase(originalClientFd);
+                            break;
+
+                        default:
+                            continue;
                     }
                 }
             }
