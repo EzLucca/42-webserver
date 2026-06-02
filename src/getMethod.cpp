@@ -1,5 +1,30 @@
 #include "getMethod.hpp"
-// 1. Pass Client by reference! No ServerManager needed.
+
+bool    validateMethod(const RouteConfig *routeLocation, std::string method)
+{
+    std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = routeLocation->vectorRoute.find("allowed_methods");
+
+    std::cout << "validateMethod function" << std::endl;
+    std::cout << method << std::endl;
+
+    if (it == routeLocation->vectorRoute.end())
+    {
+        std::cout << "allowed_methods not found" << std::endl;
+        return false;
+    }
+    const std::vector<std::string> methods = it->second;
+    for (std::vector<std::string>::const_iterator mit = methods.begin();
+            mit != methods.end();
+            ++mit)
+    {
+        std::cout << "Allowed method: [" << *mit << "]" << std::endl;
+        if (*mit == method)
+            return true;
+    }
+    std::cout << "return end here" << std::endl;
+    return false;
+}
+
 void returnPage(Client& activeClient) 
 {
     std::string filepath;
@@ -38,9 +63,24 @@ void returnPage(Client& activeClient)
             {
                 const RouteConfig *route = config->getRoute(uriRequest); 
 
+                // TODO: Check location
+                // TODO: Check if autoindex is on
+                // TODO: Method validation 
+                if (route == NULL)
+                    break;
+                if(!validateMethod(route, activeClient.getRequest().getMethod()))
+                {
+                    // std::cout << "throwing here" << std::endl;
+                    // throw std::invalid_argument("Method not allowed");
+                    activeClient.getResponse().setStatusCode(405);
+                    returnPage(activeClient);
+                    activeClient.setState(FINISHED);
+                    return;
+                }
+
                 if (route != NULL) {
-                    // Fetch the root and index from your vectorRoute map
                     // TODO: parsing
+                    std::cout << "route is null" << std::endl;
                     std::string root = route->vectorRoute.at("root").at(0);
                     std::string index = route->vectorRoute.at("index").at(0);
                     filepath = root + "/" + index;
@@ -57,6 +97,12 @@ void returnPage(Client& activeClient)
             // 3. Ask the config directly for the error page!
             filepath = config->getErrorPage(404);
             statusText = "404 Not Found";
+            break;
+
+        case 405:
+            // 3. Ask the config directly for the error page!
+            filepath = config->getErrorPage(405);
+            statusText = "405 Method not allowed";
             break;
 
         case 500:

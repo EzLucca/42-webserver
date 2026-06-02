@@ -8,3 +8,4 @@
 #include "ServerManager.hpp"
 
 void    returnPage(Client &activeClient);
+bool    validateMethod(const RouteConfig *routeLocation, std::string method);

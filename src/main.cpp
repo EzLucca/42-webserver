@@ -379,6 +379,7 @@ int main(int argc, char **argv) {
 
                     // take filename
                     std::string filename = activeClient.getRequest().getFilename();
+                    std::cout << filename << " name script" << std::endl;
                     bool isCgi = false;
 
 
@@ -408,9 +409,21 @@ int main(int argc, char **argv) {
                     } 
                     else 
                     {
-                        std::cout << "Static file request. Calling returnPage." << std::endl;
-                        returnPage(activeClient);
-                        activeClient.setState(FINISHED); 
+
+                        try {
+                            std::cout << "Static file request. Calling returnPage." << std::endl;
+                            returnPage(activeClient);
+                        } catch (const std::exception &e) {
+                            std::cerr << "Error: " << e.what() << std::endl;
+                            // TODO: disconnect client.
+                            activeClient.setState(ERROR); 
+                            std::cout << activeClient.getState() << std::endl; 
+                            std::cout << "Client fd: " << activeClient.getFd()
+                                << " marked ERROR"
+                                << std::endl;
+                        }
+                        if(activeClient.getState() != 14) 
+                            activeClient.setState(FINISHED); 
                     }
 
                     // if (activeClient.getRequest().getMethod() == "POST") {
@@ -418,6 +431,7 @@ int main(int argc, char **argv) {
                     // }
 
                     // here we process the request and build response on the fly
+                    std::cout << "test" << activeClient.getState() << std::endl; 
                     if (activeClient.getState() == CGI_CALL)
                     {
                         CgiHandler	CgiObject(activeClient);
@@ -474,10 +488,11 @@ int main(int argc, char **argv) {
                 }
                 */
                 // close the connections, and set the fd back to -1
+                std::cout << "2test" << activeClient.getState() << std::endl; 
                 if (/*activeClient.getState() == CGI_IO_DONE ||*/
                         activeClient.getState() == ERROR || activeClient.getState() == FINISHED) 
                 {
-
+                    std::cout << "Failed to send response" << std::endl;
                     clients.erase(currentFd);
                     close(fds[i].fd);
                     fds[i].fd = -1;

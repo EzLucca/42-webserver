@@ -1,5 +1,6 @@
 #include "CgiHandler.hpp"
 #include "Client.hpp"
+#include "helperUtils.hpp"
 
 //****************************************************
 // static void printconfig(ServerConfig config) // DEBUG:
@@ -76,6 +77,7 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     // }
 
     _scriptPath = root + activeClient.getRequest().getUriPath(); 
+    validatePath(_scriptPath);
     std::cout << _scriptPath << " ########62384623" << std::endl;
 
     if  ((_method == "POST" && !_headers.count("content-type"))
