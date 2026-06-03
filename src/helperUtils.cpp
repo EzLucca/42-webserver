@@ -36,3 +36,16 @@ void    validateUriPath(Client &activeClient)
         activeClient.getResponse().setStatusCode(404);
 }
 
+// void    updateBodySize(Client &activeClient)
+// {
+//
+//     const ServerConfig *config = activeClient.getConfig();
+//     const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
+//
+//     std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("client_max_body_size");
+//
+//     if (it != route->vectorRoute.end() && filename.find(".py") != std::string::npos) 
+//     {
+//
+//     }
+// }

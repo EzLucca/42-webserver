@@ -381,6 +381,7 @@ int main(int argc, char **argv) {
                     const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
 
                     validateUriPath(activeClient);
+                    // TODO: validate maxbodysize
 
                     if (route != NULL) 
                     {
@@ -497,7 +498,7 @@ int main(int argc, char **argv) {
                         activeClient.getState() == ERROR || activeClient.getState() == FINISHED) 
                 {
                     std::cout << "Failed to send response" << std::endl;
-                    activeClient.getResponse().setStatusCode(501);
+                    // activeClient.getResponse().setStatusCode(501);
                     returnPage(activeClient);
                     clients.erase(currentFd);
                     close(fds[i].fd);
