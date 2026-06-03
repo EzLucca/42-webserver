@@ -1,7 +1,7 @@
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++20 -Iinclude
+CXXFLAGS = -Wall -Wextra -Werror -std=c++20 -Iinclude -ggdb
 
 SRC = \
 	src/main.cpp \
@@ -12,8 +12,9 @@ SRC = \
 	src/ConfigParser.cpp \
 	src/ServerConfig.cpp \
 	src/ServerManager.cpp \
+	src/getMethod.cpp \
 	src/CgiHandler.cpp \
-	src/getMethod.cpp
+	src/helperUtils.cpp \
 
 OBJ_DIR = obj
 

@@ -1,23 +1,8 @@
 #include "ConfigParser.hpp"
-#include <filesystem>
+#include "helperUtils.hpp"
 #include <iostream>
 #include <fstream>
 #include <arpa/inet.h>
-
-/**
- * @brief Checks if a file or directory exists.
- *
- * This function uses std::filesystem to verify whether the given file path
- * exists. If the path is invalid, it prints an error message and terminates
- * the program.
- *
- * @param filePath Path to the file or directory to check.
- */
-void validatePath(const std::string& filePath)
-{
-    if (!std::filesystem::exists(filePath))
-        throw std::invalid_argument("path does not exist: " + filePath);
-}
 
 /**
  * @brief Validates and converts the configured client body size.
@@ -316,6 +301,7 @@ void ConfigParser::parseLocationBlock( const std::string& value, std::istream& s
 
     parselocation(stream, nestedLocation, config);
 
+    config.setLocationlist(locationValue);
     config.setRoute(locationValue, nestedLocation);
 }
 

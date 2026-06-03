@@ -1,11 +1,11 @@
-#ifndef CLIENT_HPP
-# define CLIENT_HPP
+# pragma once
 
 #include <iostream>
+#include <vector>
+
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "ServerConfig.hpp"
-#include <vector>
 
 //these are possible states (these can change still)
 enum ClientState {
@@ -61,5 +61,3 @@ class   Client
             const ServerConfig* getConfig();
             int getFd() const;
 };
-
-#endif

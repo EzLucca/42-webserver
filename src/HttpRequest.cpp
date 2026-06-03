@@ -1,14 +1,15 @@
 #include "HttpRequest.hpp"
+#include "Client.hpp"
 
 
 HttpRequest::HttpRequest() :
-_isChunked(false),
-_contentLength(0),
-_currentChunkSize(-1),
-_fullChunkBodySize(0),
-_bodyFilePath("not-set"),
-_bytesWritten(0),
-_keepAlive(true)
+    _isChunked(false),
+    _contentLength(0),
+    _currentChunkSize(-1),
+    _fullChunkBodySize(0),
+    _bodyFilePath("not-set"),
+    _bytesWritten(0),
+    _keepAlive(true)
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -51,7 +52,7 @@ void HttpRequest::setHeader(std::string key, std::string value)
 void HttpRequest::setContentLength(std::string& value)
 {
     int parsedLength = std::stoi(value);
-    
+
     // We need to check manually minus values
     if (parsedLength < 0) {
         throw std::invalid_argument("Negative Content-Length"); 
@@ -109,19 +110,19 @@ void HttpRequest::printHeaders()
     {
         //first is header (key)
         //second is the value
-        
+
         std::cout << "Header: [" << it->first << "] " 
-                << "Value: [" << it->second << "]" << std::endl;
+            << "Value: [" << it->second << "]" << std::endl;
     }
 }
 
 /*
-void HttpRequest::printBody()
-{
-    std::cout << "Printing the body!" << std::endl;
-    std::cout << _body << std::endl;
-}
-*/
+   void HttpRequest::printBody()
+   {
+   std::cout << "Printing the body!" << std::endl;
+   std::cout << _body << std::endl;
+   }
+   */
 void HttpRequest::setFullChunkBodySize(size_t amount)
 {
     _fullChunkBodySize += amount;
@@ -160,4 +161,104 @@ void HttpRequest::setKeepAlive(bool keepAlive)
 bool HttpRequest::getKeepAlive()
 {
     return (_keepAlive);
+}
+
+void HttpRequest::setQueryString(void)
+{
+    std::string uriRequest = getUri();
+    size_t	queryPos = uriRequest.find('?');
+    if (queryPos != std::string::npos)
+    {
+        _uriPath = uriRequest.substr(0, queryPos);
+        _queryString = uriRequest.substr(queryPos + 1);
+    }
+    else
+    {
+        _uriPath = uriRequest;
+        _queryString = "";
+    }
+    //uriPath = /cgi-bin/file.py  
+    // size_t pos = klist.find(uriPath)
+    // if(pos != std::string::npos)
+    // {
+    //         size_t finalpos;
+    //         if(pos > finalpos)
+    //             finalpos = pos;
+    // }
+    // uriPath = raw.substr(0, finalpos);
+}
+
+void HttpRequest::setUriPath(std::string uriPath)
+{
+    _uriPath = uriPath;
+}
+
+void HttpRequest::setFilename(std::string filename)
+{
+    _filename = filename;
+}
+
+std::string HttpRequest::getUriPath()
+{
+    return (_uriPath);
+}
+
+std::string HttpRequest::getFilename()
+{
+    return (_filename);
+}
+
+std::string HttpRequest::getQueryString()
+{
+    return (_queryString);
+}
+
+void HttpRequest::setLocation(std::string location)
+{
+    _locationKey = location;
+}
+std::string HttpRequest::getLocationKey()
+{
+    return (_locationKey);
+}
+
+void    HttpRequest::setupPathKeys(Client &activeClient)
+{
+    std::string uriRequest = activeClient.getRequest().getUri();
+    std::cout << "Requested URI: " << uriRequest << std::endl;
+
+    // 2. Grab the direct pointer to the rulebook!
+    const ServerConfig *activeConfig = activeClient.getConfig();
+
+    std::vector<std::string> klist = activeConfig->getLocationList();
+    // activeClient.getRequest().setQueryString();
+    setQueryString();
+
+    std::cout << getUriPath() << std::endl;
+    std::cout << getQueryString() << std::endl;
+
+    std::string objstring = getUriPath();
+    size_t finalpos = 0;
+    for (const std::string &s : klist) {
+        size_t pos = getUriPath().find(s);
+        if(pos != std::string::npos)
+        {
+            pos = s.size();
+            if(pos > finalpos)
+                finalpos = pos;
+            std::cout << finalpos << std::endl;
+        }
+
+    }
+    setLocation(objstring.substr(0, finalpos));
+    setFilename(objstring.substr(finalpos));
+
+    if (getFilename() != "")
+    {
+        setFilename(objstring.substr(finalpos + 1));
+    }
+
+    std::cout << getUriPath() << std::endl;
+    std::cout << getLocationKey() << std::endl;
+    std::cout << getFilename() << std::endl;
 }

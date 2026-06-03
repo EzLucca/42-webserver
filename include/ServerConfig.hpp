@@ -43,6 +43,7 @@ class ServerConfig
         size_t                              _clientMaxBodySize;
         std::map<int, std::string>          _errorPages;        // indexed error pages
         std::map<std::string, RouteConfig>  _routes;            // routing tables
+        std::vector<std::string>            _locationList;
         // TEST:
         // ~TEST:
 
@@ -60,6 +61,7 @@ class ServerConfig
         void    setClientMaxBodySize(size_t clientMaxBodySize);
         void    setErrorPage(int code, const std::string& errorPage);        // indexed error pages
         void    setRoute(const std::string& location, RouteConfig  routes);  // routing tables
+        void    setLocationlist(std::string location);
 
         // getters
         int                                         getPort() const;
@@ -68,11 +70,16 @@ class ServerConfig
         size_t                                      getClientMaxBodySize() const;
         const std::map<int, std::string>&           getErrorPages() const;
         const std::map<std::string, RouteConfig>&   getRoutes() const;
+        std::vector<std::string>                    getLocationList() const;
 
 
         // Useful helpers
         std::string         getErrorPage(int code) const;
         const RouteConfig*  getRoute(const std::string& location) const;
+        // const std::unordered_map<std::string, std::vector<std::string>> getLocationBlock() const;
 };
+
+
+
 
 std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m);

@@ -1,5 +1,4 @@
-#ifndef HTTPREQUEST_HPP
-# define HTTPREQUEST_HPP
+# pragma once
 
 #include <iostream>
 #include <map>
@@ -7,14 +6,18 @@
 
 //HttpRequest consist of request line, headers (body and query optional)
 // Class holds the parsed URI, Method and headers
+class Client;
 class HttpRequest
 {
     private:
             std::string                         _method;
-            std::string                         _rawUri;       
+            std::string                         _rawUri;
+            std::string                         _uriPath;
             std::string                         _queryString;  
             std::string                         _version;
+            std::string                         _filename;
             std::map<std::string, std::string>  _headers;
+            std::string                         _locationKey;
             bool                                _isChunked;
             size_t                              _contentLength;
             long                                _currentChunkSize;
@@ -42,6 +45,10 @@ class HttpRequest
             //void printBody();
             void setBodyFilePath(std::string setBodyFilePath);
             void setKeepAlive(bool keepAlive);
+            void setQueryString(void);
+            void setUriPath(std::string uriPath);
+            void setFilename(std::string filename);
+            void setLocation(std::string location);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
@@ -51,15 +58,17 @@ class HttpRequest
             long                                getFullChunkBodySize();
             std::string                         getMethod();
             std::string                         getUri();
+            std::string                         getUriPath();
             std::string                         getVersion();
             std::string                         getBodyFilePath();
+            std::string                         getFilename();
+            std::string                         getQueryString();
+            std::string                         getLocationKey();
             size_t                              getBytesWritten();
             bool                                getKeepAlive();
 
             void                                addBytesWritten(size_t bytes);
-  
+            void                                setupPathKeys(Client &activeClient);
         
 
 };
-
-#endif

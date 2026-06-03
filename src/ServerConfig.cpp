@@ -91,3 +91,18 @@ const RouteConfig*  ServerConfig::getRoute(const std::string& key) const
     }
     return NULL;
 }
+
+void    ServerConfig::setLocationlist(std::string location)
+{
+    _locationList.push_back(location);
+}
+
+std::vector<std::string>    ServerConfig::getLocationList() const
+{
+    return (_locationList);
+}
+
+// const std::unordered_map<std::string, std::vector<std::string>> ServerConfig::getLocationBlock() const
+// {
+//     return (vectorRoute);
+// }
