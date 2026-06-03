@@ -16,6 +16,7 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "getMethod.hpp"
+#include "helperUtils.hpp"
 
 #define PORT 8080
 #define MAX_FDS 100
@@ -356,7 +357,7 @@ int main(int argc, char **argv) {
 
                 catch (const HttpException &e) {
                     activeClient.setState(ERROR);
-                    std::cout << e.getStatusCode() << " <--- statuscode. (testing)";
+                    std::cout << e.getStatusCode() << " <--- statuscode.";
                     activeClient.getResponse().setStatusCode(e.getStatusCode());
                     activeClient.getResponse().setStatusMessage(e.getStatusMessage());
                 }
@@ -364,17 +365,9 @@ int main(int argc, char **argv) {
                 // if parse is completed so if state is processing we start to execute
                 // the request
                 if (activeClient.getState() == PROCESSING) {
-                    // check for request method
-                    //  redirections for methods
-
-                    activeClient.getResponse().setStatusCode(200);
-                    // activeClient.getResponse().setStatusCode(404);
-
                     // TEST:
                     activeClient.getRequest().setupPathKeys(activeClient);
 
-                    // CgiHandler	CgiObject(activeClient);
-                    // CgiObject.CgiStart(activeClient.getRequest());
                     std::cout << "It is stuck here5 with client state: " << activeClient.getState() << std::endl;
 
                     // take filename
@@ -387,12 +380,12 @@ int main(int argc, char **argv) {
                     const ServerConfig *config = activeClient.getConfig();
                     const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
 
+                    validateUriPath(activeClient);
+
                     if (route != NULL) 
                     {
-
                         // search for the cgi_pass directive in this specific location block
                         std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("cgi_pass");
-
 
                         // THE DUAL CHECK: Was cgi_pass found AND does the file end in .py
                         if (it != route->vectorRoute.end() && filename.find(".py") != std::string::npos) 
@@ -434,8 +427,10 @@ int main(int argc, char **argv) {
                     std::cout << "test" << activeClient.getState() << std::endl; 
                     if (activeClient.getState() == CGI_CALL)
                     {
+                        try {
                         CgiHandler	CgiObject(activeClient);
                         CgiProcess  cgi = CgiObject.CgiStart(activeClient.getRequest());
+
                         bool	added = false;
                         if (cgi.valid == true)
                         {
@@ -456,6 +451,15 @@ int main(int argc, char **argv) {
                                 std::cerr << "Server full, rejecting CGI process." << std::endl; 				
                                 close(cgi.responseFd); // close the connection because server full
                             }
+                        }
+                        } catch (const std::exception &e) {
+                            std::cerr << "Error: " << e.what() << std::endl;
+                            // TODO: disconnect client.
+                            activeClient.setState(ERROR); 
+                            std::cout << activeClient.getState() << std::endl; 
+                            std::cout << "Client fd: " << activeClient.getFd()
+                                << " marked ERROR"
+                                << std::endl;
                         }
 
                         // CgiHandler(activeClient.getRequest(), server);
@@ -488,11 +492,13 @@ int main(int argc, char **argv) {
                 }
                 */
                 // close the connections, and set the fd back to -1
-                std::cout << "2test" << activeClient.getState() << std::endl; 
+                std::cout << "2test " << activeClient.getState() << std::endl; 
                 if (/*activeClient.getState() == CGI_IO_DONE ||*/
                         activeClient.getState() == ERROR || activeClient.getState() == FINISHED) 
                 {
                     std::cout << "Failed to send response" << std::endl;
+                    activeClient.getResponse().setStatusCode(501);
+                    returnPage(activeClient);
                     clients.erase(currentFd);
                     close(fds[i].fd);
                     fds[i].fd = -1;

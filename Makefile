@@ -14,6 +14,7 @@ SRC = \
 	src/ServerManager.cpp \
 	src/getMethod.cpp \
 	src/CgiHandler.cpp \
+	src/helperUtils.cpp \
 
 OBJ_DIR = obj
 

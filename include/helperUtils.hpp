@@ -3,4 +3,7 @@
 #include <iostream>
 #include <filesystem>
 
-void validatePath(const std::string& filePath);
+class Client ;
+
+void    validatePath(const std::string& filePath);
+void    validateUriPath(Client &activeClient);
