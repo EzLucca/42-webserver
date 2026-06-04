@@ -110,11 +110,26 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
     {
         std::string key = line.substr(0, colonPos); 
         std::string value = line.substr(colonPos + 1);
+        std::string combinedValue;
+        std::map<std::string, std::string> currentHeaders = request.getHeaders();
         //HTTP standard has OWS ( optional whitespace), so after parsing value we need to check if there is space before the value!
         value = trimSpaces(value);
         //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
-        key = stringToLower(key); // DOESNT WORK, FIX!
+        key = stringToLower(key);
 
+        if (currentHeaders.find(key) != currentHeaders.end()) 
+        {
+            if (key == "host" || key == "content-length") 
+            {
+                throw HttpException(400, "Bad Request: Duplicate critical header");
+            }
+            combinedValue = currentHeaders[key] + ", " + value;
+            request.setHeader(key, combinedValue);
+        } 
+        else 
+        {
+          request.setHeader(key, value);
+        }
         if (key == "connection")
         {
             if (value == "closed")
@@ -141,8 +156,6 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
             std::cout << "Chunked is flagged " << request.getIsChunked() << std::endl; //DEBUGGING
             
         }
-        request.setHeader(key, value); // add to the headers.
-
     }
     else if (colonPos == std::string::npos)
     {
