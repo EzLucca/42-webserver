@@ -55,7 +55,7 @@ class   Client
             void	appendToBuffer(const char* data, ssize_t size);
             const	std::string getBuffer() const;
             void	eraseFromBuffer(size_t length);
-			void	udpateLastActivity();
+			void	updateLastActivity();
 
 
             HttpRequest& getRequest();
@@ -63,4 +63,5 @@ class   Client
             ClientState getState() const;
             const ServerConfig* getConfig();
             int getFd() const;
+			time_t	getLastActivity();
 };

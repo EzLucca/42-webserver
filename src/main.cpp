@@ -21,7 +21,7 @@
 #define PORT 8080
 #define MAX_FDS 100
 #define CLIENT_TIMEOUT 1000
-#define CGI_TIMEOUT 1000
+#define CGI_TIMEOUT 10
 
 void printFdRegistry(const std::map<int, int>& fdRegistry)
 {
@@ -58,6 +58,18 @@ bool validateConfigFile(std::string_view &fileName) {
     }
 
     return (true);
+}
+
+
+void	checkClientTimeouts(now, clients, fds)
+{
+	time_t	now = time(NULL);
+	//iterate clients for timeouts
+}
+
+void	checkCgiTimeouts(now, cgiProcesses, fdRegistry, clients, fds)
+{
+	//iterate cgiprocesses for timeouts
 }
 
 
@@ -272,6 +284,7 @@ int main(int argc, char **argv) {
 				{
                     CgiProcess &cgi = cgiIt->second;
                     time_t	now = time(NULL);
+					int	status;
 					if (now - cgi.startedAt > CGI_TIMEOUT)
 					{
 						kill(cgi.pid, SIGKILL);
@@ -280,7 +293,7 @@ int main(int argc, char **argv) {
 						fdRegistry.erase(triggered_fd);
 						cgiProcesses.erase(triggered_fd);
 						close(originalClientFd);
-						clients.erase(originalCientFd);
+						clients.erase(originalClientFd);
 					}
                     activeClient.getResponse().CgiReadResponse(cgi, activeClient);
                     std::cout << "It is stuck here7" << std::endl;
