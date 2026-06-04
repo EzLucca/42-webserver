@@ -7,3 +7,4 @@ class Client ;
 
 void    validatePath(const std::string& filePath);
 void    validateUriPath(Client &activeClient);
+size_t  getBodyClient(Client &activeClient);

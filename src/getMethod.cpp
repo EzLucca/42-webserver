@@ -25,6 +25,23 @@ bool    validateMethod(const RouteConfig *routeLocation, std::string method)
     return false;
 }
 
+void returnErrorPage(Client& activeClient) 
+{
+    std::string filepath;
+    std::string statusText;
+
+    std::string uriRequest = activeClient.getRequest().getUri();
+    std::cout << "Requested URI from inside return: " << uriRequest << std::endl; 
+    // statusText = activeClient.getResponse().getStatusMessage();
+    statusText = activeClient.getResponse().getStatusCode();
+
+    // 2. Grab the direct pointer to the rulebook!
+    const ServerConfig *config = activeClient.getConfig();
+    int code = activeClient.getResponse().getStatusCode();
+
+        filepath = config->getErrorPage(code);
+
+}
 void returnPage(Client& activeClient) 
 {
     std::string filepath;
@@ -32,7 +49,8 @@ void returnPage(Client& activeClient)
 
     std::string uriRequest = activeClient.getRequest().getUri();
     std::cout << "Requested URI from inside return: " << uriRequest << std::endl; 
-    statusText = activeClient.getResponse().getStatusMessage();
+    // statusText = activeClient.getResponse().getStatusMessage();
+    statusText = activeClient.getResponse().getStatusCode();
 
     // 2. Grab the direct pointer to the rulebook!
     const ServerConfig *config = activeClient.getConfig();
@@ -67,8 +85,6 @@ void returnPage(Client& activeClient)
                 break;
             if(!validateMethod(route, activeClient.getRequest().getMethod()))
             {
-                // std::cout << "throwing here" << std::endl;
-                // throw std::invalid_argument("Method not allowed");
                 activeClient.getResponse().setStatusCode(405);
                 returnPage(activeClient);
                 activeClient.setState(FINISHED);
@@ -146,7 +162,11 @@ void returnPage(Client& activeClient)
     std::stringstream buffer;
     buffer << file.rdbuf();
     std::string body = buffer.str();
+     
+    if (body.size() > activeClient.getConfig()->getClientMaxBodySize())
+        throw std::invalid_argument("body bigger");
 
+    activeClient.getResponse().setResponseBody(body);
     // 4. C++98 String conversion for Content-Length
     std::stringstream lengthStream;
     lengthStream << body.size();
