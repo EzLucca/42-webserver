@@ -76,26 +76,26 @@ void	removeFdFromPoll(struct pollfd fds[], int fd)
 	}
 }
 
-void	checkClientTimeouts(time_t now, std::map<int, Clients>&  clients, struct pollfd fds[])
+void	checkClientTimeouts(time_t now, std::map<int, Client>&  clients, struct pollfd fds[])
 {
-	for (std::map<int, Client>::iterator clientIt = clients.begiin(); it != clients.end();)
+	for (std::map<int, Client>::iterator clientIt = clients.begin(); clientIt != clients.end();)
 	{
 		int clientsFd = clientIt->first;
 		Client& client = clientIt->second;
 		if (now - client.getLastActivity() > CLIENT_TIMEOUT)
 		{
-			close(clientFd);
-			removeFdFromPoll(fds, clientFd);
+			close(clientsFd);
+			removeFdFromPoll(fds, clientsFd);
 			clients.erase(clientIt++);
 		}
 		else
 		{
-			it++;
+			clientIt++;
 		}
 	}
 }
 
-void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::map<int, int>& fdRegistry, std::map<int, Client>& clients, struct pollfds fds[])
+void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::map<int, int>& fdRegistry, std::map<int, Client>& clients, struct pollfd fds[])
 {
 	for (std::map<int, CgiProcess>::iterator cgiIt = cgiProcesses.begin(); cgiIt != cgiProcesses.end();)
 	{
@@ -125,7 +125,7 @@ void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::
 				clients.erase(clientFd);
 			}
 			fdRegistry.erase(cgiFd);
-			cgiProcesses.erase(it++);
+			cgiProcesses.erase(cgiIt++);
 		}
 		else
 		{
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
         // poll() waits here, timeout -1 means that it waits infinitely that
         // somethin happpens
 
-        int poll_count = poll(fds, MAX_FDS, CLIENT_TIMEOUT);
+        int poll_count = poll(fds, MAX_FDS, POLL_TIMEOUT_MS);
         if (poll_count < 0)
 		{
             std::cerr << "Poll error" << std::endl;
@@ -345,18 +345,6 @@ int main(int argc, char **argv) {
                 if (cgiIt != cgiProcesses.end())
 				{
                     CgiProcess &cgi = cgiIt->second;
-                    time_t	now = time(NULL);
-					int	status;
-					if (now - cgi.startedAt > CGI_TIMEOUT)
-					{
-						kill(cgi.pid, SIGKILL);
-						waitpid(cgi.pid, &status, WNOHANG);
-						close(cgi.responseFd);
-						fdRegistry.erase(triggered_fd);
-						cgiProcesses.erase(triggered_fd);
-						close(originalClientFd);
-						clients.erase(originalClientFd);
-					}
                     activeClient.getResponse().CgiReadResponse(cgi, activeClient);
                     std::cout << "It is stuck here7" << std::endl;
 
