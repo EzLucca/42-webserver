@@ -41,6 +41,40 @@ void returnErrorPage(Client& activeClient)
 
         filepath = config->getErrorPage(code);
 
+    std::ifstream file(filepath.c_str()); // .c_str() needed for C++98 ifstream
+
+    if (!file.is_open())
+    {
+        std::cerr << "Could not open: " << filepath << std::endl;
+        // In the future, this should change the status to 404/500 and recursively call returnPage
+        activeClient.getResponse().setStatusCode(404);
+        returnPage(activeClient);
+        activeClient.setState(FINISHED);
+        return;
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string body = buffer.str();
+     
+    if (body.size() > activeClient.getConfig()->getClientMaxBodySize())
+        throw std::invalid_argument("body bigger");
+
+    activeClient.getResponse().setResponseBody(body);
+    // 4. C++98 String conversion for Content-Length
+    std::stringstream lengthStream;
+    lengthStream << body.size();
+    std::string contentLength = lengthStream.str();
+
+    std::string response =
+        "HTTP/1.1 " + statusText + "\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: " + contentLength + "\r\n"
+        "\r\n" +
+        body;
+
+    // Warning: Direct write() is blocking. We will move this to POLLOUT later!
+    write(activeClient.getFd(), response.c_str(), response.size());
 }
 void returnPage(Client& activeClient) 
 {
