@@ -20,6 +20,8 @@
 
 #define PORT 8080
 #define MAX_FDS 100
+#define CLIENT_TIMEOUT 1000
+#define CGI_TIMEOUT 1000
 
 void printFdRegistry(const std::map<int, int>& fdRegistry)
 {
@@ -162,12 +164,14 @@ int main(int argc, char **argv) {
     // std::cout << "Server listening on port " <<
     // manager.getServerValues("mysite.com", "listen") << "..." << std::endl;
     //  Main event loop
-    while (true) {
+    while (true)
+	{
         // poll() waits here, timeout -1 means that it waits infinitely that
         // somethin happpens
 
-        int poll_count = poll(fds, MAX_FDS, -1);
-        if (poll_count < 0) {
+        int poll_count = poll(fds, MAX_FDS, CLIENT_TIMEOUT);
+        if (poll_count < 0)
+		{
             std::cerr << "Poll error" << std::endl;
             break;
         }
@@ -178,18 +182,24 @@ int main(int argc, char **argv) {
         //         continue;
         // DEBUG:
         // go through structs, and see who woke up poll():n
-        for (int i = 0; i < MAX_FDS; i++) {
+		time_t	now = time(NULL);
+		checkClientTimeouts(now, clients, fds);
+		checkCgiTimeouts(now, cgiProcesses, fdRegistry, clients, fds);
+        for (int i = 0; i < MAX_FDS; i++)
+		{
 
             // --- DIAGNOSTIC RADAR & BLINDFOLD REMOVAL ---
 
             // 1. Print EXACTLY what signal the OS is sending to this socket!
-            if (fds[i].revents != 0) {
+            if (fds[i].revents != 0)
+			{
                 std::cout << ">>> POLL WOKE UP! FD: " << fds[i].fd 
                     << " | Revents code: " << fds[i].revents << " <<<" << std::endl;
             }
 
             // 2. Let ALL signals pass through to your logic! Do not skip anything!
-            if (!(fds[i].revents & (POLLIN | POLLHUP))) {
+            if (!(fds[i].revents & (POLLIN | POLLHUP)))
+			{
                 continue;
             }
 
@@ -198,7 +208,8 @@ int main(int argc, char **argv) {
             // Master socket wokeup, some1 wants to connect, what kind of socket is
             // this?
             std::map<int, const ServerConfig *>::iterator it = masterSocketRegistry.find(triggered_fd);
-            if (it != masterSocketRegistry.end()) {
+            if (it != masterSocketRegistry.end())
+			{
 
                 const ServerConfig *matchedConfig = it->second;
                 struct sockaddr_in client_address;
@@ -206,12 +217,14 @@ int main(int argc, char **argv) {
 
                 // Call accept DOUBLE  CHECK ACCEPT FUNCTION
                 int new_client_fd = accept( triggered_fd, (struct sockaddr *)&client_address, &client_len);
-                if (new_client_fd < 0) {
+                if (new_client_fd < 0)
+				{
                     std::cerr << "Accept failed on Master FD " << triggered_fd
                         << ". Error: " << strerror(errno) << std::endl;
                     exit(1);
                 }
-                if (new_client_fd == -1) {
+                if (new_client_fd == -1)
+				{
                     std::cerr << "Failure in accepting" << std::endl;
                     break;
                 }
@@ -221,8 +234,10 @@ int main(int argc, char **argv) {
                 bool added = false; // flag if adding client succesfull
 
                 // Save the client fd, and insert into our array
-                for (int j = 0; j < MAX_FDS; j++) {
-                    if (fds[j].fd == -1) {
+                for (int j = 0; j < MAX_FDS; j++)
+				{
+                    if (fds[j].fd == -1)
+					{
                         fds[j].fd = new_client_fd;
                         fds[j].events = POLLIN; //  activate pollin
                         clients[new_client_fd] = Client(new_client_fd, matchedConfig);
@@ -234,7 +249,8 @@ int main(int argc, char **argv) {
                         break;
                     }
                 }
-                if (!added) {
+                if (!added)
+				{
                     std::cerr << "Server full, rejecting client." << std::endl;
                     close(new_client_fd); // close the connection because server full
                 }
@@ -247,18 +263,31 @@ int main(int argc, char **argv) {
             std::cout << triggered_fd << " teste" << std::endl;
             printFdRegistry(fdRegistry); // TEST:
 
-            if (shit != fdRegistry.end()) {
+            if (shit != fdRegistry.end())
+			{
                 //	int	cgiPipeFd = it->first;
                 int originalClientFd = shit->second;
                 Client &activeClient = clients[originalClientFd];
-                if (cgiIt != cgiProcesses.end()) {
+                if (cgiIt != cgiProcesses.end())
+				{
                     CgiProcess &cgi = cgiIt->second;
-                    std::cout << "It is stuck here6" << std::endl;
+                    time_t	now = time(NULL);
+					if (now - cgi.startedAt > CGI_TIMEOUT)
+					{
+						kill(cgi.pid, SIGKILL);
+						waitpid(cgi.pid, &status, WNOHANG);
+						close(cgi.responseFd);
+						fdRegistry.erase(triggered_fd);
+						cgiProcesses.erase(triggered_fd);
+						close(originalClientFd);
+						clients.erase(originalCientFd);
+					}
                     activeClient.getResponse().CgiReadResponse(cgi, activeClient);
                     std::cout << "It is stuck here7" << std::endl;
 
                     // activeClient.setState(CGI_IO_DONE);
-                    switch (activeClient.getState()) {
+                    switch (activeClient.getState())
+					{
 
                         case CGI_IO_OK:
                             fds[i].events = POLLHUP;
@@ -302,8 +331,10 @@ int main(int argc, char **argv) {
                             close(originalClientFd);
                             clients.erase(originalClientFd);
 
-                            for (int k = 0; k < MAX_FDS; k++) {
-                                if (fds[k].fd == originalClientFd) {
+                            for (int k = 0; k < MAX_FDS; k++)
+							{
+                                if (fds[k].fd == originalClientFd)
+								{
                                     fds[k].fd = -1;
                                     break;
                                 }
@@ -329,7 +360,8 @@ int main(int argc, char **argv) {
                 }
             }
             // Already existing
-            else {
+            else
+			{
 
                 int currentFd = fds[i].fd; // take the fd who called, this is our key
                 Client &activeClient = clients[currentFd]; // get the activeclient
@@ -340,7 +372,8 @@ int main(int argc, char **argv) {
                 // read data to the buffer
                 int valRead = read(fds[i].fd, shovelBuffer, sizeof(shovelBuffer));
 
-                if (valRead <= 0) {
+                if (valRead <= 0)
+				{
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     clients.erase(currentFd);
@@ -350,12 +383,15 @@ int main(int argc, char **argv) {
                 }
 
                 activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
+				activeClient.updateLastActivity();
 
-                try {
+                try
+				{
                     httpParser.parse(activeClient);
                 }
 
-                catch (const HttpException &e) {
+                catch (const HttpException &e)
+				{
                     activeClient.setState(ERROR);
                     std::cout << e.getStatusCode() << " <--- statuscode.";
                     activeClient.getResponse().setStatusCode(e.getStatusCode());
@@ -364,7 +400,8 @@ int main(int argc, char **argv) {
 
                 // if parse is completed so if state is processing we start to execute
                 // the request
-                if (activeClient.getState() == PROCESSING) {
+                if (activeClient.getState() == PROCESSING)
+				{
                     // TEST:
                     activeClient.getRequest().setupPathKeys(activeClient);
 
@@ -403,10 +440,12 @@ int main(int argc, char **argv) {
                     else 
                     {
 
-                        try {
+                        try
+						{
                             std::cout << "Static file request. Calling returnPage." << std::endl;
                             returnPage(activeClient);
-                        } catch (const std::exception &e) {
+                        } catch (const std::exception &e)
+						{
                             std::cerr << "Error: " << e.what() << std::endl;
                             // TODO: disconnect client.
                             activeClient.setState(ERROR); 
@@ -430,32 +469,35 @@ int main(int argc, char **argv) {
                     std::cout << "test" << activeClient.getState() << std::endl; 
                     if (activeClient.getState() == CGI_CALL)
                     {
-                        try {
-                        CgiHandler	CgiObject(activeClient);
-                        CgiProcess  cgi = CgiObject.CgiStart(activeClient.getRequest());
+                        try
+						{
+							CgiHandler	CgiObject(activeClient);
+							CgiProcess  cgi = CgiObject.CgiStart(activeClient.getRequest());
 
-                        bool	added = false;
-                        if (cgi.valid == true)
-                        {
-                            for (int j = 0; j < MAX_FDS; j++)
-                            {
-                                if (fds[j].fd == -1)
-                                {
-                                    fds[j].fd = cgi.responseFd;
-                                    fds[j].events = POLLIN | POLLHUP; //  activate pollin 				
-                                    added = true;
-                                    fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
-                                    cgiProcesses.insert(std::make_pair(fds[j].fd, cgi));
-                                    break;
-                                }
-                            }
-                            if (!added)
-                            {
-                                std::cerr << "Server full, rejecting CGI process." << std::endl; 				
-                                close(cgi.responseFd); // close the connection because server full
-                            }
+							bool	added = false;
+							if (cgi.valid == true)
+							{
+								for (int j = 0; j < MAX_FDS; j++)
+								{
+									if (fds[j].fd == -1)
+									{
+										fds[j].fd = cgi.responseFd;
+										fds[j].events = POLLIN | POLLHUP; //  activate pollin 				
+										added = true;
+										fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
+										cgiProcesses.insert(std::make_pair(fds[j].fd, cgi));
+										break;
+									}
+								}
+								if (!added)
+								{
+									std::cerr << "Server full, rejecting CGI process." << std::endl; 				
+									close(cgi.responseFd); // close the connection because server full
+								}
+							}
                         }
-                        } catch (const std::exception &e) {
+						catch (const std::exception &e)
+						{
                             std::cerr << "Error: " << e.what() << std::endl;
                             // TODO: disconnect client.
                             activeClient.setState(ERROR); 
@@ -511,4 +553,4 @@ int main(int argc, char **argv) {
         }
     }
     return 0;
-    }
+}

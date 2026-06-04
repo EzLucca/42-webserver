@@ -12,6 +12,7 @@ Client::Client(int fd, const ServerConfig* config) :
     _fd(fd),
     _state(READING_REQUESTLINE),
     _config(config)
+	_lastActivity = time(NULL);
 {
     std::cout << "Client object created." << std::endl; 
 }
@@ -31,6 +32,11 @@ void Client::setState(ClientState state)
 {
     _state = state;
     return ;
+}
+
+void	Client::updateLastActivity()
+{
+	_lastActivity = time(NULL);
 }
 
 void Client::appendToBuffer(const char* data, ssize_t size)
