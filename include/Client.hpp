@@ -63,5 +63,5 @@ class   Client
             ClientState getState() const;
             const ServerConfig* getConfig();
             int getFd() const;
-			time_t	getLastActivity();
+			time_t	getLastActivity() const;
 };

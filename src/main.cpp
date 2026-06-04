@@ -7,6 +7,7 @@
 #include <string>
 #include <sys/socket.h> // For socket(), bind(), listen(), accept()
 #include <unistd.h>     // For close(), read(), write()
+#include <signal.h>
 
 #include "CgiHandler.hpp"
 #include "Client.hpp"
@@ -20,7 +21,8 @@
 
 #define PORT 8080
 #define MAX_FDS 100
-#define CLIENT_TIMEOUT 1000
+#define POLL_TIMEOUT_MS 1000
+#define CLIENT_TIMEOUT 30
 #define CGI_TIMEOUT 10
 
 void printFdRegistry(const std::map<int, int>& fdRegistry)
@@ -60,16 +62,76 @@ bool validateConfigFile(std::string_view &fileName) {
     return (true);
 }
 
-
-void	checkClientTimeouts(now, clients, fds)
+void	removeFdFromPoll(struct pollfd fds[], int fd)
 {
-	time_t	now = time(NULL);
-	//iterate clients for timeouts
+	for (int i = 0; i < MAX_FDS; i++)
+	{
+		if (fds[i].fd == fd)
+		{
+			fds[i].fd = -1;
+			fds[i].events = 0;
+			fds[i].revents = 0;
+			return;
+		}
+	}
 }
 
-void	checkCgiTimeouts(now, cgiProcesses, fdRegistry, clients, fds)
+void	checkClientTimeouts(time_t now, std::map<int, Clients>&  clients, struct pollfd fds[])
 {
-	//iterate cgiprocesses for timeouts
+	for (std::map<int, Client>::iterator clientIt = clients.begiin(); it != clients.end();)
+	{
+		int clientsFd = clientIt->first;
+		Client& client = clientIt->second;
+		if (now - client.getLastActivity() > CLIENT_TIMEOUT)
+		{
+			close(clientFd);
+			removeFdFromPoll(fds, clientFd);
+			clients.erase(clientIt++);
+		}
+		else
+		{
+			it++;
+		}
+	}
+}
+
+void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::map<int, int>& fdRegistry, std::map<int, Client>& clients, struct pollfds fds[])
+{
+	for (std::map<int, CgiProcess>::iterator cgiIt = cgiProcesses.begin(); cgiIt != cgiProcesses.end();)
+	{
+		int cgiFd = cgiIt->first;
+		CgiProcess& cgi = cgiIt->second;
+
+		if (now - cgi.startedAt > CGI_TIMEOUT)
+		{
+			std::map<int, int>::iterator regIt = fdRegistry.find(cgiFd);
+			int	clientFd = -1;
+			if (regIt != fdRegistry.end())
+			{
+				clientFd = regIt->second;
+			}
+			if (cgi.pid > 0)
+			{
+				int status;
+				kill(cgi.pid, SIGKILL);
+				waitpid(cgi.pid, &status, 0);
+			}
+			close(cgiFd);
+			removeFdFromPoll(fds, cgiFd);
+			if (clientFd != -1)
+			{
+				close(clientFd);
+				removeFdFromPoll(fds, clientFd);
+				clients.erase(clientFd);
+			}
+			fdRegistry.erase(cgiFd);
+			cgiProcesses.erase(it++);
+		}
+		else
+		{
+			cgiIt++;
+		}
+	}
 }
 
 

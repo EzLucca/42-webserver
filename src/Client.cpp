@@ -39,7 +39,7 @@ void	Client::updateLastActivity()
 	_lastActivity = time(NULL);
 }
 
-time_t	Client::getLastActivity()
+time_t	Client::getLastActivity() const
 {
 	return (_lastActivity);
 }
