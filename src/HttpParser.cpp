@@ -195,9 +195,11 @@ void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequ
     //fstream has an internal buffer of ~4Kb (using RAM), so when we are writing into a file, its actually written after 4kb, or manual flush call
     //filenaming needs to be unique, lets have client fd for example added there.
     // in case of keep alive connection, check if there is already temp file from previous request. if there is, remove the old before creating new
-
-    request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
-    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary);
+	bool firstWrite = request.getBodyFilePath() == "not-set";
+	if (firstWrite)
+		request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
+	std::ofstream outFile(request.getBodyFilePath().c_str(), std::ios::out | std::ios::binary 
+	| (firstWrite ? std::ios::trunc : std::ios::app));
     if (!outFile.is_open())
         throw HttpException(500, "Internal Server Error: Could not open temp file for writing");
     

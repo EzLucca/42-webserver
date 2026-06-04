@@ -222,6 +222,15 @@ std::string HttpRequest::getLocationKey()
     return (_locationKey);
 }
 
+void	HttpRequest::cleanupBodyFile()
+{
+	if (_bodyFilePath.c_str() != "not-set")
+	{
+		std::remove(_bodyFilePath..c_str());
+		_bodyFilePath = "not-set";
+	}
+}
+
 void    HttpRequest::setupPathKeys(Client &activeClient)
 {
     std::string uriRequest = activeClient.getRequest().getUri();

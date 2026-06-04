@@ -31,24 +31,24 @@ class HttpRequest
             ~HttpRequest();
 
             //setters
-            void setMethod(std::string method);
-            void setUri(std::string uri);
-            void setVersion(std::string version);
-            void setPath(std::string path);
-            void setQueryString(std::string queryString);
-            void setHeader(std::string key, std::string value);
-            void setContentLength(std::string& value);
-            void setIsChunked();
-            void setCurrentChunkSize(std::string chunkLine);
-            void setFullChunkBodySize(size_t amount);
-            void printHeaders();
+            void	setMethod(std::string method);
+            void	setUri(std::string uri);
+            void	setVersion(std::string version);
+            void	setPath(std::string path);
+            void	setQueryString(std::string queryString);
+            void	setHeader(std::string key, std::string value);
+            void	setContentLength(std::string& value);
+            void	setIsChunked();
+            void	setCurrentChunkSize(std::string chunkLine);
+            void	setFullChunkBodySize(size_t amount);
+            void	printHeaders();
             //void printBody();
-            void setBodyFilePath(std::string setBodyFilePath);
-            void setKeepAlive(bool keepAlive);
-            void setQueryString(void);
-            void setUriPath(std::string uriPath);
-            void setFilename(std::string filename);
-            void setLocation(std::string location);
+            void	setBodyFilePath(std::string setBodyFilePath);
+            void	setKeepAlive(bool keepAlive);
+            void	setQueryString(void);
+            void	setUriPath(std::string uriPath);
+            void	setFilename(std::string filename);
+            void	setLocation(std::string location);
 
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
@@ -69,6 +69,7 @@ class HttpRequest
 
             void                                addBytesWritten(size_t bytes);
             void                                setupPathKeys(Client &activeClient);
+			void								cleanupBodyFile();
         
 
 };

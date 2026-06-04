@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
                             break;
 
                         case CGI_IO_DONE:
-
+							activeClient.getRequest().cleanupBodyFile();
                             activeClient.getResponse()
                                 .setResponseBody(cgi.output);
 
@@ -311,7 +311,7 @@ int main(int argc, char **argv) {
                             break;
 
                         case CGI_IO_ERROR:
-
+							activeClient.getRequest().cleanupBodyFile();
                             std::cerr << "CGI Error encountered."
                                 << std::endl;
 
@@ -415,8 +415,11 @@ int main(int argc, char **argv) {
                                 << " marked ERROR"
                                 << std::endl;
                         }
-                        if(activeClient.getState() != 14) 
-                            activeClient.setState(FINISHED); 
+                        if(activeClient.getState() != 14)
+						{
+							activeClient.getRequest().cleanupBodyFile();
+                            activeClient.setState(FINISHED);
+						}
                     }
 
                     // if (activeClient.getRequest().getMethod() == "POST") {
@@ -499,6 +502,7 @@ int main(int argc, char **argv) {
                     std::cout << "Failed to send response" << std::endl;
                     activeClient.getResponse().setStatusCode(501);
                     returnPage(activeClient);
+					activeClient.getRequest().cleanupBodyFile();
                     clients.erase(currentFd);
                     close(fds[i].fd);
                     fds[i].fd = -1;

@@ -19,12 +19,7 @@ Client::Client(int fd, const ServerConfig* config) :
 Client::~Client()
 {
     //if connection drops out, we delete tmp file/
-
-    if (_request.getBodyFilePath() != "not-set")
-    {
-        std::remove(_request.getBodyFilePath().c_str());
-    }
-
+	_request.cleanupBodyFile();
     std::cout << "Client object destroyed." << std::endl; 
 }
 
