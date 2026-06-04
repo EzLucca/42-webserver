@@ -55,7 +55,6 @@ void returnPage(Client& activeClient)
     std::cout << "Status Code: " << activeClient.getResponse().getStatusCode() << std::endl;
     switch (activeClient.getResponse().getStatusCode())
     {
-        std::cout << "Status Code: " << activeClient.getResponse().getStatusCode() << std::endl;
         case 200:
         {
             const RouteConfig *route = config->getRoute(uriRequest); 

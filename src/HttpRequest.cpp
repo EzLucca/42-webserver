@@ -76,6 +76,11 @@ bool   HttpRequest::getIsChunked()
     return (_isChunked);
 }
 
+void	HttpRequest::resetCurrentChunkSize()
+{
+	_currentChunkSize = -1;
+}
+
 long    HttpRequest::getCurrentChunkSize()
 {
     return (_currentChunkSize);

@@ -70,6 +70,7 @@ class HttpRequest
             void                                addBytesWritten(size_t bytes);
             void                                setupPathKeys(Client &activeClient);
 			void								cleanupBodyFile();
+			void								resetCurrentChunkSize();
         
 
 };

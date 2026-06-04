@@ -341,7 +341,7 @@ void HttpParser::parse(Client& client)
                 parseBodyIntoFile(client.getFd(), line, client.getRequest()); // this is now writing the chunk of data into a file.
                 client.getRequest().setFullChunkBodySize(chunkSize); //increment full chunkbodysize after extracted the data,
                 client.eraseFromBuffer(chunkSize + 2); // Free the buffer so we dont run into RAM problems.
-                client.getRequest().setCurrentChunkSize("-0x1");
+                client.getRequest().resetCurrentChunkSize();
             }
             
         }
