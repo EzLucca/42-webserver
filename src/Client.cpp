@@ -12,7 +12,7 @@ Client::Client(int fd, const ServerConfig* config) :
     _fd(fd),
     _state(READING_REQUESTLINE),
     _config(config),
-	_lastActivity(time(NULL));
+	_lastActivity(time(NULL))
 {
     std::cout << "Client object created." << std::endl; 
 }

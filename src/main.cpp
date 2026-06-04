@@ -62,6 +62,16 @@ bool validateConfigFile(std::string_view &fileName) {
     return (true);
 }
 
+bool	isClientWaitingForCgi(int clientFd, std::map<int, int>& fdRegistry)
+{
+	for (std::map<int, int>::iterator it = fdRegistry.begin(); it != fdregistry.end(); it++)
+	{
+		if (it->second == clientFd)
+			return (true);
+	}
+	return (false);
+}
+
 void	removeFdFromPoll(struct pollfd fds[], int fd)
 {
 	for (int i = 0; i < MAX_FDS; i++)
@@ -76,12 +86,17 @@ void	removeFdFromPoll(struct pollfd fds[], int fd)
 	}
 }
 
-void	checkClientTimeouts(time_t now, std::map<int, Client>&  clients, struct pollfd fds[])
+void	checkClientTimeouts(time_t now, std::map<int, Client>&, std::map<int, int>& fdRegistry, clients, struct pollfd fds[])
 {
 	for (std::map<int, Client>::iterator clientIt = clients.begin(); clientIt != clients.end();)
 	{
 		int clientsFd = clientIt->first;
 		Client& client = clientIt->second;
+		if (isClientWaitingForCgi(clientFd, fdRegistry))
+		{
+			clientIt++;
+			continue;
+		}
 		if (now - client.getLastActivity() > CLIENT_TIMEOUT)
 		{
 			close(clientsFd);
@@ -257,7 +272,7 @@ int main(int argc, char **argv) {
         // DEBUG:
         // go through structs, and see who woke up poll():n
 		time_t	now = time(NULL);
-		checkClientTimeouts(now, clients, fds);
+		checkClientTimeouts(now, clients, fdRegistry, fds);
 		checkCgiTimeouts(now, cgiProcesses, fdRegistry, clients, fds);
         for (int i = 0; i < MAX_FDS; i++)
 		{
