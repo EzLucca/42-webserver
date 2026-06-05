@@ -61,6 +61,9 @@ bool validateConfigFile(std::string_view &fileName) {
 
 int main(int argc, char **argv) {
 
+    //if pipe or socket breaks, we dont murder our program
+    signal(SIGPIPE, SIG_IGN);
+
     if (argc != 2) {
         std::cout << "Usage:\n\t./webserv [configuration_file]" << std::endl;
         return (1);
