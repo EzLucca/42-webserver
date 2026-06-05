@@ -128,8 +128,10 @@ void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::
 			if (cgi.pid > 0)
 			{
 				int status;
-				kill(cgi.pid, SIGKILL);
-				waitpid(cgi.pid, &status, 0);
+				if (kill(cgi.pid, SIGKILL) == -1)
+					std::cerr << "SIGKILL failure" << std::endl;
+				if (waitpid(cgi.pid, &status, 0) == -1)
+					std::cerr << "Child reaping failed" << std::endl;
 			}
 			close(cgiFd);
 			removeFdFromPoll(fds, cgiFd);
@@ -137,7 +139,12 @@ void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::
 			{
 				close(clientFd);
 				removeFdFromPoll(fds, clientFd);
-				clients.erase(clientFd);
+				std::map<int, Client>::iterator clientIt = clients.find(clientFd);
+				if (clientIt != clients.end())
+				{
+					clientIt->second.getRequest().cleanupBodyFile();
+					clients.erase(clientIt);
+				}
 			}
 			fdRegistry.erase(cgiFd);
 			cgiProcesses.erase(cgiIt++);

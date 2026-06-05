@@ -83,14 +83,18 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
     if (bytesRead == 0)
     {
         // (Wait for child blocking, because we know it has closed the pipe)
-        pid_t result = waitpid(cgi.pid, &status, 0);
-
-        // (DO NOT CLOSE FD HERE! main.cpp will handle it.)
-        cgi.responseClosed = true;
-
-        // checkin if child process crashed 
-        std::cout << "bytes = 0" << std::endl;
-        if (result == -1 || !WIFEXITED(status) || WEXITSTATUS(status) != 0)
+        pid_t result = waitpid(cgi.pid, &status, WNOHANG);
+        if (result == 0)
+		{
+			activeClient.setState(CGI_IO_OK);
+			return ;
+		}
+        if (result == -1)
+        {
+            activeClient.setState(CGI_IO_ERROR);
+            return ;
+        }
+		if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
         {
             activeClient.setState(CGI_IO_ERROR);
             return ;
