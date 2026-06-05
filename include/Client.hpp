@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <ctime>
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
@@ -42,17 +43,19 @@ class   Client
             HttpRequest             _request;
             HttpResponse            _response;
             const ServerConfig*     _config;
+			time_t					_lastActivity;
 
     public:
             Client();
             Client(int fd, const ServerConfig* config); // constructor sets state = Reading headears on default
             ~Client();
 
-            void setState(ClientState state);
-            void setConfig(ServerConfig config);
-            void appendToBuffer(const char* data, ssize_t size);
-            const std::string getBuffer() const;
-            void eraseFromBuffer(size_t length);
+            void	setState(ClientState state);
+            void	setConfig(ServerConfig config);
+            void	appendToBuffer(const char* data, ssize_t size);
+            const	std::string getBuffer() const;
+            void	eraseFromBuffer(size_t length);
+			void	updateLastActivity();
 
 
             HttpRequest& getRequest();
@@ -60,4 +63,5 @@ class   Client
             ClientState getState() const;
             const ServerConfig* getConfig();
             int getFd() const;
+			time_t	getLastActivity() const;
 };

@@ -48,7 +48,12 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
         {
             throw HttpException(505, "HTTP version not supported.");
         }
-
+		std::string	lowerUri = stringToLower(uri);
+		if (lowerUri == "/.." || lowerUri.find("\\") != std::string::npos || lowerUri.find("/../") != std::string::npos
+			|| (lowerUri.size() >= 3 && lowerUri.compare(lowerUri.size() - 3, 3, "/..") == 0)
+			|| lowerUri.find("%2e%2e") != std::string::npos || lowerUri.find("%2f") != std::string::npos
+			|| lowerUri.find("%5c") != std::string::npos)
+			throw HttpException(403, "Forbidden");
         //DEBUGGING!!
         std::cout << "Parsed method: " << request.getMethod() << "\n"
             << "Parsed Uri :" << request.getUri() << "\n"
@@ -114,16 +119,29 @@ void HttpParser::parseSingleHeader(std::string& line, Client& client)
     {
         std::string key = line.substr(0, colonPos); 
         std::string value = line.substr(colonPos + 1);
+        std::string combinedValue;
+        std::map<std::string, std::string> currentHeaders = request.getHeaders();
         //HTTP standard has OWS ( optional whitespace), so after parsing value we need to check if there is space before the value!
         value = trimSpaces(value);
         //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
-        key = stringToLower(key); // DOESNT WORK, FIX!
+        key = stringToLower(key);
 
-        if (key == "connection")
+        if (currentHeaders.find(key) != currentHeaders.end()) 
         {
-            if (value == "closed")
-                // request.setKeepAlive(false);
-                client.getRequest().setKeepAlive(false);
+            if (key == "host" || key == "content-length") 
+            {
+                throw HttpException(400, "Bad Request: Duplicate critical header");
+            }
+            combinedValue = currentHeaders[key] + ", " + value;
+            request.setHeader(key, combinedValue);
+        } 
+        else 
+        {
+          request.setHeader(key, value);
+        }
+        if (key == "connection"  && value == "closed")
+        {
+                request.setKeepAlive(false);
         }
         if (key == "content-length")
         {   
@@ -211,9 +229,11 @@ void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequ
     //fstream has an internal buffer of ~4Kb (using RAM), so when we are writing into a file, its actually written after 4kb, or manual flush call
     //filenaming needs to be unique, lets have client fd for example added there.
     // in case of keep alive connection, check if there is already temp file from previous request. if there is, remove the old before creating new
-
-    request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
-    std::ofstream outFile(request.getBodyFilePath(), std::ios::out | std::ios::app | std::ios::binary);
+	bool firstWrite = request.getBodyFilePath() == "not-set";
+	if (firstWrite)
+		request.setBodyFilePath("temp_body_" + std::to_string(clientFd) + ".bin");
+	std::ofstream outFile(request.getBodyFilePath().c_str(), std::ios::out | std::ios::binary 
+	| (firstWrite ? std::ios::trunc : std::ios::app));
     if (!outFile.is_open())
         throw HttpException(500, "Internal Server Error: Could not open temp file for writing");
 
@@ -362,7 +382,7 @@ void HttpParser::parse(Client& client)
                 if (client.getRequest().getFullChunkBodySize() > static_cast<long>(bodyClientMax))
                     throw HttpException(400, "Bad Request: Content-Length is astronomically large");
                 client.eraseFromBuffer(chunkSize + 2); // Free the buffer so we dont run into RAM problems.
-                client.getRequest().setCurrentChunkSize("-0x1");
+                client.getRequest().resetCurrentChunkSize();
             }
 
         }
