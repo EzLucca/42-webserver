@@ -7,5 +7,7 @@
 #include "Client.hpp"
 #include "ServerManager.hpp"
 
-void    returnPage(Client &activeClient);
-bool    validateMethod(const RouteConfig *routeLocation, std::string method);
+void        returnPage(Client &activeClient);
+void        returnErrorPage(Client& activeClient);
+bool        validateMethod(const RouteConfig *routeLocation, std::string method);
+std::string createResponse(Client& activeClient, std::string filepath);

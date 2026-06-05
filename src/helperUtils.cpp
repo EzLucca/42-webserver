@@ -10,29 +10,55 @@
  *
  * @param filePath Path to the file or directory to check.
  */
-void validatePath(const std::string& filePath)
+void validatePath(const std::string &filePath)
 {
     if (!std::filesystem::exists(filePath))
         throw std::invalid_argument("path does not exist: " + filePath);
 }
 
-void    validateUriPath(Client &activeClient)
+bool    validateUriPath(Client &activeClient)
 {
     std::string uriPathRequest = activeClient.getRequest().getUriPath();
-    std::vector<std::string> locationlist = activeClient.getConfig()->getLocationList();
+    std::vector<std::string> locationlist =
+        activeClient.getConfig()->getLocationList();
     bool found = false;
 
-    for (const std::string& location : locationlist)
-    {
-        if (location == uriPathRequest)
-        {
+    for (const std::string &location : locationlist) {
+        if (location == uriPathRequest) {
             found = true;
             break;
         }
     }
     if (found)
+    {
         activeClient.getResponse().setStatusCode(200);
-    else
-        activeClient.getResponse().setStatusCode(404);
+        return (true);
+    }
+    activeClient.getResponse().setStatusCode(404);
+    activeClient.setState(ERROR); 
+    return (false);
 }
 
+size_t getBodyClient(Client &activeClient)
+{
+    size_t bodyClientMax = activeClient.getConfig()->getClientMaxBodySize();
+
+    const ServerConfig *config = activeClient.getConfig();
+    const RouteConfig *route =
+        config->getRoute(activeClient.getRequest().getLocationKey());
+
+    std::unordered_map<std::string, std::vector<std::string>>::const_iterator it =
+        route->vectorRoute.find("client_max_body_size");
+
+    if (it != route->vectorRoute.end() && !it->second.empty()) {
+        std::string val = it->second[0];
+        if (val.back() == 'M') {
+            int size = std::stoi(val.substr(0, val.size() - 1));
+            bodyClientMax = size * 1024 * 1024;
+            std::cout << bodyClientMax << " body size of the location" << std::endl;
+            return (bodyClientMax);
+        }
+    }
+    std::cout << bodyClientMax << " body size" << std::endl;
+    return (bodyClientMax);
+}

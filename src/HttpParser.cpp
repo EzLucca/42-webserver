@@ -1,5 +1,6 @@
 #include "HttpParser.hpp"
 #include "HttpException.hpp"
+#include "helperUtils.hpp"
 
 void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 {
@@ -15,7 +16,7 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
         //validate Uri, if not valid return
         request.setVersion(line.substr(secondSpace +1));
         //validate version, if not valid return
-        
+
         //validating methods
         if(request.getMethod() != "GET" && request.getMethod() != "POST" && request.getMethod() != "DELETE")
         {
@@ -38,9 +39,9 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
             char c = uri[i];
             // check for spaces and not printable characters
             if (c <= 32 || c >= 127) { 
-            throw HttpException(400, "Bad Request: Invalid character in URI");
+                throw HttpException(400, "Bad Request: Invalid character in URI");
+            }
         }
-}
 
         //validating version
         if (request.getVersion() != "HTTP/1.1")
@@ -55,8 +56,8 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 			throw HttpException(403, "Forbidden");
         //DEBUGGING!!
         std::cout << "Parsed method: " << request.getMethod() << "\n"
-                    << "Parsed Uri :" << request.getUri() << "\n"
-                    << "Parsed version : " << request.getVersion() << std::endl;
+            << "Parsed Uri :" << request.getUri() << "\n"
+            << "Parsed version : " << request.getVersion() << std::endl;
     }
     else 
     {
@@ -65,7 +66,8 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
     }
 }
 
-void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
+// void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
+void HttpParser::parseAllHeaders(std::string& rawHeaders, Client& client)
 {
     // main logic here is that we parse line by line calli singleheader parse function, and after the parse, we erase that part from rawHeaders
     while (rawHeaders.length() > 0)
@@ -82,7 +84,8 @@ void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
             break;
         }
         std::string singleHeader = rawHeaders.substr(0, singleHeaderLength);
-        parseSingleHeader(singleHeader, request); //lets parse it
+        // parseSingleHeader(singleHeader, request); //lets parse it
+        parseSingleHeader(singleHeader, client); //lets parse it
         rawHeaders.erase(0, singleHeaderLength + 2); //erase the parsed header 
     }
 }
@@ -107,7 +110,8 @@ std::string HttpParser::stringToLower(std::string value)
     return (s);
 }
 
-void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
+// void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
+void HttpParser::parseSingleHeader(std::string& line, Client& client)
 {
     size_t colonPos = line.find(':');
 
@@ -140,10 +144,18 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
                 request.setKeepAlive(false);
         }
         if (key == "content-length")
-        {   try
+        {   
+            try
             {
-            // extract the key and value (value into number) and save to request object
-            request.setContentLength(value); // Maybe we should try catch this, need somekind of validation check
+                // TEST:
+
+                // ValidateBodyLength with the config on the client;
+                size_t bodyClientMax = getBodyClient(client);
+
+                client.getRequest().setContentLength(value);
+                // Maybe we should try catch this, need somekind of validation check
+                if (client.getRequest().getContentLength() > bodyClientMax)
+                    throw HttpException(400, "Bad Request: Content-Length is astronomically large");
             }
             catch (const std::invalid_argument& e) {
                 // catching characaters
@@ -156,10 +168,15 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         }
         if (key == "transfer-encoding" && value == "chunked")
         {
-            request.setIsChunked();
-            std::cout << "Chunked is flagged " << request.getIsChunked() << std::endl; //DEBUGGING
-            
+            // request.setIsChunked();
+            // std::cout << "Chunked is flagged " << request.getIsChunked() << std::endl; //DEBUGGING
+
+            client.getRequest().setIsChunked();
+            std::cout << "Chunked is flagged " << client.getRequest().getIsChunked() << std::endl; //DEBUGGING
         }
+        // request.setHeader(key, value); // add to the headers.
+        client.getRequest().setHeader(key, value); // add to the headers.
+
     }
     else if (colonPos == std::string::npos)
     {
@@ -219,14 +236,14 @@ void HttpParser::parseBodyIntoFile(int clientFd, std::string& bodyData, HttpRequ
 	| (firstWrite ? std::ios::trunc : std::ios::app));
     if (!outFile.is_open())
         throw HttpException(500, "Internal Server Error: Could not open temp file for writing");
-    
+
     outFile.write(bodyData.data(), bodyData.size()); //.data of stringobject return pointer to raw , direct memory address where the actual bytes are stored. (that is why we need size, no null terminator there)
-    
+
     //also remember the filepath 
     //we better to open and close file between writings. (this will also flush the fstream internal buffer), and this will protect us from fd limits.
     //we need to use the outFile.write(datachunkData, datachunkSize) to write safely in to the file. 
     //we need remember to increment the fullBodySize variable
-    
+
     //filestreams automatically close when they get out of scope. but we should do it manually here just for safety
     outFile.close();
 
@@ -252,7 +269,7 @@ void HttpParser::parse(Client& client)
     //we land here after we have read the whatever client was sending
     // we have a order which we need to follow:
     // 1. we parse the request line, we are searching for \r\n and then we know its end of the request line
-        //From here we get method, URI, and http version to our http request object
+    //From here we get method, URI, and http version to our http request object
     if (client.getState() == READING_REQUESTLINE)
     {
         const std::string& workBuffer = client.getBuffer(); //lets have a reference, for optimization reasons
@@ -262,15 +279,16 @@ void HttpParser::parse(Client& client)
             //we found the \r\n, so our request line is fully in received.
             std::string line = workBuffer.substr(0, pos);
             parseRequestLine(line, client.getRequest());
+            client.getRequest().setupPathKeys(client);
             // then we need to erase the requestline part from the client buffer and change state
             client.eraseFromBuffer(pos + 2); // +2 because we are infront of \r\n
             client.setState(READING_HEADERS); // set state to the next thing, so reading headers.
 
         }
     }
-    
+
     // 2. we parse the headers, now we are searching for \r\n\r\n to know we have read the headers.
-        //From here we parse all the headers, to our map
+    //From here we parse all the headers, to our map
     if (client.getState() == READING_HEADERS)
     {
         const std::string& workBuffer = client.getBuffer();
@@ -280,7 +298,8 @@ void HttpParser::parse(Client& client)
             //we found the \r\n\r\n, so our hearders are fully in received.
             std::string line = workBuffer.substr(0, pos + 2);
 
-            parseAllHeaders(line, client.getRequest());
+            // parseAllHeaders(line, client.getRequest());
+            parseAllHeaders(line, client);
 
             // erase headers from the buffer and change state!
             client.eraseFromBuffer(pos + 4); // +4 because we are infront of \r\n\r\n
@@ -289,10 +308,10 @@ void HttpParser::parse(Client& client)
             HttpRequest request = client.getRequest();
             request.printHeaders();
             std::cout << "contentlength: " << request.getContentLength() << std::endl;
-            
+
             if (request.getIsChunked())
             {
-                
+
                 client.setState(READING_BODY_CHUNKED);
             }
             else if (request.getContentLength() > 0)
@@ -304,10 +323,10 @@ void HttpParser::parse(Client& client)
                 client.setState(PROCESSING);
             }
         }
-        
+
     }
     // 3. we parse the body, here we are comparing the content length number to the actual size of the string. when the size == to the content length, we know thats end of the body
-        //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
+    //we just append all the bytes until we have appended the same amount the parsed contentlength value is. 
     while (client.getState() == READING_BODY_CHUNKED)
     {
 
@@ -324,9 +343,9 @@ void HttpParser::parse(Client& client)
             size_t pos = workBuffer.find("\r\n"); //find the first chunksize value
             if (pos != std::string::npos)
             {
-            std::string line = workBuffer.substr(0, pos); // now we have the hex value as string
-            client.getRequest().setCurrentChunkSize(line);
-            client.eraseFromBuffer(pos + 2);
+                std::string line = workBuffer.substr(0, pos); // now we have the hex value as string
+                client.getRequest().setCurrentChunkSize(line);
+                client.eraseFromBuffer(pos + 2);
             }
             else
             {
@@ -335,7 +354,7 @@ void HttpParser::parse(Client& client)
         }
         else
         {
-        //Then we have the PHASE 2 where we read the actual data
+            //Then we have the PHASE 2 where we read the actual data
             //This is when we know we are in the end of the body
             if (chunkSize == 0)
             {
@@ -348,7 +367,7 @@ void HttpParser::parse(Client& client)
             {
                 return ;
             }
-            
+
             // otherwise we read the chunksize amount of data, remove it from the buffer, and then return our flag back to -1
             //we need to also check ofc that there is enough data in the buffer to read.
             if (workBuffer.size() >= ((size_t)chunkSize + 2)) //+2 because of the hanging \r\n
@@ -357,48 +376,53 @@ void HttpParser::parse(Client& client)
                 //client.getRequest().appendToBody(line); //This needs to be saved inside a file(not inside a string object)
                 parseBodyIntoFile(client.getFd(), line, client.getRequest()); // this is now writing the chunk of data into a file.
                 client.getRequest().setFullChunkBodySize(chunkSize); //increment full chunkbodysize after extracted the data,
+                                                                     // TODO: check fullchunkbodysize against location limits size.
+                                                                     // Check for data type
+                size_t bodyClientMax = getBodyClient(client);
+                if (client.getRequest().getFullChunkBodySize() > static_cast<long>(bodyClientMax))
+                    throw HttpException(400, "Bad Request: Content-Length is astronomically large");
                 client.eraseFromBuffer(chunkSize + 2); // Free the buffer so we dont run into RAM problems.
                 client.getRequest().resetCurrentChunkSize();
             }
-            
+
         }
-        
+
     }
 
     if (client.getState() == READING_BODY)
     {
         const std::string& bodyBuffer = client.getBuffer();
-    
-    // fd 
-    if (!bodyBuffer.empty()) {
-        size_t bytesToWrite = bodyBuffer.size();
-        size_t bytesRemaining = client.getRequest().getContentLength() - client.getRequest().getBytesWritten();
-        
-        // make sure we dont accidentally write from new request
-        if (bytesToWrite > bytesRemaining) {
-            bytesToWrite = bytesRemaining; 
+
+        // fd 
+        if (!bodyBuffer.empty()) {
+            size_t bytesToWrite = bodyBuffer.size();
+            size_t bytesRemaining = client.getRequest().getContentLength() - client.getRequest().getBytesWritten();
+
+            // make sure we dont accidentally write from new request
+            if (bytesToWrite > bytesRemaining) {
+                bytesToWrite = bytesRemaining; 
+            }
+
+            std::string chunkToWrite = bodyBuffer.substr(0, bytesToWrite);
+            parseBodyIntoFile(client.getFd(), chunkToWrite, client.getRequest());
+
+            // update state, free ram
+            client.getRequest().addBytesWritten(bytesToWrite);
+            client.eraseFromBuffer(bytesToWrite);
         }
 
-        std::string chunkToWrite = bodyBuffer.substr(0, bytesToWrite);
-        parseBodyIntoFile(client.getFd(), chunkToWrite, client.getRequest());
-        
-        // update state, free ram
-        client.getRequest().addBytesWritten(bytesToWrite);
-        client.eraseFromBuffer(bytesToWrite);
-    }
-
-    // Check if ready
-    if (client.getRequest().getBytesWritten() >= client.getRequest().getContentLength()) 
-    {
-        client.setState(PROCESSING);
-    }
+        // Check if ready
+        if (client.getRequest().getBytesWritten() >= client.getRequest().getContentLength()) 
+        {
+            client.setState(PROCESSING);
+        }
 
     }
     else 
     {
         return ;
     }
-    
+
 }
 
 

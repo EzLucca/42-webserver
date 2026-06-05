@@ -25,34 +25,79 @@ bool    validateMethod(const RouteConfig *routeLocation, std::string method)
     return false;
 }
 
-void returnPage(Client& activeClient) 
+std::string createResponse(Client& activeClient, std::string filepath)
+{
+    std::string statusCode;
+    statusCode = activeClient.getResponse().getStatusCode();
+    std::ifstream file(filepath.c_str()); // .c_str() needed for C++98 ifstream
+
+    if (!file.is_open())
+    {
+        std::cerr << "Could not open: " << filepath << std::endl;
+        // In the future, this should change the status to 404/500 and recursively call returnPage
+        activeClient.getResponse().setStatusCode(404);
+        returnPage(activeClient);
+        activeClient.setState(FINISHED);
+        return filepath;
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string body = buffer.str();
+
+    activeClient.getResponse().setResponseBody(body);
+    // 4. C++98 String conversion for Content-Length
+    std::stringstream lengthStream;
+    lengthStream << body.size();
+    std::string contentLength = lengthStream.str();
+
+    std::string response =
+        "HTTP/1.1 " + statusCode + "\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: " + contentLength + "\r\n"
+        "\r\n" +
+        activeClient.getResponse().getResponseBody();
+    return response;
+}
+
+void    returnErrorPage(Client& activeClient) 
+{
+    std::string filepath;
+    std::string statusCode;
+    std::string response;
+
+    std::string uriRequest = activeClient.getRequest().getUri();
+    std::cout << "URI from inside returnErrorPage: " << uriRequest << std::endl; 
+
+    statusCode = activeClient.getResponse().getStatusCode();
+
+    const ServerConfig *config = activeClient.getConfig();
+    int code = activeClient.getResponse().getStatusCode();
+
+    filepath = config->getErrorPage(code);
+
+    response = createResponse(activeClient, filepath);
+
+    // Warning: Direct write() is blocking. We will move this to POLLOUT later!
+    write(activeClient.getFd(), response.c_str(), response.size());
+}
+
+void    returnPage(Client& activeClient) 
 {
     std::string filepath;
     std::string statusText;
 
     std::string uriRequest = activeClient.getRequest().getUri();
     std::cout << "Requested URI from inside return: " << uriRequest << std::endl; 
-    statusText = activeClient.getResponse().getStatusMessage();
+    // statusText = activeClient.getResponse().getStatusMessage();
+    statusText = activeClient.getResponse().getStatusCode();
 
     // 2. Grab the direct pointer to the rulebook!
     const ServerConfig *config = activeClient.getConfig();
 
-    // Safety check just in case HERE DO 
-    /*
-       TODO: Check allowed methods
-
-       Path translation & hard drive check
-       • translate the web uri into physical hard drive paath using
-       the root directive of the matched location block. 
-       CGI or static ?
-       • AFter all previous things checked and ok, rules ok , file exists.
-       ∘ Then you route to cgi ONLY IF BOTH ARE TRUE:  1.The matched location block has a cgi_pass directive configured.
-       2.The physical file extension matches the CGI extension
-       (e.g., it ends in .py or .php).
-
-       If either of those is false. (e.g there is no cgi_pass, ot the file is .png, you route the request to the static master to just serve the file as standard binary/text\
-       */
     std::cout << "Status Code: " << activeClient.getResponse().getStatusCode() << std::endl;
+    if (activeClient.getResponse().getStatusCode() != 200)
+        returnErrorPage(activeClient);
     switch (activeClient.getResponse().getStatusCode())
     {
         case 200:
@@ -66,8 +111,6 @@ void returnPage(Client& activeClient)
                 break;
             if(!validateMethod(route, activeClient.getRequest().getMethod()))
             {
-                // std::cout << "throwing here" << std::endl;
-                // throw std::invalid_argument("Method not allowed");
                 activeClient.getResponse().setStatusCode(405);
                 returnPage(activeClient);
                 activeClient.setState(FINISHED);
@@ -88,80 +131,12 @@ void returnPage(Client& activeClient)
             break;
         }
 
-        case 400:
-        // 3. Ask the config directly for the error page!
-        filepath = config->getErrorPage(400);
-		break;
-
-		case 403:
-		// 3. aSk tHe ConFiG dIrECtlY fOr tHE eRroR pAgE!
-		filepath = config->getErrorPage(403);
-		break;
-
-		case 404:
-        // 3. Ask the config directly for the error page!
-        filepath = config->getErrorPage(404);
-        break;
-
-        case 405:
-        // 3. Ask the config directly for the error page!
-        filepath = config->getErrorPage(405);
-        break;
-
-        case 414:
-        // 3. Ask the config directly for the error page!
-        filepath = config->getErrorPage(414);
-        break;
-
-        case 500:
-        filepath = config->getErrorPage(500); 
-        // If the user didn't specify a 500 page in the .conf, use a hardcoded default
-        if (filepath.empty()) 
-            filepath = "var/www/errorpages/500.html";
-        break;
-
-        case 501:
-        // 3. Ask the config directly for the error page!
-        filepath = config->getErrorPage(501);
-        break;
-
-        case 505:
-        // 3. Ask the config directly for the error page!
-        filepath = config->getErrorPage(505);
-        break;
-
         default:
         filepath = "var/www/errorpages/default.html";
         break;
     }
-
-    std::ifstream file(filepath.c_str()); // .c_str() needed for C++98 ifstream
-
-    if (!file.is_open())
-    {
-        std::cerr << "Could not open: " << filepath << std::endl;
-        // In the future, this should change the status to 404/500 and recursively call returnPage
-        activeClient.getResponse().setStatusCode(404);
-        returnPage(activeClient);
-        activeClient.setState(FINISHED);
-        return;
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string body = buffer.str();
-
-    // 4. C++98 String conversion for Content-Length
-    std::stringstream lengthStream;
-    lengthStream << body.size();
-    std::string contentLength = lengthStream.str();
-
-    std::string response =
-        "HTTP/1.1 " + statusText + "\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: " + contentLength + "\r\n"
-        "\r\n" +
-        body;
+    std::string response;
+    response = createResponse(activeClient, filepath);
 
     // Warning: Direct write() is blocking. We will move this to POLLOUT later!
     write(activeClient.getFd(), response.c_str(), response.size());

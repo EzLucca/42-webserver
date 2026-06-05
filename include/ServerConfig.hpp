@@ -5,30 +5,9 @@
 # include <map>
 # include <ostream>
 # include <unordered_map>
-// TEST:
-# include <set>
-
-enum HttpMethod
-{
-    GET,
-    POST,
-    DELETE_
-};
-
-class LocationConfig
-{
-    public:
-        std::string path;
-
-        std::map<std::string, std::string> values;
-
-        std::set<HttpMethod> methods;
-};
-// ~TEST:
 
 struct RouteConfig 
 {
-    // TODO: check if unordered is necessary
     std::unordered_map<std::string, std::vector<std::string>> vectorRoute;
 };
 
@@ -78,8 +57,5 @@ class ServerConfig
         const RouteConfig*  getRoute(const std::string& location) const;
         // const std::unordered_map<std::string, std::vector<std::string>> getLocationBlock() const;
 };
-
-
-
 
 std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m);
