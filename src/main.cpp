@@ -388,7 +388,7 @@ int main(int argc, char **argv)
                 catch (const HttpException &e)
                 {
                     activeClient.setState(ERROR);
-                    std::cout << e.getStatusCode() << " <--- statuscode.";
+                    std::cout << e.getStatusCode() << " <--- statuscode." << std::endl;
                     activeClient.getResponse().setStatusCode(e.getStatusCode());
                     activeClient.getResponse().setStatusMessage(e.getStatusMessage());
                 }
@@ -413,7 +413,10 @@ int main(int argc, char **argv)
                     const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
 
                     validateUriPath(activeClient);
+                    // if (validateUriPath(activeClient) == false)
+                    //     break;
                     // TODO: validate maxbodysize
+                    std::cout << "status after validate " << activeClient.getResponse().getStatusCode() << std::endl;
 
                     if (route != NULL) 
                     {
@@ -435,7 +438,8 @@ int main(int argc, char **argv)
                     } 
                     else 
                     {
-
+                        // if (activeClient.getState() == ERROR)
+                        //     break ;
                         try {
                             std::cout << "Static file request. Calling returnPage." << std::endl;
                             returnPage(activeClient);
@@ -535,7 +539,7 @@ int main(int argc, char **argv)
                     // activeClient.getResponse().setStatusCode(501);
                     try {
                         std::cout << "Returning page from error block" << std::endl;
-                        returnPage(activeClient);
+                        returnErrorPage(activeClient);
                     } catch (const std::exception &e)
                     {
                         std::cerr << "Error: " << e.what() << std::endl;

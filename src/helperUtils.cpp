@@ -16,7 +16,7 @@ void validatePath(const std::string &filePath)
         throw std::invalid_argument("path does not exist: " + filePath);
 }
 
-void validateUriPath(Client &activeClient)
+bool    validateUriPath(Client &activeClient)
 {
     std::string uriPathRequest = activeClient.getRequest().getUriPath();
     std::vector<std::string> locationlist =
@@ -30,9 +30,13 @@ void validateUriPath(Client &activeClient)
         }
     }
     if (found)
+    {
         activeClient.getResponse().setStatusCode(200);
-    else
-        activeClient.getResponse().setStatusCode(404);
+        return (true);
+    }
+    activeClient.getResponse().setStatusCode(404);
+    activeClient.setState(ERROR); 
+    return (false);
 }
 
 size_t getBodyClient(Client &activeClient)
