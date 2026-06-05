@@ -27,8 +27,9 @@ bool    validateMethod(const RouteConfig *routeLocation, std::string method)
 
 std::string createResponse(Client& activeClient, std::string filepath)
 {
-    std::string statusCode;
-    statusCode = activeClient.getResponse().getStatusCode();
+    int code = activeClient.getResponse().getStatusCode();
+    std::string statusCode = std::to_string(code);
+    std::string statusmsg = activeClient.getResponse().getStatusMessage();
     std::ifstream file(filepath.c_str()); // .c_str() needed for C++98 ifstream
 
     if (!file.is_open())
@@ -52,7 +53,7 @@ std::string createResponse(Client& activeClient, std::string filepath)
     std::string contentLength = lengthStream.str();
 
     std::string response =
-        "HTTP/1.1 " + statusCode + "\r\n"
+        "HTTP/1.1 " + statusCode + " " + statusmsg + "\r\n"
         "Content-Type: text/html\r\n"
         "Content-Length: " + contentLength + "\r\n"
         "\r\n" +
@@ -101,39 +102,39 @@ void    returnPage(Client& activeClient)
     switch (activeClient.getResponse().getStatusCode())
     {
         case 200:
-        {
-            const RouteConfig *route = config->getRoute(uriRequest); 
-
-            // TODO: Check location
-            // TODO: Check if autoindex is on
-            // TODO: Method validation 
-            if (route == NULL)
-                break;
-            if(!validateMethod(route, activeClient.getRequest().getMethod()))
             {
-                activeClient.getResponse().setStatusCode(405);
-                returnPage(activeClient);
-                activeClient.setState(FINISHED);
-                return;
-            }
+                const RouteConfig *route = config->getRoute(uriRequest); 
 
-            if (route != NULL) {
-                // TODO: parsing
-                std::cout << "route is not null" << std::endl;
-                std::string root = route->vectorRoute.at("root").at(0);
-                std::string index = route->vectorRoute.at("index").at(0);
-                filepath = root + "/" + index;
-                // filepath = root + "/";
-            } else {
-                std::cout << "route is null" << std::endl;
-                filepath = "var/www/html/index.html"; // Fallback if route not found
+                // TODO: Check location
+                // TODO: Check if autoindex is on
+                // TODO: Method validation 
+                if (route == NULL)
+                    break;
+                if(!validateMethod(route, activeClient.getRequest().getMethod()))
+                {
+                    activeClient.getResponse().setStatusCode(405);
+                    returnPage(activeClient);
+                    activeClient.setState(FINISHED);
+                    return;
+                }
+
+                if (route != NULL) {
+                    // TODO: parsing
+                    std::cout << "route is not null" << std::endl;
+                    std::string root = route->vectorRoute.at("root").at(0);
+                    std::string index = route->vectorRoute.at("index").at(0);
+                    filepath = root + "/" + index;
+                    // filepath = root + "/";
+                } else {
+                    std::cout << "route is null" << std::endl;
+                    filepath = "var/www/html/index.html"; // Fallback if route not found
+                }
+                break;
             }
-            break;
-        }
 
         default:
-        filepath = "var/www/errorpages/default.html";
-        break;
+            filepath = "var/www/errorpages/default.html";
+            break;
     }
     std::string response;
     response = createResponse(activeClient, filepath);

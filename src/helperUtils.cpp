@@ -32,6 +32,7 @@ bool    validateUriPath(Client &activeClient)
     if (found)
     {
         activeClient.getResponse().setStatusCode(200);
+        activeClient.getResponse().setStatusMessage("OK");
         return (true);
     }
     activeClient.getResponse().setStatusCode(404);

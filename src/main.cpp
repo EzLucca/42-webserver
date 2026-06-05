@@ -641,7 +641,6 @@ int main(int argc, char **argv)
                 if (/*activeClient.getState() == CGI_IO_DONE ||*/
                         activeClient.getState() == ERROR || activeClient.getState() == FINISHED) 
                 {
-                    std::cout << "Error or Finished" << std::endl;
                     // activeClient.getResponse().setStatusCode(501);
                     if (activeClient.getState() == ERROR)
                     {
