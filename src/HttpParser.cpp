@@ -120,7 +120,7 @@ void HttpParser::parseSingleHeader(std::string& line, Client& client)
         std::string key = line.substr(0, colonPos); 
         std::string value = line.substr(colonPos + 1);
         std::string combinedValue;
-        std::map<std::string, std::string> currentHeaders = request.getHeaders();
+        std::map<std::string, std::string> currentHeaders = client.getRequest().getHeaders();
         //HTTP standard has OWS ( optional whitespace), so after parsing value we need to check if there is space before the value!
         value = trimSpaces(value);
         //we need to lowercase ALL the headerkeys, because they are case insensitive in http1.0
@@ -133,15 +133,15 @@ void HttpParser::parseSingleHeader(std::string& line, Client& client)
                 throw HttpException(400, "Bad Request: Duplicate critical header");
             }
             combinedValue = currentHeaders[key] + ", " + value;
-            request.setHeader(key, combinedValue);
+            client.getRequest().setHeader(key, combinedValue);
         } 
         else 
         {
-          request.setHeader(key, value);
+          client.getRequest().setHeader(key, value);
         }
         if (key == "connection"  && value == "closed")
         {
-                request.setKeepAlive(false);
+                client.getRequest().setKeepAlive(false);
         }
         if (key == "content-length")
         {   

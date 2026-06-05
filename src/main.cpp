@@ -66,96 +66,96 @@ bool validateConfigFile(std::string_view &fileName)
 
 bool	isClientWaitingForCgi(int clientFd, std::map<int, int>& fdRegistry)
 {
-	for (std::map<int, int>::iterator it = fdRegistry.begin(); it != fdRegistry.end(); it++)
-	{
-		if (it->second == clientFd)
-			return (true);
-	}
-	return (false);
+    for (std::map<int, int>::iterator it = fdRegistry.begin(); it != fdRegistry.end(); it++)
+    {
+        if (it->second == clientFd)
+            return (true);
+    }
+    return (false);
 }
 
 void	removeFdFromPoll(struct pollfd fds[], int fd)
 {
-	for (int i = 0; i < MAX_FDS; i++)
-	{
-		if (fds[i].fd == fd)
-		{
-			fds[i].fd = -1;
-			fds[i].events = 0;
-			fds[i].revents = 0;
-			return;
-		}
-	}
+    for (int i = 0; i < MAX_FDS; i++)
+    {
+        if (fds[i].fd == fd)
+        {
+            fds[i].fd = -1;
+            fds[i].events = 0;
+            fds[i].revents = 0;
+            return;
+        }
+    }
 }
 
 void	checkClientTimeouts(time_t now, std::map<int, Client>& clients, std::map<int, int>& fdRegistry, struct pollfd fds[])
 {
-	for (std::map<int, Client>::iterator clientIt = clients.begin(); clientIt != clients.end();)
-	{
-		int clientFd = clientIt->first;
-		Client& client = clientIt->second;
-		if (isClientWaitingForCgi(clientFd, fdRegistry))
-		{
-			clientIt++;
-			continue;
-		}
-		if (now - client.getLastActivity() > CLIENT_TIMEOUT)
-		{
-			close(clientFd);
-			removeFdFromPoll(fds, clientFd);
-			clients.erase(clientIt++);
-		}
-		else
-		{
-			clientIt++;
-		}
-	}
+    for (std::map<int, Client>::iterator clientIt = clients.begin(); clientIt != clients.end();)
+    {
+        int clientFd = clientIt->first;
+        Client& client = clientIt->second;
+        if (isClientWaitingForCgi(clientFd, fdRegistry))
+        {
+            clientIt++;
+            continue;
+        }
+        if (now - client.getLastActivity() > CLIENT_TIMEOUT)
+        {
+            close(clientFd);
+            removeFdFromPoll(fds, clientFd);
+            clients.erase(clientIt++);
+        }
+        else
+        {
+            clientIt++;
+        }
+    }
 }
 
 void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::map<int, int>& fdRegistry, std::map<int, Client>& clients, struct pollfd fds[])
 {
-	for (std::map<int, CgiProcess>::iterator cgiIt = cgiProcesses.begin(); cgiIt != cgiProcesses.end();)
-	{
-		int cgiFd = cgiIt->first;
-		CgiProcess& cgi = cgiIt->second;
+    for (std::map<int, CgiProcess>::iterator cgiIt = cgiProcesses.begin(); cgiIt != cgiProcesses.end();)
+    {
+        int cgiFd = cgiIt->first;
+        CgiProcess& cgi = cgiIt->second;
 
-		if (now - cgi.startedAt > CGI_TIMEOUT)
-		{
-			std::map<int, int>::iterator regIt = fdRegistry.find(cgiFd);
-			int	clientFd = -1;
-			if (regIt != fdRegistry.end())
-			{
-				clientFd = regIt->second;
-			}
-			if (cgi.pid > 0)
-			{
-				int status;
-				if (kill(cgi.pid, SIGKILL) == -1)
-					std::cerr << "SIGKILL failure" << std::endl;
-				if (waitpid(cgi.pid, &status, WNOHANG) == -1)
-					std::cerr << "Child reaping failed" << std::endl;
-			}
-			close(cgiFd);
-			removeFdFromPoll(fds, cgiFd);
-			if (clientFd != -1)
-			{
-				close(clientFd);
-				removeFdFromPoll(fds, clientFd);
-				std::map<int, Client>::iterator clientIt = clients.find(clientFd);
-				if (clientIt != clients.end())
-				{
-					clientIt->second.getRequest().cleanupBodyFile();
-					clients.erase(clientIt);
-				}
-			}
-			fdRegistry.erase(cgiFd);
-			cgiProcesses.erase(cgiIt++);
-		}
-		else
-		{
-			cgiIt++;
-		}
-	}
+        if (now - cgi.startedAt > CGI_TIMEOUT)
+        {
+            std::map<int, int>::iterator regIt = fdRegistry.find(cgiFd);
+            int	clientFd = -1;
+            if (regIt != fdRegistry.end())
+            {
+                clientFd = regIt->second;
+            }
+            if (cgi.pid > 0)
+            {
+                int status;
+                if (kill(cgi.pid, SIGKILL) == -1)
+                    std::cerr << "SIGKILL failure" << std::endl;
+                if (waitpid(cgi.pid, &status, WNOHANG) == -1)
+                    std::cerr << "Child reaping failed" << std::endl;
+            }
+            close(cgiFd);
+            removeFdFromPoll(fds, cgiFd);
+            if (clientFd != -1)
+            {
+                close(clientFd);
+                removeFdFromPoll(fds, clientFd);
+                std::map<int, Client>::iterator clientIt = clients.find(clientFd);
+                if (clientIt != clients.end())
+                {
+                    clientIt->second.getRequest().cleanupBodyFile();
+                    clients.erase(clientIt);
+                }
+            }
+            fdRegistry.erase(cgiFd);
+            cgiProcesses.erase(cgiIt++);
+        }
+        else
+        {
+            cgiIt++;
+        }
+    }
 }
 
 
@@ -274,13 +274,13 @@ int main(int argc, char **argv)
     // manager.getServerValues("mysite.com", "listen") << "..." << std::endl;
     //  Main event loop
     while (true)
-	{
+    {
         // poll() waits here, timeout -1 means that it waits infinitely that
         // somethin happpens
 
         int poll_count = poll(fds, MAX_FDS, POLL_TIMEOUT_MS);
         if (poll_count < 0)
-		{
+        {
             std::cerr << "Poll error" << std::endl;
             break;
         }
@@ -291,11 +291,11 @@ int main(int argc, char **argv)
         //         continue;
         // DEBUG:
         // go through structs, and see who woke up poll():n
-		time_t	now = time(NULL);
-		checkClientTimeouts(now, clients, fdRegistry, fds);
-		checkCgiTimeouts(now, cgiProcesses, fdRegistry, clients, fds);
+        time_t	now = time(NULL);
+        checkClientTimeouts(now, clients, fdRegistry, fds);
+        checkCgiTimeouts(now, cgiProcesses, fdRegistry, clients, fds);
         for (int i = 0; i < MAX_FDS; i++)
-		{
+        {
 
             // --- DIAGNOSTIC RADAR & BLINDFOLD REMOVAL ---
 
@@ -392,7 +392,7 @@ int main(int argc, char **argv)
                             break;
 
                         case CGI_IO_DONE:
-							activeClient.getRequest().cleanupBodyFile();
+                            activeClient.getRequest().cleanupBodyFile();
                             activeClient.getResponse()
                                 .setResponseBody(cgi.output);
 
@@ -440,7 +440,7 @@ int main(int argc, char **argv)
                             break;
 
                         case CGI_IO_ERROR:
-							activeClient.getRequest().cleanupBodyFile();
+                            activeClient.getRequest().cleanupBodyFile();
                             std::cerr << "CGI Error encountered."
                                 << std::endl;
 
@@ -481,7 +481,7 @@ int main(int argc, char **argv)
                 }
 
                 activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-				activeClient.updateLastActivity();
+                activeClient.updateLastActivity();
 
                 try
                 {
@@ -556,11 +556,11 @@ int main(int argc, char **argv)
                                 << " marked ERROR"
                                 << std::endl;
                         }
-                        if(activeClient.getState() != 14)
-						{
-							activeClient.getRequest().cleanupBodyFile();
+                        if(activeClient.getState() != ERROR)
+                        {
+                            activeClient.getRequest().cleanupBodyFile();
                             activeClient.setState(FINISHED);
-						}
+                        }
                     }
 
                     // if (activeClient.getRequest().getMethod() == "POST") {
@@ -641,14 +641,17 @@ int main(int argc, char **argv)
                 if (/*activeClient.getState() == CGI_IO_DONE ||*/
                         activeClient.getState() == ERROR || activeClient.getState() == FINISHED) 
                 {
-                    std::cout << "Failed to send response" << std::endl;
+                    std::cout << "Error or Finished" << std::endl;
                     // activeClient.getResponse().setStatusCode(501);
-                    try {
-                        std::cout << "Returning page from error block" << std::endl;
-                        returnErrorPage(activeClient);
-                    } catch (const std::exception &e)
+                    if (activeClient.getState() == ERROR)
                     {
-                        std::cerr << "Error: " << e.what() << std::endl;
+                        try {
+                            std::cout << "Returning page from error block" << std::endl;
+                            returnErrorPage(activeClient);
+                        } catch (const std::exception &e)
+                        {
+                            std::cerr << "Error: " << e.what() << std::endl;
+                        }
                     }
                     activeClient.getRequest().cleanupBodyFile();
                     clients.erase(currentFd);
@@ -659,4 +662,4 @@ int main(int argc, char **argv)
         }
     }
     return 0;
-}
+    }
