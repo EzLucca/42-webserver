@@ -1,5 +1,6 @@
 #include "HttpRequest.hpp"
 #include "Client.hpp"
+#include "HttpException.hpp"
 
 
 HttpRequest::HttpRequest() :
@@ -75,6 +76,11 @@ bool   HttpRequest::getIsChunked()
     return (_isChunked);
 }
 
+void	HttpRequest::resetCurrentChunkSize()
+{
+	_currentChunkSize = -1;
+}
+
 long    HttpRequest::getCurrentChunkSize()
 {
     return (_currentChunkSize);
@@ -82,7 +88,20 @@ long    HttpRequest::getCurrentChunkSize()
 
 void    HttpRequest::setCurrentChunkSize(std::string chunkLine)
 {
-    _currentChunkSize = std::stoi(chunkLine, 0, 16);
+	try
+	{
+		_currentChunkSize = std::stoi(chunkLine, 0, 16);
+	}
+	catch (const std::invalid_argument& e)
+	{
+		throw HttpException(400, "Bad Request: Invalid chunk size");
+	}
+	catch (const std::out_of_range& e)
+	{
+		throw HttpException(400, "Bad Request: Chunk size too large");
+	}
+	if (_currentChunkSize < 0)
+		throw HttpException(400, "Bad Request: Invalid chunk size");
 }
 
 std::string HttpRequest::getMethod()
@@ -220,6 +239,15 @@ void HttpRequest::setLocation(std::string location)
 std::string HttpRequest::getLocationKey()
 {
     return (_locationKey);
+}
+
+void	HttpRequest::cleanupBodyFile()
+{
+	if (_bodyFilePath != "not-set")
+	{
+		std::remove(_bodyFilePath.c_str());
+		_bodyFilePath = "not-set";
+	}
 }
 
 void    HttpRequest::setupPathKeys(Client &activeClient)

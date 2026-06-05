@@ -55,7 +55,6 @@ void returnPage(Client& activeClient)
     std::cout << "Status Code: " << activeClient.getResponse().getStatusCode() << std::endl;
     switch (activeClient.getResponse().getStatusCode())
     {
-        std::cout << "Status Code: " << activeClient.getResponse().getStatusCode() << std::endl;
         case 200:
         {
             const RouteConfig *route = config->getRoute(uriRequest); 
@@ -92,9 +91,14 @@ void returnPage(Client& activeClient)
         case 400:
         // 3. Ask the config directly for the error page!
         filepath = config->getErrorPage(400);
-        break;
+		break;
 
-        case 404:
+		case 403:
+		// 3. aSk tHe ConFiG dIrECtlY fOr tHE eRroR pAgE!
+		filepath = config->getErrorPage(403);
+		break;
+
+		case 404:
         // 3. Ask the config directly for the error page!
         filepath = config->getErrorPage(404);
         break;

@@ -11,7 +11,8 @@ Client::Client()
 Client::Client(int fd, const ServerConfig* config) :
     _fd(fd),
     _state(READING_REQUESTLINE),
-    _config(config)
+    _config(config),
+	_lastActivity(time(NULL))
 {
     std::cout << "Client object created." << std::endl; 
 }
@@ -19,12 +20,7 @@ Client::Client(int fd, const ServerConfig* config) :
 Client::~Client()
 {
     //if connection drops out, we delete tmp file/
-
-    if (_request.getBodyFilePath() != "not-set")
-    {
-        std::remove(_request.getBodyFilePath().c_str());
-    }
-
+	_request.cleanupBodyFile();
     std::cout << "Client object destroyed." << std::endl; 
 }
 
@@ -36,6 +32,16 @@ void Client::setState(ClientState state)
 {
     _state = state;
     return ;
+}
+
+void	Client::updateLastActivity()
+{
+	_lastActivity = time(NULL);
+}
+
+time_t	Client::getLastActivity() const
+{
+	return (_lastActivity);
 }
 
 void Client::appendToBuffer(const char* data, ssize_t size)
