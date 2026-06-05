@@ -48,8 +48,8 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
             throw HttpException(505, "HTTP version not supported.");
         }
 		std::string	lowerUri = stringToLower(uri);
-		if (lowerUri.find("../") != std::string::npos || lowerUri.find("/..")  != std::string::npos
-			|| lowerUri.find("\\") != std::string::npos || lowerUri.find("/../") != std::string::npos
+		if (lowerUri == "/.." || lowerUri.find("\\") != std::string::npos || lowerUri.find("/../") != std::string::npos
+			|| (lowerUri.size() >= 3 && lowerUri.compare(lowerUri.size() - 3, 3, "/..") == 0)
 			|| lowerUri.find("%2e%2e") != std::string::npos || lowerUri.find("%2f") != std::string::npos
 			|| lowerUri.find("%5c") != std::string::npos)
 			throw HttpException(403, "Forbidden");
