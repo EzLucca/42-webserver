@@ -130,7 +130,7 @@ void	checkCgiTimeouts(time_t now, std::map<int, CgiProcess>& cgiProcesses, std::
 				int status;
 				if (kill(cgi.pid, SIGKILL) == -1)
 					std::cerr << "SIGKILL failure" << std::endl;
-				if (waitpid(cgi.pid, &status, 0) == -1)
+				if (waitpid(cgi.pid, &status, WNOHANG) == -1)
 					std::cerr << "Child reaping failed" << std::endl;
 			}
 			close(cgiFd);

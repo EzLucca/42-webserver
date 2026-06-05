@@ -47,7 +47,11 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
         {
             throw HttpException(505, "HTTP version not supported.");
         }
-
+		if (uri.find("../") != std::string::npos || uri.find("/..")  != std::string::npos
+			|| uri.find("..\\") != std::string::npos || uri.find("\\..")
+			|| uri.find("..") != std::string::npos || uri.find("%2e%2e") != std::string::npos
+			|| uri.find("%2f") || uri.find("%5c") != std::string::npos)
+			throw HttpException(403, "Forbidden");
         //DEBUGGING!!
         std::cout << "Parsed method: " << request.getMethod() << "\n"
                     << "Parsed Uri :" << request.getUri() << "\n"
