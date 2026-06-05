@@ -130,9 +130,8 @@ void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
         {
           request.setHeader(key, value);
         }
-        if (key == "connection")
+        if (key == "connection"  && value == "closed")
         {
-            if (value == "closed")
                 request.setKeepAlive(false);
         }
         if (key == "content-length")
