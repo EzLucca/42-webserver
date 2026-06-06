@@ -31,6 +31,7 @@ struct CgiProcess {
 class Client;
 class CgiHandler {
     private:
+        std::string                         _root;
         std::string                         _cgiPass; // where e.g. python interpreter lives e.g. usr/bin/python3
         std::string                         _cgiExtention; // format to save the script
         std::string                         _scriptPath;   // path where the script lives

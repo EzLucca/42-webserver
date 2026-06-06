@@ -54,16 +54,15 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     std::unordered_map<std::string, std::vector<std::string>> victorRoute;
     victorRoute = config->vectorRoute;
     std::unordered_map<std::string, std::vector<std::string>>::const_iterator it;
-    std::string root;
     for (it = victorRoute.begin(); it != victorRoute.end(); it++)
     {
         if (it->first == "root")
-            root = it->second[0];
+            _root = it->second[0];
         if (it->first == "cgi_pass")
             _cgiPass = it->second[0];
     }
 
-    std::cout << root << " #######3" << std::endl;
+    std::cout << _root << " #######3" << std::endl;
     std::cout << _cgiPass << " ########" << std::endl;
     // std::string::const_iterator it = config->vectorRoute.find("root");
     // if (it != config->vectorRoute.end() && !it->second.empty()) {
@@ -83,7 +82,7 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     }
     else
     {
-        _scriptPath = root + activeClient.getRequest().getUriPath();  
+        _scriptPath = _root + activeClient.getRequest().getUriPath();  
     }
     validatePath(_scriptPath);
     std::cout << _scriptPath << " ########62384623" << std::endl;
@@ -152,6 +151,7 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
         _envs.push_back("SERVER_PROTOCOL=" + request.getVersion());
         _envs.push_back("SCRIPT_FILENAME=" + _scriptPath);
         _envs.push_back("PATH_INFO=" + _cgiPass);
+        _envs.push_back("UPLOAD_DIR=" + _root);
         _envs.push_back("CONTENT_TYPE=" + _contentType); //validation????????????????????
         _envs.push_back("SERVER_NAME=" + _serverName);
         _envs.push_back("REDIRECT_STATUS=200");//?????????????
