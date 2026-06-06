@@ -69,7 +69,7 @@ void    returnErrorPage(Client& activeClient)
 
     std::string uriRequest = activeClient.getRequest().getUri();
     std::cout << "URI from inside returnErrorPage: " << uriRequest << std::endl; 
-
+    std::cout << "ERROR STATUS CODE: " << activeClient.getResponse().getStatusCode() << std::endl;
     statusCode = activeClient.getResponse().getStatusCode();
 
     const ServerConfig *config = activeClient.getConfig();

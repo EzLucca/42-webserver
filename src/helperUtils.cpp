@@ -96,3 +96,14 @@ std::string buildSafeTargetPath(const RouteConfig* route, const std::string& uri
 
     return fullPath;
 }
+
+bool endsWith(const std::string& fullString, const std::string& ending) 
+{
+    // 1. If the ending is longer than the string, it's impossible.
+    if (fullString.length() >= ending.length()) 
+    {
+        // 2. Compare the very end of the fullString against the ending
+        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+    }
+    return false;
+}

@@ -75,8 +75,16 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     // if (shiit != config->vectorRoute.end() && !shiit->second.empty()) {
     //     _cgiPass = shiit->second[0];
     // }
-
-    _scriptPath = root + activeClient.getRequest().getUriPath(); 
+    std::string checkHijack = activeClient.getRequest().getFilename();
+    //checking if the hijackmode is activated 
+    if (endsWith(checkHijack, ".py") == true)
+    {
+        _scriptPath = checkHijack;
+    }
+    else
+    {
+        _scriptPath = root + activeClient.getRequest().getUriPath();  
+    }
     validatePath(_scriptPath);
     std::cout << _scriptPath << " ########62384623" << std::endl;
 
