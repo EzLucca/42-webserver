@@ -1,6 +1,7 @@
 #include "HttpRequest.hpp"
 #include "Client.hpp"
 #include "HttpException.hpp"
+#include "helperUtils.hpp"
 
 
 HttpRequest::HttpRequest() :
@@ -290,3 +291,44 @@ void    HttpRequest::setupPathKeys(Client &activeClient)
     std::cout << getLocationKey() << std::endl;
     std::cout << getFilename() << std::endl;
 }
+
+
+void HttpRequest::handleDeleteRequest(Client& activeClient)
+{
+
+    HttpRequest& request = activeClient.getRequest();
+    HttpResponse& response = activeClient.getResponse();
+    
+    std::string targetPath = buildSafeTargetPath(activeClient.getConfig()->getRoute(request.getLocationKey()), request.getFilename());
+    // check that  the file exists
+    if (access(targetPath.c_str(), F_OK) != 0) 
+    {
+        response.setStatusCode(404);
+        response.setResponseBody("<html><body>404 Not Found: File does not exist</body></html>");
+        return;
+    }
+
+    // check write permissions, to check we can delete the file
+    if (access(targetPath.c_str(), W_OK) != 0) 
+    {
+        response.setStatusCode(403);
+        response.setResponseBody("<html><body>403 Forbidden: Permission denied</body></html>");
+        return;
+    }
+
+    // try to delete the file
+    if (remove(targetPath.c_str()) == 0) 
+    {
+        // 204 No Content is standard if you don't send a body, 
+        // 200 OK is standard if you send a success message.
+        response.setStatusCode(200); 
+        response.setResponseBody("<html><body>200 OK: File deleted successfully</body></html>");
+    } 
+    else 
+    {
+        // error, couldnt delete
+        response.setStatusCode(500);
+        response.setResponseBody("<html><body>500 Internal Server Error: Could not delete file</body></html>");
+    }
+}
+

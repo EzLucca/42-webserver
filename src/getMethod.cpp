@@ -121,6 +121,7 @@ void    returnPage(Client& activeClient)
                 if (route != NULL) {
                     // TODO: parsing
                     std::cout << "route is not null" << std::endl;
+                    // TODO PROBLEM WITH THIS APPROACH. 
                     std::string root = route->vectorRoute.at("root").at(0);
                     std::string index = route->vectorRoute.at("index").at(0);
                     filepath = root + "/" + index;

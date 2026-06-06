@@ -372,7 +372,7 @@ int main(int argc, char **argv)
             std::cout << triggered_fd << " teste" << std::endl;
             printFdRegistry(fdRegistry); // TEST:
 
-            if (shit != fdRegistry.end())
+            if (shit != fdRegistry.end()) 
             {
                 //	int	cgiPipeFd = it->first;
                 int originalClientFd = shit->second;
@@ -507,6 +507,7 @@ int main(int argc, char **argv)
 
                     // take filename
                     std::string filename = activeClient.getRequest().getFilename();
+                    std::string currentMethod = activeClient.getRequest().getMethod();
                     std::cout << filename << " name script" << std::endl;
                     bool isCgi = false;
 
@@ -523,6 +524,36 @@ int main(int argc, char **argv)
 
                     if (route != NULL) 
                     {
+
+                        bool methodAllowed = false;
+                        std::unordered_map<std::string, std::vector<std::string>>::const_iterator methodIt = route->vectorRoute.find("allowed_methods");
+                        
+                        if (methodIt != route->vectorRoute.end()) 
+                        {
+                            const std::vector<std::string>& allowedList = methodIt->second;
+                            for (size_t k = 0; k < allowedList.size(); ++k) 
+                            {
+                                if (allowedList[k] == currentMethod) 
+                                {
+                                    methodAllowed = true;
+                                    break;
+                                }
+                            }
+                        } 
+                        else 
+                        {
+                            // If the config doesn't specify 'allowed_methods', decide your default fallback.
+                            // Usually, GET is allowed by default.
+                            if (currentMethod == "GET") {
+                                methodAllowed = true;
+                            }
+                        }
+
+                        // If the Bouncer says no, kick them out immediately!
+                        if (!methodAllowed) 
+                        {
+                            throw HttpException(405, "Method Not Allowed");
+                        }
                         // search for the cgi_pass directive in this specific location block
                         std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("cgi_pass");
 
@@ -533,16 +564,24 @@ int main(int argc, char **argv)
                         }
                     }
 
-                    // routin
-                    if (isCgi) 
+                    if (activeClient.getRequest().getMethod() == "DELETE")
+                    {
+                        
+                        activeClient.getRequest().handleDeleteRequest(activeClient);
+                        activeClient.getRequest().cleanupBodyFile();
+                        //TODO STILL NEED TO SEND RESPONSE!!!!!
+                        activeClient.setState(FINISHED);
+
+
+                    }
+                    else if (isCgi) 
                     {
                         std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
                         activeClient.setState(CGI_CALL);
                     } 
                     else 
                     {
-                        // if (activeClient.getState() == ERROR)
-                        //     break ;
+                        
                         try {
                             std::cout << "Static file request. Calling returnPage." << std::endl;
                             returnPage(activeClient);
