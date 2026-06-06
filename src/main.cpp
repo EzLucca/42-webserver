@@ -560,7 +560,7 @@ int main(int argc, char **argv)
                         std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("cgi_pass");
 
                         // THE DUAL CHECK: Was cgi_pass found AND does the file end in .py
-                        if (it != route->vectorRoute.end() && filename.find(".py") != std::string::npos) 
+                        if (it != route->vectorRoute.end() && endsWith(filename, ".py")) 
                         {
                             isCgi = true;
                         }
