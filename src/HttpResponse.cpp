@@ -2,7 +2,7 @@
 #include "Client.hpp"
 
 HttpResponse::HttpResponse() : 
-    _statusCode(0),
+    _statusCode(200),
     _statusMessage("not-set")
 {
     std::cout << "HttpResponse constructor called." << std::endl;
@@ -111,4 +111,33 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
 
 HttpResponse::~HttpResponse()
 {
+}
+
+std::string HttpResponse::getMimeType(const std::string& filePath)
+{
+    // findt the last '.' dot in the filename
+    size_t dotPos = filePath.find_last_of('.');
+    
+    
+    // if no extension, return default binary data type
+    if (dotPos == std::string::npos)
+        return "application/octet-stream"; 
+
+    // extract extension
+    std::string extension = filePath.substr(dotPos);
+
+    // comapre to most common types
+    if (extension == ".html" || extension == ".htm") return "text/html";
+    if (extension == ".css") return "text/css";
+    if (extension == ".js") return "application/javascript";
+    if (extension == ".png") return "image/png";
+    if (extension == ".jpg" || extension == ".jpeg") return "image/jpeg";
+    if (extension == ".gif") return "image/gif";
+    if (extension == ".ico") return "image/x-icon";
+    if (extension == ".txt") return "text/plain";
+    if (extension == ".json") return "application/json";
+    if (extension == ".pdf") return "application/pdf";
+
+    // uknown extension
+    return "application/octet-stream";
 }

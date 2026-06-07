@@ -29,6 +29,7 @@ class HttpResponse
             std::string     getStatusMessage() const;
 			std::string		getResponseBody() const;
 			void			CgiReadResponse(CgiProcess &cgi, Client &activeClient);
+            std::string     getMimeType(const std::string& filePath);
     // BODY -- The actual content returned , such as HTML, JSON, or text
 
 };
