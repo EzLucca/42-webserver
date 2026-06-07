@@ -54,16 +54,15 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     std::unordered_map<std::string, std::vector<std::string>> victorRoute;
     victorRoute = config->vectorRoute;
     std::unordered_map<std::string, std::vector<std::string>>::const_iterator it;
-    std::string root;
     for (it = victorRoute.begin(); it != victorRoute.end(); it++)
     {
         if (it->first == "root")
-            root = it->second[0];
+            _root = it->second[0];
         if (it->first == "cgi_pass")
             _cgiPass = it->second[0];
     }
 
-    std::cout << root << " #######3" << std::endl;
+    std::cout << _root << " #######3" << std::endl;
     std::cout << _cgiPass << " ########" << std::endl;
     // std::string::const_iterator it = config->vectorRoute.find("root");
     // if (it != config->vectorRoute.end() && !it->second.empty()) {
@@ -75,18 +74,34 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     // if (shiit != config->vectorRoute.end() && !shiit->second.empty()) {
     //     _cgiPass = shiit->second[0];
     // }
-
-    _scriptPath = root + activeClient.getRequest().getUriPath(); 
+    std::string checkHijack = activeClient.getRequest().getFilename();
+    //checking if the hijackmode is activated 
+    if (checkHijack == "var/cgi/cgi-bin/betterUpload.py")
+    {
+        _scriptPath = checkHijack;
+    }
+    else
+    {
+        _scriptPath = _root + activeClient.getRequest().getUriPath();  
+    }
     validatePath(_scriptPath);
     std::cout << _scriptPath << " ########62384623" << std::endl;
 
-    if  ((_method == "POST" && !_headers.count("content-type"))
-            || !_headers.count("host"))
-    {
-        std::cerr << "Malformed request\n";
+    //  Safe extraction for Content-Type
+    std::map<std::string, std::string>::const_iterator ct_it = _headers.find("content-type");
+    if (ct_it != _headers.end()) {
+        _contentType = ct_it->second;
+    } else {
+        _contentType = ""; // Empty string if the header doesn't exist (normal for GET)
     }
-    _contentType = _headers.at("content-type");
-    _serverName = _headers.at("host");
+
+    //  Safe extraction for Host
+    std::map<std::string, std::string>::const_iterator host_it = _headers.find("host");
+    if (host_it != _headers.end()) {
+        _serverName = host_it->second;
+    } else {
+        _serverName = ""; // Or handle as a fatal error since Host is mandatory in HTTP/1.1
+    }
 
     //***********************************
     std::cout << "_serverName: " + _serverName << std::endl;
@@ -116,22 +131,34 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
     }
     else if (_pid == 0)
     {
+        //  Close the read-end of the pipe (the child only writes to it)
         close(response_fd[0]);
-        cgi.bodyFileFd = open(_bodyFilePath.c_str(), O_RDONLY);
-        if (cgi.bodyFileFd < 0)
+        
+        //  Setup STDIN --- ONLY for POST requests!
+        if (_method == "POST")
         {
-            close(cgi.responseFd);
-            cgi.responseFd = -1;
-            cgi.responseClosed = true;
-            cgi.valid = false;
-            std::cerr << "CGI failed to open body file\n";
-            return (cgi);
+            cgi.bodyFileFd = open(_bodyFilePath.c_str(), O_RDONLY);
+            if (cgi.bodyFileFd < 0)
+            {
+                std::cerr << "CGI failed to open body file\n";
+                _exit(1); // CRITICAL: Instantly kill the child if it fails.
+            }
+            
+            if (dup2(cgi.bodyFileFd, STDIN_FILENO) < 0)
+            {
+                std::cerr << "CGI dup2 STDIN failed\n";
+                _exit(1);
+            }
+            close(cgi.bodyFileFd); // Close the original fd now that it is dup'd
         }
-        if (dup2(cgi.bodyFileFd, STDIN_FILENO) < 0 || (dup2(response_fd[1], STDOUT_FILENO) < 0))
+
+        //  Setup STDOUT --- ALWAYS do this for EVERY request!
+        if (dup2(response_fd[1], STDOUT_FILENO) < 0)
         {
-            std::cerr << "CGI dup2 failed\n";
+            std::cerr << "CGI dup2 STDOUT failed\n";
             _exit(1);
         }
+        //  Now that STDOUT is securely hooked up to the pipe, close the original pipe FD
         close(response_fd[1]);
         // close(cgi.bodyFileFd);
         //		std::vector<std::string>	_envs;
@@ -144,6 +171,7 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
         _envs.push_back("SERVER_PROTOCOL=" + request.getVersion());
         _envs.push_back("SCRIPT_FILENAME=" + _scriptPath);
         _envs.push_back("PATH_INFO=" + _cgiPass);
+        _envs.push_back("UPLOAD_DIR=" + _root);
         _envs.push_back("CONTENT_TYPE=" + _contentType); //validation????????????????????
         _envs.push_back("SERVER_NAME=" + _serverName);
         _envs.push_back("REDIRECT_STATUS=200");//?????????????

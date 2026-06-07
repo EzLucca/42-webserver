@@ -63,3 +63,47 @@ size_t getBodyClient(Client &activeClient)
     std::cout << bodyClientMax << " body size" << std::endl;
     return (bodyClientMax);
 }
+
+std::string buildSafeTargetPath(const RouteConfig* route, const std::string& uri) 
+{
+    std::string root = "";
+
+    //  Safely extract "root" without using the explosive .at()
+    if (route != NULL) 
+    {
+        std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("root");
+        if (it != route->vectorRoute.end() && !it->second.empty()) 
+        {
+            root = it->second[0];
+        }
+    }
+
+    // Fallback if your friend's config block didn't have a root
+    if (root.empty()) 
+    {
+        root = "var/www/html"; // Change this to your project's default directory
+    }
+
+    // Glue them together
+    std::string fullPath = root + "/" + uri;
+
+    //  The Scrub: Find any double slashes "//" and replace them with a single "/"
+    size_t pos = 0;
+    while ((pos = fullPath.find("//", pos)) != std::string::npos) 
+    {
+        fullPath.replace(pos, 2, "/");
+    }
+
+    return fullPath;
+}
+
+bool endsWith(const std::string& fullString, const std::string& ending) 
+{
+    // 1. If the ending is longer than the string, it's impossible.
+    if (fullString.length() >= ending.length()) 
+    {
+        // 2. Compare the very end of the fullString against the ending
+        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+    }
+    return false;
+}

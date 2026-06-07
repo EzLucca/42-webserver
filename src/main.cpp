@@ -372,7 +372,7 @@ int main(int argc, char **argv)
             std::cout << triggered_fd << " teste" << std::endl;
             printFdRegistry(fdRegistry); // TEST:
 
-            if (shit != fdRegistry.end())
+            if (shit != fdRegistry.end()) 
             {
                 //	int	cgiPipeFd = it->first;
                 int originalClientFd = shit->second;
@@ -507,6 +507,7 @@ int main(int argc, char **argv)
 
                     // take filename
                     std::string filename = activeClient.getRequest().getFilename();
+                    std::string currentMethod = activeClient.getRequest().getMethod();
                     std::cout << filename << " name script" << std::endl;
                     bool isCgi = false;
 
@@ -514,8 +515,8 @@ int main(int argc, char **argv)
                     // fetchin the routing rules for the active client
                     const ServerConfig *config = activeClient.getConfig();
                     const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
-
-                    validateUriPath(activeClient);
+                    //cant do validation without an error here when posting a file
+                    //validateUriPath(activeClient);
                     // if (validateUriPath(activeClient) == false)
                     //     break;
                     // TODO: validate maxbodysize
@@ -523,26 +524,84 @@ int main(int argc, char **argv)
 
                     if (route != NULL) 
                     {
+
+                        bool methodAllowed = false;
+                        std::unordered_map<std::string, std::vector<std::string>>::const_iterator methodIt = route->vectorRoute.find("allowed_methods");
+                        
+                        if (methodIt != route->vectorRoute.end()) 
+                        {
+                            const std::vector<std::string>& allowedList = methodIt->second;
+                            for (size_t k = 0; k < allowedList.size(); ++k) 
+                            {
+                                if (allowedList[k] == currentMethod) 
+                                {
+                                    methodAllowed = true;
+                                    break;
+                                }
+                            }
+                        } 
+                        else 
+                        {
+                            // If the config doesn't specify 'allowed_methods', decide your default fallback.
+                            // Usually, GET is allowed by default.
+                            if (currentMethod == "GET") {
+                                methodAllowed = true;
+                            }
+                        }
+
+                        // If the Bouncer says no, kick them out immediately!
+                        if (!methodAllowed) 
+                        {
+                            activeClient.getResponse().setStatusCode(405);
+                            activeClient.getResponse().setStatusMessage("Method no allowed");
+                            activeClient.setState(ERROR);
+                        }
                         // search for the cgi_pass directive in this specific location block
                         std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = route->vectorRoute.find("cgi_pass");
 
                         // THE DUAL CHECK: Was cgi_pass found AND does the file end in .py
-                        if (it != route->vectorRoute.end() && filename.find(".py") != std::string::npos) 
+                        if (it != route->vectorRoute.end() && endsWith(filename, ".py")) 
                         {
                             isCgi = true;
                         }
-                    }
+                    
 
-                    // routin
-                    if (isCgi) 
+                    else if (activeClient.getRequest().getMethod() == "POST")
+                    {
+                        // search upload enable
+                        std::unordered_map<std::string, std::vector<std::string>>::const_iterator uploadIt = route->vectorRoute.find("upload_enable");
+
+                       
+                        // (Ensure the setting exists, the vector isn't empty, and the first value is "on")
+                        if (uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] == "on") 
+                        {
+                            // force cgi, because every post method goes through it
+                            isCgi = true;
+                            // (Overwrite the requested file to point to the actual Python upload script.)
+                            // (NOTE: Change this string to match the actual path to your Python script!)
+                            activeClient.getRequest().setFilename("var/cgi/cgi-bin/betterUpload.py"); 
+                            
+                            std::cout << "HIJACK ACTIVATED: Routing POST upload to CGI script!" << std::endl;
+                        }
+                    }
+                }
+
+                    if (activeClient.getRequest().getMethod() == "DELETE")
+                    {
+                        
+                        activeClient.getRequest().handleDeleteRequest(activeClient);
+                        activeClient.getRequest().cleanupBodyFile();
+                        //TODO STILL NEED TO SEND RESPONSE!!!!!
+                        activeClient.setState(FINISHED);
+                    }
+                    else if (isCgi) 
                     {
                         std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
                         activeClient.setState(CGI_CALL);
-                    } 
+                    }
                     else 
                     {
-                        // if (activeClient.getState() == ERROR)
-                        //     break ;
+                        
                         try {
                             std::cout << "Static file request. Calling returnPage." << std::endl;
                             returnPage(activeClient);
@@ -571,6 +630,10 @@ int main(int argc, char **argv)
                     std::cout << "test" << activeClient.getState() << std::endl; 
                     if (activeClient.getState() == CGI_CALL)
                     {
+                        std::cout << "\n[DEBUG CGI PRE-FLIGHT CHECK]" << std::endl;
+                        std::cout << "Original URI: " << activeClient.getRequest().getUri() << std::endl;
+                        std::cout << "Target Script: " << activeClient.getRequest().getFilename() << std::endl;
+                        std::cout << "----------------------------\n" << std::endl;
                         try {
                             CgiHandler	CgiObject(activeClient);
                             CgiProcess  cgi = CgiObject.CgiStart(activeClient.getRequest());

@@ -31,7 +31,7 @@ def main():
 
     # Define target directory for uploads 
     # (This is relative to the directory where you start your webserv)
-    upload_dir = "var/www/uploads"
+    upload_dir = os.environ.get("UPLOAD_DIR", "var/www/uploads")
 
     if msg.is_multipart():
         for part in msg.get_payload():

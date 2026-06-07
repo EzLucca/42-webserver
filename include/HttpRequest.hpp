@@ -69,8 +69,9 @@ class HttpRequest
 
             void                                addBytesWritten(size_t bytes);
             void                                setupPathKeys(Client &activeClient);
-			void								cleanupBodyFile();
-			void								resetCurrentChunkSize();
+            void				cleanupBodyFile();
+            void                                resetCurrentChunkSize();
+            void                                handleDeleteRequest(Client& activeClient);
         
 
 };
