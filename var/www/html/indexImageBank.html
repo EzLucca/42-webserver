@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WeekendFun Dynamic Gallery</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #222; color: white; text-align: center; }
+        .upload-box { margin: 20px auto; padding: 20px; background: #333; border-radius: 8px; width: 50%; }
+        /* The magical CSS Grid! */
+        .gallery-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+            gap: 15px; 
+            padding: 20px; 
+        }
+        .gallery-grid img { 
+            width: 100%; 
+            height: 200px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            border: 2px solid #555;
+            transition: transform 0.2s;
+        }
+        .gallery-grid img:hover { transform: scale(1.05); border-color: #00ffcc; }
+        button { background-color: #00ffcc; color: black; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>Webserv Dynamic Gallery</h1>
+
+    <div class="upload-box">
+        <input type="file" id="fileInput" accept="image/*">
+        <button onclick="uploadImage()">Upload Picture</button>
+        <p id="statusText" style="color: #00ffcc;"></p>
+    </div>
+
+    <div class="gallery-grid" id="gallery"></div>
+
+    <script>
+        // 1. Fetch images as soon as the page loads!
+        window.onload = loadGallery;
+
+        function loadGallery() {
+            // Ask your C++ server to run the gallery.py script
+            fetch('/cgi-bin/gallery.py')
+                .then(response => response.json())
+                .then(data => {
+                    const galleryDiv = document.getElementById('gallery');
+                    galleryDiv.innerHTML = ''; // Clear old images
+                    
+                    // Loop through the JSON array and create HTML tags
+                    data.images.forEach(filename => {
+                        const imgElement = document.createElement('img');
+                        // Tell the browser to GET the image from your static uploads route!
+                        imgElement.src = `/upload/${filename}`; 
+                        galleryDiv.appendChild(imgElement);
+                    });
+                })
+                .catch(error => console.error('Error loading gallery:', error));
+        }
+
+        function uploadImage() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            document.getElementById('statusText').innerText = "Uploading...";
+
+            // Send the POST request to your existing Python upload script
+            fetch('/upload/target.py', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('statusText').innerText = "Upload successful!";
+                    fileInput.value = ""; // Clear the input
+                    loadGallery(); // Instantly refresh the grid without reloading the page!
+                } else {
+                    document.getElementById('statusText').innerText = "Upload failed!";
+                }
+            })
+            .catch(error => {
+                document.getElementById('statusText').innerText = "Server Error!";
+            });
+        }
+    </script>
+</body>
+</html>
