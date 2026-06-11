@@ -1,9 +1,13 @@
 #include "HttpResponse.hpp"
 #include "Client.hpp"
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string>
 
 HttpResponse::HttpResponse() : 
     _statusCode(200),
-    _statusMessage("not-set")
+    _statusMessage("OK"),
+    _fileFd(-1)
 {
     std::cout << "HttpResponse constructor called." << std::endl;
 }
@@ -155,4 +159,55 @@ void HttpResponse::buildRawResponse()
 std::string& HttpResponse::getBuffer()
 {
     return (_responseBuffer);
+}
+
+void HttpResponse::prepareFileStream(std::string filepath, Client& activeClient)
+{
+    //  open file
+    _fileFd = open(filepath.c_str(), O_RDONLY);
+
+    if (_fileFd < 0) // < 0 means it failed to open
+    {
+        _statusCode = 404;
+        _statusMessage = "Not Found";
+        filepath = activeClient.getConfig()->getErrorPage(404);
+        _fileFd = open(filepath.c_str(), O_RDONLY);
+        
+        if (_fileFd < 0) {
+            this->_responseBuffer = "HTTP/1.1 404 Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found";
+            this->_isStreamingFile = false;
+            return;
+        }
+    }
+
+    // get filesize with stat
+    struct stat stat_buf;
+    fstat(_fileFd, &stat_buf);
+    size_t fileSize = stat_buf.st_size;
+
+    // build headers first
+    std::string contentType = getMimeType(filepath); 
+    
+    std::string headers = "HTTP/1.1 " + std::to_string(_statusCode) + " " + _statusMessage + "\r\n";
+    headers += "Content-Type: " + contentType + "\r\n";
+    headers += "Content-Length: " + std::to_string(fileSize) + "\r\n";
+    headers += "Connection: keep-alive\r\n\r\n";
+    
+    this->_responseBuffer = headers;
+    this->_isStreamingFile = true;
+}
+
+int     HttpResponse::getFileFd() const
+{
+    return (_fileFd);
+}
+
+bool    HttpResponse::isStreaming() const
+{
+    return (_isStreamingFile);
+}
+
+void    HttpResponse::setStreamingFlag(bool state)
+{
+    _isStreamingFile = state;
 }

@@ -407,6 +407,11 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             try {
                 std::cout << "Static file request. Calling returnPage." << std::endl;
                 returnPage(activeClient);
+                //if return page succeeds, set pollout on
+                if (activeClient.getState() == WRITING_RESPONSE)
+                {
+                    _fds[i].events = POLLOUT;
+                }
             } catch (const std::exception &e)
             {
                 std::cerr << "Error: " << e.what() << std::endl;
@@ -416,11 +421,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     << " marked ERROR"
                     << std::endl;
             }
-            if (activeClient.getState() != ERROR)
-            {
-                activeClient.getRequest().cleanupBodyFile();
-                activeClient.setState(FINISHED);
-            }
+       
         }
 
         std::cout << "test" << activeClient.getState() << std::endl;
@@ -488,39 +489,53 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 }
    if (_fds[i].revents & POLLOUT)
     {
-        // only write if the client is actually ready for it
-        if (activeClient.getState() == WRITING_RESPONSE)
+      std::string& buffer = activeClient.getResponse().getBuffer();
+      //std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
+              << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
+
+        // pump data 
+        if (buffer.empty() && activeClient.getResponse().isStreaming())
         {
-            //grab the response as reference
-            std::string& buffer = activeClient.getResponse().getBuffer();
+            char chunk[88192];
+            int fd = activeClient.getResponse().getFileFd();
 
-            // send it
-            ssize_t bytesSent = write(_fds[i].fd, buffer.c_str(), buffer.size());
-
-            if (bytesSent > 0)
+            
+            // read from fd
+            ssize_t bytesRead = read(fd, chunk, sizeof(chunk));
+            
+            if (bytesRead > 0)
             {
-                // remember clear buffer
-                buffer.erase(0, bytesSent);
-                
-                if (buffer.empty())
-                {
-                // reset client state and change back to pollin
-                activeClient.setState(FINISHED);
-                _fds[i].events = POLLIN; 
+        
+                buffer.append(chunk, bytesRead);
+            }
+            else if (bytesRead == 0)
+            {   
+                std::cout << "DEBUG: EOF reached, closing FD " << fd << std::endl;
+                // File is empty or error. Close it!
+                close(fd);
+                activeClient.getResponse().setStreamingFlag(false);
             }
         }
-            else if (bytesSent < 0)
-            {
-                // MORE CLEANING HERE 
-                close(_fds[i].fd);
-                _fds[i].fd = -1;
-                _clients.erase(currentFd);
-                std::cerr << "Connection dropped out or unidentified error occured."
-                << std::endl;
-                // Close FD, remove from registry, etc.
+
+        // send data to browser
+        if (!buffer.empty())
+        {
+            // FIXED: Using currentFd instead of triggered_fd
+            ssize_t bytesSent = write(currentFd, buffer.c_str(), buffer.size());
+            
+            if (bytesSent > 0) {
+                buffer.erase(0, bytesSent); 
             }
         }
-    } 
+
+        // reset when fully finished
+        if (buffer.empty() && !activeClient.getResponse().isStreaming())
+        {
+            //std::cout << "DEBUG: Streaming complete. Finishing client." << std::endl;
+            activeClient.setState(FINISHED);
+            _fds[i].events = POLLIN; 
+        }
+}
 }
 
 void ServerEngine::run()
