@@ -496,7 +496,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         // pump data 
         if (buffer.empty() && activeClient.getResponse().isStreaming())
         {
-            char chunk[88192];
+            char chunk[8192];
             int fd = activeClient.getResponse().getFileFd();
 
             
