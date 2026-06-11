@@ -110,11 +110,70 @@
     #imageModal img {
         box-shadow: 0 0 40px rgba(0, 255, 204, 0.4);
     }
+        /* The CRT Overlay */
+    body::after {
+        content: " ";
+        display: block;
+        position: fixed;
+        top: 0; 
+        left: 0; 
+        bottom: 0; 
+        right: 0;
+        /* Creates the tiny horizontal lines */
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+        background-size: 100% 4px;
+        z-index: 999;
+        pointer-events: none; /* Let clicks pass through! */
+    }
+    .typewriter {
+    display: inline-block;
+    overflow: hidden; 
+    white-space: nowrap; 
+    border-right: .15em solid #00ffcc; /* The typing cursor */
+    animation: typing 2s steps(20, end), blink-caret .75s step-end infinite;
+    }
+
+    /* The Cursor Blink */
+    .cursor { animation: blink-caret 1s step-end infinite; }
+
+    @keyframes typing {
+        from { width: 0 }
+        to { width: 100% }
+    }
+    @keyframes blink-caret {
+        from, to { border-color: transparent; color: transparent; }
+        50% { border-color: #00ffcc; color: #00ffcc; }
+    }
+        /* Make the container control the layout */
+    .img-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+
+    /* The secret text overlay */
+    .img-meta {
+        position: absolute;
+        bottom: -30px; /* Start hidden below the image */
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        color: #00ffcc;
+        font-size: 12px;
+        padding: 8px 0;
+        transition: bottom 0.3s ease; /* Slide up animation */
+        pointer-events: none;
+    }
+
+    /* When hovering the container, slide the text up */
+    .img-container:hover .img-meta {
+        bottom: 0;
+    }
 </style>
 </head>
 <body>
 
-    <h1>Webserv Dynamic Gallery</h1>
+    <h1 class="typewriter">./webserv_gallery.sh<span class="cursor">_</span></h1>
 
     <div class="upload-box">
         <input type="file" id="fileInput" accept="image/*" multiple>
@@ -141,19 +200,27 @@
                     galleryDiv.innerHTML = ''; // Clear old images
                     
                     data.images.forEach(filename => {
-                        // Create the image element
+                        // 1. Create a wrapper div for the cool overlay
+                        const wrapperDiv = document.createElement('div');
+                        wrapperDiv.className = "img-container";
+
+                        // 2. Create the image element (just like before)
                         const imgElement = document.createElement('img');
-                        // Set the source path for the image
                         imgElement.src = `/upload/${filename}`; 
-                        
-                        // NEW: Change the mouse cursor so the user knows it is a clickable button
                         imgElement.style.cursor = "pointer"; 
-                        
-                        // NEW: Attach an onclick event. 'this.src' passes the exact URL of the clicked image!
                         imgElement.onclick = function() { openModal(this.src); };
+
+                        // 3. Create the secret data overlay (the text block)
+                        const metaDiv = document.createElement('div');
+                        metaDiv.className = "img-meta";
+                        metaDiv.innerText = `[SYS.FILE] >> ${filename}`;
+
+                        // 4. Assemble the pieces! Put the img and text inside the wrapper...
+                        wrapperDiv.appendChild(imgElement);
+                        wrapperDiv.appendChild(metaDiv);
                         
-                        // Add the image to the grid
-                        galleryDiv.appendChild(imgElement);
+                        // 5. ...and put the whole wrapper into the main grid!
+                        galleryDiv.appendChild(wrapperDiv);
                     });
                 })
                 .catch(error => console.error('Error loading gallery:', error));
