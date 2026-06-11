@@ -265,7 +265,7 @@ int main(int argc, char **argv)
         fds[i].events = POLLIN; // POLLIN means tell me when there is data to read
         masterSocketRegistry[server_fd] = &allServers[i];
     }
-    manager.printServers();
+    // manager.printServers();
 
     // exit(2);
 

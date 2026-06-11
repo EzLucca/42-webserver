@@ -332,3 +332,12 @@ void HttpRequest::handleDeleteRequest(Client& activeClient)
     }
 }
 
+void    HttpRequest::setAutoindex(bool autoindex)
+{
+    _hasAutoindex = autoindex;
+}
+bool    HttpRequest::getAutoindex()
+{
+    return(_hasAutoindex);
+}
+
