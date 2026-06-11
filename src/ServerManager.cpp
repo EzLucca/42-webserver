@@ -4,6 +4,11 @@
 #include <filesystem>
 #include <arpa/inet.h>
 #include <vector>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
 
 /**
  * @param server the object to add
@@ -103,4 +108,75 @@ std::vector<int> ServerManager::getMasterFds() const
         masterFds.push_back(it->first);
      }
      return masterFds;
+}
+
+bool ServerManager::setupMasterSockets(struct pollfd fds[], std::map<int, const ServerConfig*>& masterSocketRegistry)
+{
+    for (size_t i = 0; i < _servers.size(); ++i)
+    {
+        std::cout << "Setting up Master Socket for port: "
+            << _servers[i].getPort() << std::endl;
+
+        // create master socket
+        // AF_INET = IPv4, SOCK_STREAM = TCP
+        int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (server_fd < 0)
+        {
+            std::cerr << "Failed to create socket" << std::endl;
+            return false;
+        }
+
+        int opt = 1; // works as 1/0 switch
+        if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) <
+                0) // set socket options
+            std::cerr << "setsockopt failed."
+                << std::endl;
+
+        if (fcntl(server_fd, F_SETFL, O_NONBLOCK) <
+                0) // set file status flags to nonblocking
+        {
+            std::cerr << "fcntl failed." << std::endl;
+            close(server_fd);
+            return false;
+        }
+
+        // define address and port (bind)
+        struct sockaddr_in address;
+        std::memset(&address, 0, sizeof(address));
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
+        address.sin_port = htons(
+                _servers[i]
+                .getPort()); // hardcoded
+        if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+        {
+            std::cerr << "Bind failed. Is the port already in use?" << std::endl;
+            close(server_fd);
+            return false;
+        }
+
+        // with listen we transform default active socket into passice socket
+        // (server mode)
+        //  also initializes queue for in case of client rush. Somaxconn macro gives
+        //  us largest queue
+        if (listen(server_fd, SOMAXCONN) < 0)
+        {
+            std::cerr << "Listen failed" << std::endl;
+            close(server_fd);
+            return false;
+        }
+
+        // set master socket in the first index
+        fds[i].fd = server_fd;
+        fds[i].events = POLLIN; // POLLIN means tell me when there is data to read
+        masterSocketRegistry[server_fd] = &_servers[i];
+        _masterSocketRegistry[server_fd] = &_servers[i];
+    }
+
+    return true;
+}
+
+const std::map<int, const ServerConfig*>& ServerManager::getMasterSocketRegistry() const
+{
+    return _masterSocketRegistry;
 }
