@@ -491,7 +491,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         // only write if the client is actually ready for it
         if (activeClient.getState() == WRITING_RESPONSE)
         {
-            //grab the response
+            //grab the response as reference
             std::string& buffer = activeClient.getResponse().getBuffer();
 
             // send it
@@ -500,14 +500,15 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             if (bytesSent > 0)
             {
                 // remember clear buffer
-                buffer.clear();
+                buffer.erase(0, bytesSent);
                 
-                // reset client state
-                activeClient.setState(FINISHED); // Or whatever your "idle" state is
-                
-                // change back pollin
+                if (buffer.empty())
+                {
+                // reset client state and change back to pollin
+                activeClient.setState(FINISHED);
                 _fds[i].events = POLLIN; 
             }
+        }
             else if (bytesSent < 0)
             {
                 // MORE CLEANING HERE 
