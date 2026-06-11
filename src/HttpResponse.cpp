@@ -141,3 +141,18 @@ std::string HttpResponse::getMimeType(const std::string& filePath)
     // uknown extension
     return "application/octet-stream";
 }
+
+void HttpResponse::buildRawResponse()
+{
+    std::string finalString = "HTTP/1.1 " + std::to_string(_statusCode) + " " + _statusMessage + " \r\n";
+    finalString += "Content-Length: " + std::to_string(_responseBody.size()) + "\r\n";
+    finalString += "\r\n"; // The mandatory blank line
+    finalString += _responseBody;
+
+    _responseBuffer = finalString;
+}
+
+std::string& HttpResponse::getBuffer()
+{
+    return (_responseBuffer);
+}

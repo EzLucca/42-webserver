@@ -14,6 +14,7 @@ class HttpResponse
             int         _statusCode;
             std::string _statusMessage;
 			std::string	_responseBody;
+            std::string _responseBuffer;
 
     // HEADERS, Metadata about the response, such as content type and caching policies
     public:
@@ -24,12 +25,15 @@ class HttpResponse
             void    setStatusCode(int statusCode);
             void    setStatusMessage(std::string statusMessage);
 			void	setResponseBody(std::string response);
+            
             //getters
             int             getStatusCode() const;
             std::string     getStatusMessage() const;
 			std::string		getResponseBody() const;
 			void			CgiReadResponse(CgiProcess &cgi, Client &activeClient);
             std::string     getMimeType(const std::string& filePath);
+            void            buildRawResponse();
+            std::string&    getBuffer();
     // BODY -- The actual content returned , such as HTML, JSON, or text
 
 };

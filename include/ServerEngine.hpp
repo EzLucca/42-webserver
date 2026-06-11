@@ -44,5 +44,6 @@ class ServerEngine
                      struct pollfd fds[],
                      std::map<int, const ServerConfig*>& masterSocketRegistry);
 
-        void run();
+        void    run();
+
 };

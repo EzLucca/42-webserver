@@ -183,14 +183,18 @@
 
     <div class="gallery-grid" id="gallery"></div>
 
-    <div id="imageModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); text-align: center; justify-content: center; align-items: center;">
+   <div id="imageModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); text-align: center; justify-content: center; align-items: center; flex-direction: column;">
         <span onclick="closeModal()" style="position: absolute; top: 20px; right: 40px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
-        <img id="modalImg" style="max-width: 90vw; max-height: 90vh; border-radius: 8px; border: 2px solid #00ffcc;">
+        
+        <img id="modalImg" style="max-width: 90vw; max-height: 80vh; border-radius: 8px; border: 2px solid #00ffcc; margin-bottom: 20px;">
+        
+        <button onclick="deleteTargetImage()" style="background: transparent; border: 1px solid #ff0055; color: #ff0055; text-shadow: 0 0 5px #ff0055; box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);">[ EXECUTE DELETE ]</button>
     </div>
     
     <script>
         // 1. Fetch images as soon as the page loads!
         window.onload = loadGallery;
+        let currentTargetFile = "";
 
         function loadGallery() {
             fetch('/cgi-bin/gallery.py')
@@ -208,7 +212,7 @@
                         const imgElement = document.createElement('img');
                         imgElement.src = `/upload/${filename}`; 
                         imgElement.style.cursor = "pointer"; 
-                        imgElement.onclick = function() { openModal(this.src); };
+                        imgElement.onclick = function() { openModal(this.src, filename); };
 
                         // 3. Create the secret data overlay (the text block)
                         const metaDiv = document.createElement('div');
@@ -258,9 +262,9 @@
                 document.getElementById('statusText').innerText = "Server Error!";
             });
         }
-        function openModal(imageSrc) {
+        function openModal(imageSrc, filename) {
             document.getElementById("modalImg").src = imageSrc;
-            // Changes the CSS display from 'none' to 'flex' to make it visible and centered
+            currentTargetFile = filename; // Lock in the target!
             document.getElementById("imageModal").style.display = "flex"; 
         }
 
@@ -268,6 +272,31 @@
         function closeModal() {
             // Reverts the CSS display back to 'none'
             document.getElementById("imageModal").style.display = "none";
+        }
+        function deleteTargetImage() {
+            if (!currentTargetFile) return;
+
+            // Confirm before destroying data!
+            if (!confirm(`WARNING: Are you sure you want to permanently delete ${currentTargetFile}?`)) {
+                return;
+            }
+
+            // Fire the DELETE method directly to the C++ server
+            fetch(`/upload/${currentTargetFile}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                // 200 OK or 204 No Content means C++ successfully deleted it
+                if (response.ok) {
+                    closeModal(); // Hide the modal
+                    loadGallery(); // Instantly refresh the grid!
+                } else {
+                    alert("Delete failed! Check the C++ server logs for a 403 or 404.");
+                }
+            })
+            .catch(error => {
+                alert("Server Connection Error!");
+            });
         }
     </script>
 </body>

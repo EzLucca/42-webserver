@@ -282,11 +282,13 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
 
 void ServerEngine::handleClientFd(int i, int currentFd)
 {
+
     std::map<int, Client>::iterator clientIt = _clients.find(currentFd);
     if (clientIt == _clients.end())
         return;
-
     Client &activeClient = clientIt->second;
+    if (_fds[i].revents & POLLIN)
+    {
 
     char shovelBuffer[8192] = {0}; // intializing buffer with zeros
 
@@ -294,6 +296,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
     if (valRead <= 0)
     {
+        // MORE CLEANING HERE 
         close(_fds[i].fd);
         _fds[i].fd = -1;
         _clients.erase(currentFd);
@@ -319,7 +322,6 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
     if (activeClient.getState() == PROCESSING)
     {
-        std::cout << "It is stuck here5 with client state: " << activeClient.getState() << std::endl;
 
         std::string filename = activeClient.getRequest().getFilename();
         std::string currentMethod = activeClient.getRequest().getMethod();
@@ -386,7 +388,14 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         {
             activeClient.getRequest().handleDeleteRequest(activeClient);
             activeClient.getRequest().cleanupBodyFile();
-            activeClient.setState(FINISHED);
+            activeClient.getResponse().setStatusCode(204);
+            activeClient.getResponse().setStatusMessage("No Content");
+            activeClient.getResponse().setResponseBody(""); // 204 has no body!
+
+            activeClient.getResponse().buildRawResponse();
+            _fds[i].events = POLLOUT;
+            
+            activeClient.setState(WRITING_RESPONSE);
         }
         else if (isCgi)
         {
@@ -477,6 +486,41 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         _fds[i].fd = -1;
     }
 }
+   if (_fds[i].revents & POLLOUT)
+    {
+        // only write if the client is actually ready for it
+        if (activeClient.getState() == WRITING_RESPONSE)
+        {
+            //grab the response
+            std::string& buffer = activeClient.getResponse().getBuffer();
+
+            // send it
+            ssize_t bytesSent = write(_fds[i].fd, buffer.c_str(), buffer.size());
+
+            if (bytesSent > 0)
+            {
+                // remember clear buffer
+                buffer.clear();
+                
+                // reset client state
+                activeClient.setState(FINISHED); // Or whatever your "idle" state is
+                
+                // change back pollin
+                _fds[i].events = POLLIN; 
+            }
+            else if (bytesSent < 0)
+            {
+                // MORE CLEANING HERE 
+                close(_fds[i].fd);
+                _fds[i].fd = -1;
+                _clients.erase(currentFd);
+                std::cerr << "Connection dropped out or unidentified error occured."
+                << std::endl;
+                // Close FD, remove from registry, etc.
+            }
+        }
+    } 
+}
 
 void ServerEngine::run()
 {
@@ -505,7 +549,7 @@ void ServerEngine::run()
                     << " | Revents code: " << _fds[i].revents << " <<<" << std::endl;
             }
 
-            if (!(_fds[i].revents & (POLLIN | POLLHUP)))
+            if (!(_fds[i].revents & (POLLIN | POLLHUP | POLLOUT)))
             {
                 continue;
             }
@@ -528,3 +572,4 @@ void ServerEngine::run()
         }
     }
 }
+
