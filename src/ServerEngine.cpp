@@ -370,18 +370,56 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                 isCgi = true;
             }
 
-            if (activeClient.getRequest().getMethod() == "POST")
-            {
-                std::unordered_map<std::string, std::vector<std::string>>::const_iterator uploadIt = route->vectorRoute.find("upload_enable");
+    if (activeClient.getRequest().getMethod() == "POST")
+    {
+    std::string contentType = activeClient.getRequest().getHeaders()["content-type"];
+    
+    //if its not html form, it must be raw file
+    if (contentType.find("multipart/form-data") == std::string::npos &&
+        contentType.find("application/x-www-form-urlencoded") == std::string::npos)
+    {
+        std::string tempPath = activeClient.getRequest().getBodyFilePath();
+        
+        // keep file name if provided
+        std::string filename = activeClient.getRequest().getFilename();
+        if (filename.empty() || filename == "/") {
+            // Fallback if they didn't specify a filename
+            filename = "dumped_file_" + std::to_string(time(NULL)); 
+        }
+        
+        std::string finalPath = "var/www/uploads/" + filename; 
+        
+        std::cout << ">>> RAW UPLOAD DETECTED (" << contentType << "): Bypassing CGI! <<<" << std::endl;
+        
+        // Move the file!
+        if (rename(tempPath.c_str(), finalPath.c_str()) == 0)
+        {
+            std::cout << "SUCCESS! File explicitly saved to: " << finalPath << std::endl;
+            activeClient.getRequest().setBodyFilePath("not-set"); 
+            
+            activeClient.getResponse().setStatusCode(201);
+            activeClient.getResponse().setStatusMessage("Created");
+            activeClient.getResponse().setResponseBody("File dumped perfectly via C++!");
+            activeClient.getResponse().buildRawResponse();
+            
+            _fds[i].events = POLLOUT;
+            activeClient.setState(WRITING_RESPONSE);
+            
+        }
+    }
+    else 
+    {
+        // it IS an HTML form! Let the Python script unpack it.
+        std::unordered_map<std::string, std::vector<std::string>>::const_iterator uploadIt = route->vectorRoute.find("upload_enable");
 
-                if (uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] == "on")
-                {
-                    isCgi = true;
-                    activeClient.getRequest().setFilename("var/cgi/cgi-bin/betterUpload.py");
-
-                    std::cout << "HIJACK ACTIVATED: Routing POST upload to CGI script!" << std::endl;
-                }
-            }
+        if (uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] == "on")
+        {
+            isCgi = true;
+            activeClient.getRequest().setFilename("var/cgi/cgi-bin/betterUpload.py");
+            std::cout << "HIJACK ACTIVATED: Routing HTML Form POST to CGI script!" << std::endl;
+        }
+    }
+}
         }
 
         if (activeClient.getRequest().getMethod() == "DELETE")
