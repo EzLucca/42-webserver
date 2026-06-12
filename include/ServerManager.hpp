@@ -1,7 +1,9 @@
 #pragma once
 
 # include "ServerConfig.hpp"
-
+# include <map>
+# include <vector>
+# include <poll.h>
 
 // grand conductor, our waiter! all the poll logic will be here 
 class ServerManager
@@ -25,13 +27,7 @@ class ServerManager
         const ServerConfig* getServerByFd(int fd);
         std::vector<ServerConfig> getServers();
         std::vector<int> getMasterFds() const;
-        // TEST: version 3
-        // const ServerConfig* findServer(
-        //     const std::string& host,
-        //     int port) const;
-        //
-        // const LocationConfig* findLocation(
-        //     const ServerConfig& server,
-        //     const std::string& uri) const;
-        // ~TEST:
+
+        bool setupMasterSockets(struct pollfd fds[], std::map<int, const ServerConfig*>& masterSocketRegistry);
+        const std::map<int, const ServerConfig*>& getMasterSocketRegistry() const;
 };

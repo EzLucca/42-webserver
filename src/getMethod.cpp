@@ -38,11 +38,12 @@ std::string createResponse(Client& activeClient, std::string filepath)
         std::cerr << "Could not open: " << filepath << std::endl;
         // In the future, this should change the status to 404/500 and recursively call returnPage
         activeClient.getResponse().setStatusCode(404);
-        returnPage(activeClient);
+        //why we call returnpage here? loop danger???
+        //returnPage(activeClient);
         activeClient.setState(FINISHED);
         return filepath;
     }
-
+    // this is the ram killer
     std::stringstream buffer;
     buffer << file.rdbuf();
     std::string body = buffer.str();
@@ -80,7 +81,7 @@ void    returnErrorPage(Client& activeClient)
 
     response = createResponse(activeClient, filepath);
 
-    // Warning: Direct write() is blocking. We will move this to POLLOUT later!
+    // this direct write needs to be deleted
     write(activeClient.getFd(), response.c_str(), response.size());
 }
 
@@ -155,9 +156,7 @@ void    returnPage(Client& activeClient)
             filepath = "var/www/errorpages/default.html";
             break;
     }
-    
-    std::string response = createResponse(activeClient, filepath);
-
-    // Warning: Direct write() is blocking. We will move this to POLLOUT later!
-    write(activeClient.getFd(), response.c_str(), response.size());
+    //preparing for filestreaming
+    activeClient.getResponse().prepareFileStream(filepath, activeClient);
+    activeClient.setState(WRITING_RESPONSE);
 }

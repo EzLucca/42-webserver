@@ -3,72 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <title>WeekendFun Dynamic Gallery</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #222; color: white; text-align: center; }
-        .upload-box { margin: 20px auto; padding: 20px; background: #333; border-radius: 8px; width: 50%; }
-        /* The magical CSS Grid! */
-        .gallery-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-            gap: 15px; 
-            padding: 20px; 
-        }
-        .gallery-grid img { 
-            width: 100%; 
-            height: 200px; 
-            object-fit: cover; 
-            border-radius: 8px; 
-            border: 2px solid #555;
-            transition: transform 0.2s;
-        }
-        .gallery-grid img:hover { transform: scale(1.05); border-color: #00ffcc; }
-        button { background-color: #00ffcc; color: black; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; }
-    </style>
+   <style>
+    /* 1. The Terminal Blueprint Background */
+    body { 
+        font-family: 'Courier New', Courier, monospace; /* True nerdy typography */
+        background-color: #0a0a0c; 
+        /* Creates a subtle glowing grid pattern */
+        background-image: 
+            linear-gradient(rgba(0, 255, 204, 0.05) 1px, transparent 1px), 
+            linear-gradient(90deg, rgba(0, 255, 204, 0.05) 1px, transparent 1px);
+        background-size: 30px 30px;
+        color: #e0e0e0; 
+        text-align: center; 
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1 {
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        color: #00ffcc;
+        text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+    }
+
+    /* 2. Cyberpunk Glassmorphism for the Control Panel */
+    .upload-box { 
+        margin: 30px auto; 
+        padding: 25px; 
+        background: rgba(20, 20, 25, 0.7); 
+        backdrop-filter: blur(10px); /* The frosted glass effect */
+        border: 1px solid rgba(0, 255, 204, 0.2); 
+        border-radius: 12px; 
+        width: 50%; 
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 3. The CLI Button */
+    button { 
+        background-color: transparent; 
+        color: #00ffcc; 
+        border: 1px solid #00ffcc; 
+        padding: 10px 25px; 
+        cursor: pointer; 
+        font-weight: bold; 
+        font-family: inherit;
+        letter-spacing: 1px;
+        border-radius: 4px; 
+        transition: all 0.3s ease;
+    }
+    button:hover { 
+        background-color: #00ffcc; 
+        color: #0a0a0c; 
+        box-shadow: 0 0 15px #00ffcc; 
+    }
+
+    /* Customizing the ugly default file input */
+    input[type="file"] {
+        color: #aaa;
+        margin-right: 15px;
+    }
+    input[type="file"]::file-selector-button {
+        background: #222;
+        color: #00ffcc;
+        border: 1px solid #555;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: 0.3s;
+    }
+    input[type="file"]::file-selector-button:hover {
+        border-color: #00ffcc;
+    }
+
+    /* 4. The Magic Grid & Awaken Hover Effects */
+    .gallery-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+        gap: 20px; 
+        padding: 20px; 
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .gallery-grid img { 
+        width: 100%; 
+        height: 220px; 
+        object-fit: cover; 
+        border-radius: 8px; 
+        border: 1px solid #333;
+        /* Start dark and moody */
+        filter: grayscale(70%) brightness(0.8); 
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smooth spring animation */
+    }
+    
+    .gallery-grid img:hover { 
+        /* Snap to full color and pop out */
+        filter: grayscale(0%) brightness(1.1); 
+        transform: scale(1.05) translateY(-5px); 
+        border-color: #00ffcc;
+        box-shadow: 0 10px 20px rgba(0, 255, 204, 0.3);
+        z-index: 2;
+    }
+
+    /* Modal styling update to match */
+    #imageModal img {
+        box-shadow: 0 0 40px rgba(0, 255, 204, 0.4);
+    }
+        /* The CRT Overlay */
+    body::after {
+        content: " ";
+        display: block;
+        position: fixed;
+        top: 0; 
+        left: 0; 
+        bottom: 0; 
+        right: 0;
+        /* Creates the tiny horizontal lines */
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+        background-size: 100% 4px;
+        z-index: 999;
+        pointer-events: none; /* Let clicks pass through! */
+    }
+    .typewriter {
+    display: inline-block;
+    overflow: hidden; 
+    white-space: nowrap; 
+    border-right: .15em solid #00ffcc; /* The typing cursor */
+    animation: typing 2s steps(20, end), blink-caret .75s step-end infinite;
+    }
+
+    /* The Cursor Blink */
+    .cursor { animation: blink-caret 1s step-end infinite; }
+
+    @keyframes typing {
+        from { width: 0 }
+        to { width: 100% }
+    }
+    @keyframes blink-caret {
+        from, to { border-color: transparent; color: transparent; }
+        50% { border-color: #00ffcc; color: #00ffcc; }
+    }
+        /* Make the container control the layout */
+    .img-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+
+    /* The secret text overlay */
+    .img-meta {
+        position: absolute;
+        bottom: -30px; /* Start hidden below the image */
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        color: #00ffcc;
+        font-size: 12px;
+        padding: 8px 0;
+        transition: bottom 0.3s ease; /* Slide up animation */
+        pointer-events: none;
+    }
+
+    /* When hovering the container, slide the text up */
+    .img-container:hover .img-meta {
+        bottom: 0;
+    }
+</style>
 </head>
 <body>
 
-    <h1>Webserv Dynamic Gallery</h1>
+    <h1 class="typewriter">./webserv_gallery.sh<span class="cursor">_</span></h1>
 
     <div class="upload-box">
-        <input type="file" id="fileInput" accept="image/*">
+        <input type="file" id="fileInput" accept="image/*" multiple>
         <button onclick="uploadImage()">Upload Picture</button>
         <p id="statusText" style="color: #00ffcc;"></p>
     </div>
 
     <div class="gallery-grid" id="gallery"></div>
 
+   <div id="imageModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); text-align: center; justify-content: center; align-items: center; flex-direction: column;">
+        <span onclick="closeModal()" style="position: absolute; top: 20px; right: 40px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;">&times;</span>
+        
+        <img id="modalImg" style="max-width: 90vw; max-height: 80vh; border-radius: 8px; border: 2px solid #00ffcc; margin-bottom: 20px;">
+        
+        <button onclick="deleteTargetImage()" style="background: transparent; border: 1px solid #ff0055; color: #ff0055; text-shadow: 0 0 5px #ff0055; box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);">[ EXECUTE DELETE ]</button>
+    </div>
+    
     <script>
         // 1. Fetch images as soon as the page loads!
         window.onload = loadGallery;
+        let currentTargetFile = "";
 
         function loadGallery() {
-            // Ask your C++ server to run the gallery.py script
             fetch('/cgi-bin/gallery.py')
                 .then(response => response.json())
                 .then(data => {
                     const galleryDiv = document.getElementById('gallery');
                     galleryDiv.innerHTML = ''; // Clear old images
                     
-                    // Loop through the JSON array and create HTML tags
                     data.images.forEach(filename => {
+                        // 1. Create a wrapper div for the cool overlay
+                        const wrapperDiv = document.createElement('div');
+                        wrapperDiv.className = "img-container";
+
+                        // 2. Create the image element (just like before)
                         const imgElement = document.createElement('img');
-                        // Tell the browser to GET the image from your static uploads route!
                         imgElement.src = `/upload/${filename}`; 
-                        galleryDiv.appendChild(imgElement);
+                        imgElement.style.cursor = "pointer"; 
+                        imgElement.onclick = function() { openModal(this.src, filename); };
+
+                        // 3. Create the secret data overlay (the text block)
+                        const metaDiv = document.createElement('div');
+                        metaDiv.className = "img-meta";
+                        metaDiv.innerText = `[SYS.FILE] >> ${filename}`;
+
+                        // 4. Assemble the pieces! Put the img and text inside the wrapper...
+                        wrapperDiv.appendChild(imgElement);
+                        wrapperDiv.appendChild(metaDiv);
+                        
+                        // 5. ...and put the whole wrapper into the main grid!
+                        galleryDiv.appendChild(wrapperDiv);
                     });
                 })
                 .catch(error => console.error('Error loading gallery:', error));
         }
 
         function uploadImage() {
-            const fileInput = document.getElementById('fileInput');
-            if (fileInput.files.length === 0) return;
+        const fileInput = document.getElementById('fileInput');
+        // Check if they selected anything
+        if (fileInput.files.length === 0) return;
 
-            const formData = new FormData();
-            formData.append("file", fileInput.files[0]);
+        const formData = new FormData();
 
-            document.getElementById('statusText').innerText = "Uploading...";
+        // LOOP through all selected files and append them
+        for (let i = 0; i < fileInput.files.length; i++) {
+            // Notice the "files[]" array syntax!
+            formData.append("files[]", fileInput.files[i]); 
+}
 
+    document.getElementById('statusText').innerText = `Uploading ${fileInput.files.length} files...`;
             // Send the POST request to your existing Python upload script
             fetch('/upload/target.py', {
                 method: 'POST',
@@ -85,6 +260,42 @@
             })
             .catch(error => {
                 document.getElementById('statusText').innerText = "Server Error!";
+            });
+        }
+        function openModal(imageSrc, filename) {
+            document.getElementById("modalImg").src = imageSrc;
+            currentTargetFile = filename; // Lock in the target!
+            document.getElementById("imageModal").style.display = "flex"; 
+        }
+
+        // This function hides the modal again when the X is clicked
+        function closeModal() {
+            // Reverts the CSS display back to 'none'
+            document.getElementById("imageModal").style.display = "none";
+        }
+        function deleteTargetImage() {
+            if (!currentTargetFile) return;
+
+            // Confirm before destroying data!
+            if (!confirm(`WARNING: Are you sure you want to permanently delete ${currentTargetFile}?`)) {
+                return;
+            }
+
+            // Fire the DELETE method directly to the C++ server
+            fetch(`/upload/${currentTargetFile}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                // 200 OK or 204 No Content means C++ successfully deleted it
+                if (response.ok) {
+                    closeModal(); // Hide the modal
+                    loadGallery(); // Instantly refresh the grid!
+                } else {
+                    alert("Delete failed! Check the C++ server logs for a 403 or 404.");
+                }
+            })
+            .catch(error => {
+                alert("Server Connection Error!");
             });
         }
     </script>
