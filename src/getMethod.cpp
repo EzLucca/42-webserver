@@ -41,7 +41,7 @@ std::string createResponse(Client& activeClient, std::string filepath)
         activeClient.getResponse().setStatusCode(404);
         //why we call returnpage here? loop danger???
         //returnPage(activeClient);
-        activeClient.setState(FINISHED);
+        activeClient.setState(ERROR);
         return filepath;
     }
     // this is the ram killer
@@ -80,8 +80,10 @@ void    returnErrorPage(Client& activeClient)
 
     response = createResponse(activeClient, filepath);
 
+    activeClient.getResponse().setResponseBuffer(response);
+    activeClient.setState(WRITING_RESPONSE);
     // this direct write needs to be deleted
-    write(activeClient.getFd(), response.c_str(), response.size());
+    // write(activeClient.getFd(), response.c_str(), response.size());
 }
 
 static std::string html_escape(const std::string &s)
@@ -177,13 +179,13 @@ void    returnPage(Client& activeClient)
                 }
 
                 //  validate methods
-                if(!validateMethod(route, activeClient.getRequest().getMethod()))
-                {
-                    activeClient.getResponse().setStatusCode(405);
-                    returnPage(activeClient);
-                    activeClient.setState(FINISHED);
-                    return;
-                }
+                // if(!validateMethod(route, activeClient.getRequest().getMethod()))
+                // {
+                //     activeClient.getResponse().setStatusCode(405);
+                //     returnPage(activeClient);
+                //     activeClient.setState(FINISHED);
+                //     return;
+                // }
 
                 //  NOW it is safe to touch the route's internals!
                 std::string root = route->vectorRoute.at("root").at(0); 
@@ -196,7 +198,10 @@ void    returnPage(Client& activeClient)
                     if (it != route->vectorRoute.end()) {
                         filepath = root + "/" + it->second.at(0);
                     } else 
+                    {
                         autoindexbody = generateAutoindex(root, uriRequest);
+                        std::cout << "autoindex build" << std::endl;
+                    }
                 } 
                 else 
                 {
@@ -225,9 +230,17 @@ void    returnPage(Client& activeClient)
             "Content-Length: " + std::to_string(body.size()) + "\r\n"
             "\r\n" +
             body;
+
+        std::cout << "Response autoindex build" << std::endl;
+        activeClient.getResponse().setResponseBuffer(response);
+        activeClient.setState(WRITING_RESPONSE);
+
+        return ;
     }
-    else
-        response = createResponse(activeClient, filepath);
+    // else
+    //     response = createResponse(activeClient, filepath);
+
+
 
     // Warning: Direct write() is blocking. We will move this to POLLOUT later!
     //preparing for filestreaming

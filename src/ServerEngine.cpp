@@ -8,11 +8,9 @@
 #include <netinet/in.h>
 #include "getMethod.hpp"
 
-ServerEngine::ServerEngine(const ServerManager& manager,
-                           struct pollfd fds[],
+ServerEngine::ServerEngine(struct pollfd fds[],
                            std::map<int, const ServerConfig*>& masterSocketRegistry)
-: _manager(manager),
- _masterSocketRegistry(masterSocketRegistry),
+: _masterSocketRegistry(masterSocketRegistry),
   _httpParser()
 {
     for (int i = 0; i < MAX_FDS; ++i)
@@ -528,8 +526,8 @@ void ServerEngine::handleClientFd(int i, int currentFd)
    if (_fds[i].revents & POLLOUT)
     {
       std::string& buffer = activeClient.getResponse().getBuffer();
-      //std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
-             // << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
+      std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
+             << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
 
         // pump data 
         if (buffer.empty() && activeClient.getResponse().isStreaming())
@@ -567,6 +565,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         }
 
         // reset when fully finished
+        std::cout << "is streaming: " << activeClient.getResponse().isStreaming() << std::endl;
         if (buffer.empty() && !activeClient.getResponse().isStreaming())
         {
             //std::cout << "DEBUG: Streaming complete. Finishing client." << std::endl;

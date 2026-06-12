@@ -7,7 +7,8 @@
 HttpResponse::HttpResponse() : 
     _statusCode(200),
     _statusMessage("OK"),
-    _fileFd(-1)
+    _fileFd(-1),
+    _isStreamingFile(false)
 {
     std::cout << "HttpResponse constructor called." << std::endl;
 }
@@ -210,4 +211,9 @@ bool    HttpResponse::isStreaming() const
 void    HttpResponse::setStreamingFlag(bool state)
 {
     _isStreamingFile = state;
+}
+
+void	HttpResponse::setResponseBuffer(std::string response)
+{
+    _responseBuffer = response;
 }
