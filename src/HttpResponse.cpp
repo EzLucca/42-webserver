@@ -162,10 +162,6 @@ std::string& HttpResponse::getBuffer()
     return (_responseBuffer);
 }
 
-void HttpResponse::setResponseBuffer(std::string response)
-{
-    _responseBuffer = response;
-}
 
 void HttpResponse::prepareFileStream(std::string filepath, Client& activeClient)
 {

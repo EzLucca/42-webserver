@@ -211,9 +211,9 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                     break;
 
                 case CGI_IO_DONE:
-                    {
-                        activeClient.getRequest().cleanupBodyFile();
-                        activeClient.getResponse().setResponseBody(cgi.output);
+                    
+                    activeClient.getRequest().cleanupBodyFile();
+                    activeClient.getResponse().setResponseBody(cgi.output);
 
                     {
                     size_t headerEnd = cgi.output.find("\r\n\r\n");
@@ -241,7 +241,7 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                         std::string final_response =
                             "HTTP/1.1 200 OK\r\n" + cgi.output;
                         activeClient.getResponse().setResponseBuffer(final_response);
-                    }
+                    
 
                         close(_fds[i].fd);
                         _fds[i].fd = -1;
@@ -250,7 +250,7 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
 
                         activeClient.setState(WRITING_RESPONSE);
 
-                   
+                    }
 
                     for (int k = 0; k < MAX_FDS; k++)
                     {
@@ -260,8 +260,9 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                             break;
                         }
                     }
+                    break;
                 case CGI_IO_ERROR:
-                    {
+                    
                         activeClient.getRequest().cleanupBodyFile();
                         std::cerr << "CGI Error encountered."
                             << std::endl;
@@ -273,13 +274,14 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                         _cgiProcesses.erase(triggered_fd);
                         _clients.erase(originalClientFd);
                         break;
-                    }
+                    
                 default:
                     return;
             }
         }
     }
 }
+
 
 void ServerEngine::handleClientFd(int i, int currentFd)
 {
