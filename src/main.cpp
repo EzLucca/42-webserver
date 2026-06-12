@@ -88,7 +88,8 @@ int main(int argc, char **argv)
 
     manager.printServers();
 
-    ServerEngine engine(manager, fds, masterSocketRegistry);
+    // ServerEngine engine(manager, fds, masterSocketRegistry);
+    ServerEngine engine(fds, masterSocketRegistry);
     engine.run();
 
     return 0;
