@@ -217,6 +217,21 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                     activeClient.getRequest().cleanupBodyFile();
                     activeClient.getResponse().setResponseBody(cgi.output);
 
+                    {
+                    size_t headerEnd = cgi.output.find("\r\n\r\n");
+    
+                    if (headerEnd != std::string::npos) 
+                    {
+                      
+                        size_t bodySize = cgi.output.length() - (headerEnd + 4); 
+                        
+                      
+                        std::string contentLengthHeader = "Content-Length: " + std::to_string(bodySize) + "\r\n";
+                        
+                       
+                        cgi.output.insert(headerEnd + 2, contentLengthHeader);
+                    }
+
                     std::cout
                         << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n"
                         << "CGI OUTPUT: "
@@ -224,13 +239,11 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                         << std::endl
                         << "\n------------------------------------\n";
 
-                    {
+                    
                         std::string final_response =
                             "HTTP/1.1 200 OK\r\n" + cgi.output;
 
-                        write(originalClientFd,
-                                final_response.c_str(),
-                                final_response.size());
+                        activeClient.getResponse().setResponseBuffer(final_response);
                     }
 
                     close(_fds[i].fd);
@@ -245,16 +258,16 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
 
                     close(cgi.responseFd);
 
-                    activeClient.setState(FINISHED);
 
-                    close(originalClientFd);
-                    _clients.erase(originalClientFd);
+                    activeClient.setState(WRITING_RESPONSE);
+
+                   
 
                     for (int k = 0; k < MAX_FDS; k++)
                     {
                         if (_fds[k].fd == originalClientFd)
                         {
-                            _fds[k].fd = -1;
+                            _fds[k].events = POLLOUT;
                             break;
                         }
                     }
@@ -564,7 +577,15 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             if (bytesSent > 0) {
                 buffer.erase(0, bytesSent); 
             }
-        }
+            else if (bytesSent < 0) 
+            {
+                // FATAL ERROR: The client disconnected during the write!
+                // You MUST clear the buffer completely and set the activeClient state to ERROR here.
+                // This breaks the loop and allows the server to clean up the dead client.
+                std::cout << "fatal error" << std::endl;
+            }
+            }
+        
 
         // reset when fully finished
         if (buffer.empty() && !activeClient.getResponse().isStreaming())

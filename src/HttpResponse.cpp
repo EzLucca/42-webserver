@@ -7,7 +7,8 @@
 HttpResponse::HttpResponse() : 
     _statusCode(200),
     _statusMessage("OK"),
-    _fileFd(-1)
+    _fileFd(-1),
+    _isStreamingFile(false)
 {
     std::cout << "HttpResponse constructor called." << std::endl;
 }
@@ -106,7 +107,7 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
         // (Everything succeeded, tell main.cpp we are done!)
         activeClient.setState(CGI_IO_DONE);
         return ;
-    }
+        }
 
 
     activeClient.setState(CGI_IO_ERROR);
@@ -159,6 +160,11 @@ void HttpResponse::buildRawResponse()
 std::string& HttpResponse::getBuffer()
 {
     return (_responseBuffer);
+}
+
+void HttpResponse::setResponseBuffer(std::string response)
+{
+    _responseBuffer = response;
 }
 
 void HttpResponse::prepareFileStream(std::string filepath, Client& activeClient)

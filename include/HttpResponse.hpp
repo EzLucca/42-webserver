@@ -30,6 +30,7 @@ class HttpResponse
             void    setStatusCode(int statusCode);
             void    setStatusMessage(std::string statusMessage);
 			void	setResponseBody(std::string response);
+            void    setResponseBuffer(std::string response);
 
             
             
