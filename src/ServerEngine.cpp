@@ -491,7 +491,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
     {
       std::string& buffer = activeClient.getResponse().getBuffer();
       //std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
-              << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
+             // << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
 
         // pump data 
         if (buffer.empty() && activeClient.getResponse().isStreaming())
