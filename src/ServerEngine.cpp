@@ -215,53 +215,50 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                         activeClient.getRequest().cleanupBodyFile();
                         activeClient.getResponse().setResponseBody(cgi.output);
 
-                        std::cout
-                            << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n"
-                            << "CGI OUTPUT: "
-                            << cgi.output
-                            << std::endl
-                            << "\n------------------------------------\n";
+                    {
+                    size_t headerEnd = cgi.output.find("\r\n\r\n");
+    
+                    if (headerEnd != std::string::npos) 
+                    {
+                      
+                        size_t bodySize = cgi.output.length() - (headerEnd + 4); 
+                        
+                      
+                        std::string contentLengthHeader = "Content-Length: " + std::to_string(bodySize) + "\r\n";
+                        
+                       
+                        cgi.output.insert(headerEnd + 2, contentLengthHeader);
+                    }
 
+                    std::cout
+                        << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n"
+                        << "CGI OUTPUT: "
+                        << cgi.output
+                        << std::endl
+                        << "\n------------------------------------\n";
+
+                    
                         std::string final_response =
                             "HTTP/1.1 200 OK\r\n" + cgi.output;
                         activeClient.getResponse().setResponseBuffer(final_response);
-
-                        for (int k = 0; k < MAX_FDS; k++)
-                        {
-                            if (_fds[k].fd == originalClientFd)
-                            {
-                                _fds[k].events = POLLOUT;
-                                break;
-                            }
-                        }
-                        activeClient.setState(WRITING_RESPONSE);
+                    }
 
                         close(_fds[i].fd);
                         _fds[i].fd = -1;
-
-                        close(triggered_fd);
-
                         _fdRegistry.erase(triggered_fd);
                         _cgiProcesses.erase(triggered_fd);
 
-                        std::cout << "CGI responseFd: "
-                            << cgi.responseFd
-                            << std::endl;
+                        activeClient.setState(WRITING_RESPONSE);
 
-                        close(cgi.responseFd);
+                   
 
-                        // close(originalClientFd);
-                        // _clients.erase(originalClientFd);
-
-                        // for (int k = 0; k < MAX_FDS; k++)
-                        // {
-                        //     if (_fds[k].fd == originalClientFd)
-                        //     {
-                        //         _fds[k].fd = -1;
-                        //         break;
-                        //     }
-                        // }
-                        break;
+                    for (int k = 0; k < MAX_FDS; k++)
+                    {
+                        if (_fds[k].fd == originalClientFd)
+                        {
+                            _fds[k].events = POLLOUT;
+                            break;
+                        }
                     }
                 case CGI_IO_ERROR:
                     {
@@ -569,7 +566,15 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             if (bytesSent > 0) {
                 buffer.erase(0, bytesSent); 
             }
-        }
+            else if (bytesSent < 0) 
+            {
+                // FATAL ERROR: The client disconnected during the write!
+                // You MUST clear the buffer completely and set the activeClient state to ERROR here.
+                // This breaks the loop and allows the server to clean up the dead client.
+                std::cout << "fatal error" << std::endl;
+            }
+            }
+        
 
         // reset when fully finished
         std::cout << "is streaming: " << activeClient.getResponse().isStreaming() << std::endl;
