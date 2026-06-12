@@ -218,13 +218,12 @@ void    returnPage(Client& activeClient)
             filepath = "var/www/errorpages/default.html";
             break;
     }
-    std::string response;
 
     if (!autoindexbody.empty())
     {
         std::string body = autoindexbody;
 
-        response =
+        std::string response =
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html\r\n"
             "Content-Length: " + std::to_string(body.size()) + "\r\n"
