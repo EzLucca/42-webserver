@@ -1,4 +1,5 @@
 #include "getMethod.hpp"
+#include <filesystem>
 
 bool    validateMethod(const RouteConfig *routeLocation, std::string method)
 {
@@ -40,7 +41,7 @@ std::string createResponse(Client& activeClient, std::string filepath)
         activeClient.getResponse().setStatusCode(404);
         //why we call returnpage here? loop danger???
         //returnPage(activeClient);
-        activeClient.setState(FINISHED);
+        activeClient.setState(ERROR);
         return filepath;
     }
     // this is the ram killer
@@ -66,13 +67,11 @@ std::string createResponse(Client& activeClient, std::string filepath)
 void    returnErrorPage(Client& activeClient) 
 {
     std::string filepath;
-    std::string statusCode;
     std::string response;
 
     std::string uriRequest = activeClient.getRequest().getUri();
     std::cout << "URI from inside returnErrorPage: " << uriRequest << std::endl; 
     std::cout << "ERROR STATUS CODE: " << activeClient.getResponse().getStatusCode() << std::endl;
-    statusCode = activeClient.getResponse().getStatusCode();
 
     const ServerConfig *config = activeClient.getConfig();
     int code = activeClient.getResponse().getStatusCode();
@@ -81,8 +80,71 @@ void    returnErrorPage(Client& activeClient)
 
     response = createResponse(activeClient, filepath);
 
+    activeClient.getResponse().setResponseBuffer(response);
+    activeClient.setState(WRITING_RESPONSE);
     // this direct write needs to be deleted
-    write(activeClient.getFd(), response.c_str(), response.size());
+    // write(activeClient.getFd(), response.c_str(), response.size());
+}
+
+static std::string html_escape(const std::string &s)
+{
+    std::string out;
+    out.reserve(s.size());
+
+    for (char c : s)
+    {
+        switch (c)
+        {
+            case '&': out += "&amp;"; break;
+            case '<': out += "&lt;"; break;
+            case '>': out += "&gt;"; break;
+            case '"': out += "&quot;"; break;
+            default: out += c;
+        }
+    }
+    return out;
+}
+
+std::string generateAutoindex(std::string filepath, std::string uriRequest)
+{
+    std::ostringstream html;
+
+    html << "<html><head><title>Index of " << uriRequest << "</title></head>";
+    html << "<body><h1>Index of " << uriRequest << "</h1><ul>";
+
+    try
+    {
+        for (const auto &entry : std::filesystem::directory_iterator(filepath))
+        {
+            std::string name = entry.path().filename().string();
+
+            // Optional: skip hidden files
+            if (name == "." || name == "..")
+                continue;
+
+            std::string display_name = html_escape(name);
+            std::string link = uriRequest;
+
+            if (link.back() != '/')
+                link += '/';
+
+            link += name;
+
+            if (std::filesystem::is_directory(entry.path()))
+                display_name += "/";
+
+            html << "<li><a href=\"" << link << "\">"
+                << display_name << "</a></li>";
+        }
+    }
+    catch (const std::exception &e)
+    {
+        return "<html><body><h1>403 Forbidden</h1></body></html>";
+    }
+
+    html << "</ul></body></html>";
+
+    return html.str();
 }
 
 void    returnPage(Client& activeClient) 
@@ -93,7 +155,7 @@ void    returnPage(Client& activeClient)
     std::string filename = activeClient.getRequest().getFilename();
     std::cout << "FILENAME: " << filename << std::endl;
     const ServerConfig *config = activeClient.getConfig();
-
+    std::string autoindexbody;
     // MUST RETURN AFTER ERROR! 
     // if we fail here, stop the entire function immediately.
     if (activeClient.getResponse().getStatusCode() != 200)
@@ -108,7 +170,7 @@ void    returnPage(Client& activeClient)
             {
                 // was using hete uri, when we should use key, this was previously returning null with the uri
                 const RouteConfig *route = config->getRoute(locationKey); 
-                
+
                 // safely handle missing routes FIRST
                 if (route == NULL)
                 {
@@ -117,28 +179,28 @@ void    returnPage(Client& activeClient)
                 }
 
                 //  validate methods
-                if(!validateMethod(route, activeClient.getRequest().getMethod()))
-                {
-                    activeClient.getResponse().setStatusCode(405);
-                    returnPage(activeClient);
-                    activeClient.setState(FINISHED);
-                    return;
-                }
+                // if(!validateMethod(route, activeClient.getRequest().getMethod()))
+                // {
+                //     activeClient.getResponse().setStatusCode(405);
+                //     returnPage(activeClient);
+                //     activeClient.setState(FINISHED);
+                //     return;
+                // }
 
                 //  NOW it is safe to touch the route's internals!
                 std::string root = route->vectorRoute.at("root").at(0); 
 
-                // determine what exactly they are asking for (directory or file?)
                 if (filename.empty() || filename == "/")
                 {
                     // they want the directory. safely check if an 'index' rule exists!
                     std::unordered_map<std::string, std::vector<std::string> >::const_iterator it = route->vectorRoute.find("index");
-                    
+
                     if (it != route->vectorRoute.end()) {
                         filepath = root + "/" + it->second.at(0);
-                    } else {
-                        // no index found in config, might trigger 403 or autoindex later
-                        filepath = root + "/"; 
+                    } else 
+                    {
+                        autoindexbody = generateAutoindex(root, uriRequest);
+                        std::cout << "autoindex build" << std::endl;
                     }
                 } 
                 else 
@@ -156,6 +218,30 @@ void    returnPage(Client& activeClient)
             filepath = "var/www/errorpages/default.html";
             break;
     }
+
+    if (!autoindexbody.empty())
+    {
+        std::string body = autoindexbody;
+
+        std::string response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "Content-Length: " + std::to_string(body.size()) + "\r\n"
+            "\r\n" +
+            body;
+
+        std::cout << "Response autoindex build" << std::endl;
+        activeClient.getResponse().setResponseBuffer(response);
+        activeClient.setState(WRITING_RESPONSE);
+
+        return ;
+    }
+    // else
+    //     response = createResponse(activeClient, filepath);
+
+
+
+    // Warning: Direct write() is blocking. We will move this to POLLOUT later!
     //preparing for filestreaming
     activeClient.getResponse().prepareFileStream(filepath, activeClient);
     activeClient.setState(WRITING_RESPONSE);

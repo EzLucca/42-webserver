@@ -306,8 +306,8 @@ void HttpParser::parse(Client& client)
 
             // WE ARE SETTING THE STATE OF READIING BODY ONLY if we have headers like "Content length" and or "Transfer-Encoding chunked."
             HttpRequest request = client.getRequest();
-            request.printHeaders();
-            std::cout << "contentlength: " << request.getContentLength() << std::endl;
+            // request.printHeaders();
+            // std::cout << "contentlength: " << request.getContentLength() << std::endl;
 
             if (request.getIsChunked())
             {

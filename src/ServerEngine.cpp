@@ -8,12 +8,10 @@
 #include <netinet/in.h>
 #include "getMethod.hpp"
 
-ServerEngine::ServerEngine(const ServerManager& manager,
-                           struct pollfd fds[],
-                           std::map<int, const ServerConfig*>& masterSocketRegistry)
-: _manager(manager),
- _masterSocketRegistry(masterSocketRegistry),
-  _httpParser()
+ServerEngine::ServerEngine(struct pollfd fds[],
+        std::map<int, const ServerConfig*>& masterSocketRegistry)
+    : _masterSocketRegistry(masterSocketRegistry),
+    _httpParser()
 {
     for (int i = 0; i < MAX_FDS; ++i)
     {
@@ -205,7 +203,6 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
         {
             CgiProcess &cgi = cgiIt->second;
             activeClient.getResponse().CgiReadResponse(cgi, activeClient);
-            std::cout << "It is stuck here7" << std::endl;
 
             switch (activeClient.getState())
             {
@@ -214,8 +211,9 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                     break;
 
                 case CGI_IO_DONE:
-                    activeClient.getRequest().cleanupBodyFile();
-                    activeClient.getResponse().setResponseBody(cgi.output);
+                    {
+                        activeClient.getRequest().cleanupBodyFile();
+                        activeClient.getResponse().setResponseBody(cgi.output);
 
                     {
                     size_t headerEnd = cgi.output.find("\r\n\r\n");
@@ -242,24 +240,15 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                     
                         std::string final_response =
                             "HTTP/1.1 200 OK\r\n" + cgi.output;
-
                         activeClient.getResponse().setResponseBuffer(final_response);
                     }
 
-                    close(_fds[i].fd);
-                    _fds[i].fd = -1;
+                        close(_fds[i].fd);
+                        _fds[i].fd = -1;
+                        _fdRegistry.erase(triggered_fd);
+                        _cgiProcesses.erase(triggered_fd);
 
-                    _fdRegistry.erase(triggered_fd);
-                    _cgiProcesses.erase(triggered_fd);
-
-                    std::cout << "CGI responseFd: "
-                        << cgi.responseFd
-                        << std::endl;
-
-                    close(cgi.responseFd);
-
-
-                    activeClient.setState(WRITING_RESPONSE);
+                        activeClient.setState(WRITING_RESPONSE);
 
                    
 
@@ -271,21 +260,20 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                             break;
                         }
                     }
-                    break;
-
                 case CGI_IO_ERROR:
-                    activeClient.getRequest().cleanupBodyFile();
-                    std::cerr << "CGI Error encountered."
-                        << std::endl;
+                    {
+                        activeClient.getRequest().cleanupBodyFile();
+                        std::cerr << "CGI Error encountered."
+                            << std::endl;
 
-                    close(_fds[i].fd);
-                    _fds[i].fd = -1;
+                        close(_fds[i].fd);
+                        _fds[i].fd = -1;
 
-                    _fdRegistry.erase(triggered_fd);
-                    _cgiProcesses.erase(triggered_fd);
-                    _clients.erase(originalClientFd);
-                    break;
-
+                        _fdRegistry.erase(triggered_fd);
+                        _cgiProcesses.erase(triggered_fd);
+                        _clients.erase(originalClientFd);
+                        break;
+                    }
                 default:
                     return;
             }
@@ -303,246 +291,247 @@ void ServerEngine::handleClientFd(int i, int currentFd)
     if (_fds[i].revents & POLLIN)
     {
 
-    char shovelBuffer[8192] = {0}; // intializing buffer with zeros
+        char shovelBuffer[8192] = {0}; // intializing buffer with zeros
 
-    int valRead = read(_fds[i].fd, shovelBuffer, sizeof(shovelBuffer));
+        int valRead = read(_fds[i].fd, shovelBuffer, sizeof(shovelBuffer));
 
-    if (valRead <= 0)
-    {
-        // MORE CLEANING HERE 
-        close(_fds[i].fd);
-        _fds[i].fd = -1;
-        _clients.erase(currentFd);
-        std::cerr << "Connection dropped out or unidentified error occured."
-            << std::endl;
-        return;
-    }
-
-    activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
-    activeClient.updateLastActivity();
-
-    try
-    {
-        _httpParser.parse(activeClient);
-    }
-    catch (const HttpException &e)
-    {
-        activeClient.setState(ERROR);
-        std::cout << e.getStatusCode() << " <--- statuscode." << std::endl;
-        activeClient.getResponse().setStatusCode(e.getStatusCode());
-        activeClient.getResponse().setStatusMessage(e.getStatusMessage());
-    }
-
-    if (activeClient.getState() == PROCESSING)
-    {
-
-        std::string filename = activeClient.getRequest().getFilename();
-        std::string currentMethod = activeClient.getRequest().getMethod();
-        std::cout << filename << " name script" << std::endl;
-        bool isCgi = false;
-
-        const ServerConfig *config = activeClient.getConfig();
-        const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
-        std::cout << "status after validate " << activeClient.getResponse().getStatusCode() << std::endl;
-
-        if (route != NULL)
+        if (valRead <= 0)
         {
-            bool methodAllowed = false;
-            std::unordered_map<std::string, std::vector<std::string>>::const_iterator methodIt = route->vectorRoute.find("allowed_methods");
+            // MORE CLEANING HERE 
+            close(_fds[i].fd);
+            _fds[i].fd = -1;
+            _clients.erase(currentFd);
+            std::cerr << "Connection dropped out or unidentified error occured."
+                << std::endl;
+            return;
+        }
 
-            if (methodIt != route->vectorRoute.end())
+        activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
+        activeClient.updateLastActivity();
+
+        try
+        {
+            _httpParser.parse(activeClient);
+        }
+        catch (const HttpException &e)
+        {
+            activeClient.setState(ERROR);
+            std::cout << e.getStatusCode() << " <--- statuscode." << std::endl;
+            activeClient.getResponse().setStatusCode(e.getStatusCode());
+            activeClient.getResponse().setStatusMessage(e.getStatusMessage());
+        }
+
+        if (activeClient.getState() == PROCESSING)
+        {
+
+            std::string filename = activeClient.getRequest().getFilename();
+            std::string currentMethod = activeClient.getRequest().getMethod();
+            std::cout << filename << " name script" << std::endl;
+            bool isCgi = false;
+
+            const ServerConfig *config = activeClient.getConfig();
+            const RouteConfig *route = config->getRoute(activeClient.getRequest().getLocationKey());
+            std::cout << "status after validate " << activeClient.getResponse().getStatusCode() << std::endl;
+
+            if (route != NULL)
             {
-                const std::vector<std::string>& allowedList = methodIt->second;
-                for (size_t k = 0; k < allowedList.size(); ++k)
+                bool methodAllowed = false;
+                std::unordered_map<std::string, std::vector<std::string>>::const_iterator methodIt = route->vectorRoute.find("allowed_methods");
+
+                if (methodIt != route->vectorRoute.end())
                 {
-                    if (allowedList[k] == currentMethod)
+                    const std::vector<std::string>& allowedList = methodIt->second;
+                    for (size_t k = 0; k < allowedList.size(); ++k)
                     {
-                        methodAllowed = true;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                if (currentMethod == "GET") {
-                    methodAllowed = true;
-                }
-            }
-
-            if (!methodAllowed)
-            {
-                activeClient.getResponse().setStatusCode(405);
-                activeClient.getResponse().setStatusMessage("Method no allowed");
-                activeClient.setState(ERROR);
-            }
-
-            std::unordered_map<std::string, std::vector<std::string>>::const_iterator it2 = route->vectorRoute.find("cgi_pass");
-
-            if (it2 != route->vectorRoute.end() && endsWith(filename, ".py"))
-            {
-                isCgi = true;
-            }
-
-    if (activeClient.getRequest().getMethod() == "POST")
-    {
-    std::string contentType = activeClient.getRequest().getHeaders()["content-type"];
-    
-    //if its not html form, it must be raw file
-    if (contentType.find("multipart/form-data") == std::string::npos &&
-        contentType.find("application/x-www-form-urlencoded") == std::string::npos)
-    {
-        std::string tempPath = activeClient.getRequest().getBodyFilePath();
-        
-        // keep file name if provided
-        std::string filename = activeClient.getRequest().getFilename();
-        if (filename.empty() || filename == "/") {
-            // Fallback if they didn't specify a filename
-            filename = "dumped_file_" + std::to_string(time(NULL)); 
-        }
-        
-        std::string finalPath = "var/www/uploads/" + filename; 
-        
-        std::cout << ">>> RAW UPLOAD DETECTED (" << contentType << "): Bypassing CGI! <<<" << std::endl;
-        
-        // Move the file!
-        if (rename(tempPath.c_str(), finalPath.c_str()) == 0)
-        {
-            std::cout << "SUCCESS! File explicitly saved to: " << finalPath << std::endl;
-            activeClient.getRequest().setBodyFilePath("not-set"); 
-            
-            activeClient.getResponse().setStatusCode(201);
-            activeClient.getResponse().setStatusMessage("Created");
-            activeClient.getResponse().setResponseBody("File dumped perfectly via C++!");
-            activeClient.getResponse().buildRawResponse();
-            
-            _fds[i].events = POLLOUT;
-            activeClient.setState(WRITING_RESPONSE);
-            
-        }
-    }
-    else 
-    {
-        // it IS an HTML form! Let the Python script unpack it.
-        std::unordered_map<std::string, std::vector<std::string>>::const_iterator uploadIt = route->vectorRoute.find("upload_enable");
-
-        if (uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] == "on")
-        {
-            isCgi = true;
-            activeClient.getRequest().setFilename("var/cgi/cgi-bin/betterUpload.py");
-            std::cout << "HIJACK ACTIVATED: Routing HTML Form POST to CGI script!" << std::endl;
-        }
-    }
-}
-        }
-
-        if (activeClient.getRequest().getMethod() == "DELETE")
-        {
-            activeClient.getRequest().handleDeleteRequest(activeClient);
-            activeClient.getRequest().cleanupBodyFile();
-            activeClient.getResponse().setStatusCode(204);
-            activeClient.getResponse().setStatusMessage("No Content");
-            activeClient.getResponse().setResponseBody(""); // 204 has no body!
-
-            activeClient.getResponse().buildRawResponse();
-            _fds[i].events = POLLOUT;
-            
-            activeClient.setState(WRITING_RESPONSE);
-        }
-        else if (isCgi)
-        {
-            std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
-            activeClient.setState(CGI_CALL);
-        }
-        else
-        {
-            try {
-                std::cout << "Static file request. Calling returnPage." << std::endl;
-                returnPage(activeClient);
-                //if return page succeeds, set pollout on
-                if (activeClient.getState() == WRITING_RESPONSE)
-                {
-                    _fds[i].events = POLLOUT;
-                }
-            } catch (const std::exception &e)
-            {
-                std::cerr << "Error: " << e.what() << std::endl;
-                activeClient.setState(ERROR);
-                std::cout << activeClient.getState() << std::endl;
-                std::cout << "Client fd: " << activeClient.getFd()
-                    << " marked ERROR"
-                    << std::endl;
-            }
-       
-        }
-
-        std::cout << "test" << activeClient.getState() << std::endl;
-        if (activeClient.getState() == CGI_CALL)
-        {
-            std::cout << "\n[DEBUG CGI PRE-FLIGHT CHECK]" << std::endl;
-            std::cout << "Original URI: " << activeClient.getRequest().getUri() << std::endl;
-            std::cout << "Target Script: " << activeClient.getRequest().getFilename() << std::endl;
-            std::cout << "----------------------------\n" << std::endl;
-            try {
-                CgiHandler CgiObject(activeClient);
-                CgiProcess cgi = CgiObject.CgiStart(activeClient.getRequest());
-
-                bool added = false;
-                if (cgi.valid == true)
-                {
-                    for (int j = 0; j < MAX_FDS; j++)
-                    {
-                        if (_fds[j].fd == -1)
+                        if (allowedList[k] == currentMethod)
                         {
-                            _fds[j].fd = cgi.responseFd;
-                            _fds[j].events = POLLIN | POLLHUP;
-                            added = true;
-                            _fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
-                            _cgiProcesses.insert(std::make_pair(_fds[j].fd, cgi));
+                            methodAllowed = true;
                             break;
                         }
                     }
-                    if (!added)
-                    {
-                        std::cerr << "Server full, rejecting CGI process." << std::endl;
-                        close(cgi.responseFd);
+                }
+                else
+                {
+                    if (currentMethod == "GET") {
+                        methodAllowed = true;
                     }
                 }
-            } catch (const std::exception &e)
-            {
-                std::cerr << "Error: " << e.what() << std::endl;
-                activeClient.setState(ERROR);
-                std::cout << activeClient.getState() << std::endl;
-                std::cout << "Client fd: " << activeClient.getFd()
-                    << " marked ERROR"
-                    << std::endl;
-            }
-        }
-    }
 
-    std::cout << "2test " << activeClient.getState() << std::endl;
-    if (activeClient.getState() == ERROR || activeClient.getState() == FINISHED)
-    {
-        if (activeClient.getState() == ERROR)
-        {
-            try {
-                std::cout << "Returning page from error block" << std::endl;
-                returnErrorPage(activeClient);
-            } catch (const std::exception &e)
+                if (!methodAllowed)
+                {
+                    activeClient.getResponse().setStatusCode(405);
+                    activeClient.getResponse().setStatusMessage("Method no allowed");
+                    activeClient.setState(ERROR);
+                }
+
+                std::unordered_map<std::string, std::vector<std::string>>::const_iterator it2 = route->vectorRoute.find("cgi_pass");
+
+                if (it2 != route->vectorRoute.end() && endsWith(filename, ".py"))
+                {
+                    isCgi = true;
+                }
+
+                if (activeClient.getRequest().getMethod() == "POST")
+                {
+                    std::string contentType = activeClient.getRequest().getHeaders()["content-type"];
+
+                    //if its not html form, it must be raw file
+                    if (contentType.find("multipart/form-data") == std::string::npos &&
+                            contentType.find("application/x-www-form-urlencoded") == std::string::npos)
+                    {
+                        std::string tempPath = activeClient.getRequest().getBodyFilePath();
+
+                        // keep file name if provided
+                        std::string filename = activeClient.getRequest().getFilename();
+                        if (filename.empty() || filename == "/") {
+                            // Fallback if they didn't specify a filename
+                            filename = "dumped_file_" + std::to_string(time(NULL)); 
+                        }
+
+                        std::string finalPath = "var/www/uploads/" + filename; 
+
+                        std::cout << ">>> RAW UPLOAD DETECTED (" << contentType << "): Bypassing CGI! <<<" << std::endl;
+
+                        // Move the file!
+                        if (rename(tempPath.c_str(), finalPath.c_str()) == 0)
+                        {
+                            std::cout << "SUCCESS! File explicitly saved to: " << finalPath << std::endl;
+                            activeClient.getRequest().setBodyFilePath("not-set"); 
+
+                            activeClient.getResponse().setStatusCode(201);
+                            activeClient.getResponse().setStatusMessage("Created");
+                            activeClient.getResponse().setResponseBody("File dumped perfectly via C++!");
+                            activeClient.getResponse().buildRawResponse();
+
+                            _fds[i].events = POLLOUT;
+                            activeClient.setState(WRITING_RESPONSE);
+
+                        }
+                    }
+                    else 
+                    {
+                        // it IS an HTML form! Let the Python script unpack it.
+                        std::unordered_map<std::string, std::vector<std::string>>::const_iterator uploadIt = route->vectorRoute.find("upload_enable");
+
+                        if (uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] == "on")
+                        {
+                            isCgi = true;
+                            activeClient.getRequest().setFilename("var/cgi/cgi-bin/betterUpload.py");
+                            std::cout << "HIJACK ACTIVATED: Routing HTML Form POST to CGI script!" << std::endl;
+                        }
+                    }
+                }
+            }
+
+            if (activeClient.getRequest().getMethod() == "DELETE")
             {
-                std::cerr << "Error: " << e.what() << std::endl;
+                activeClient.getRequest().handleDeleteRequest(activeClient);
+                activeClient.getRequest().cleanupBodyFile();
+                activeClient.getResponse().setStatusCode(204);
+                activeClient.getResponse().setStatusMessage("No Content");
+                activeClient.getResponse().setResponseBody(""); // 204 has no body!
+
+                activeClient.getResponse().buildRawResponse();
+                _fds[i].events = POLLOUT;
+
+                activeClient.setState(WRITING_RESPONSE);
+            }
+            else if (isCgi)
+            {
+                std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
+                activeClient.setState(CGI_CALL);
+            }
+            else
+            {
+                try {
+                    std::cout << "Static file request. Calling returnPage." << std::endl;
+                    returnPage(activeClient);
+                    //if return page succeeds, set pollout on
+                    if (activeClient.getState() == WRITING_RESPONSE)
+                    {
+                        _fds[i].events = POLLOUT;
+                    }
+                } catch (const std::exception &e)
+                {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                    activeClient.setState(ERROR);
+                    std::cout << activeClient.getState() << std::endl;
+                    std::cout << "Client fd: " << activeClient.getFd()
+                        << " marked ERROR"
+                        << std::endl;
+                }
+
+            }
+
+            std::cout << "test" << activeClient.getState() << std::endl;
+            if (activeClient.getState() == CGI_CALL)
+            {
+                std::cout << "\n[DEBUG CGI PRE-FLIGHT CHECK]" << std::endl;
+                std::cout << "Original URI: " << activeClient.getRequest().getUri() << std::endl;
+                std::cout << "Target Script: " << activeClient.getRequest().getFilename() << std::endl;
+                std::cout << "----------------------------\n" << std::endl;
+                try {
+                    CgiHandler CgiObject(activeClient);
+                    CgiProcess cgi = CgiObject.CgiStart(activeClient.getRequest());
+
+                    bool added = false;
+                    if (cgi.valid == true)
+                    {
+                        for (int j = 0; j < MAX_FDS; j++)
+                        {
+                            if (_fds[j].fd == -1)
+                            {
+                                _fds[j].fd = cgi.responseFd;
+                                _fds[j].events = POLLIN | POLLHUP;
+                                added = true;
+                                _fdRegistry.insert(std::make_pair(cgi.responseFd, activeClient.getFd()));
+                                _cgiProcesses.insert(std::make_pair(_fds[j].fd, cgi));
+                                break;
+                            }
+                        }
+                        if (!added)
+                        {
+                            std::cerr << "Server full, rejecting CGI process." << std::endl;
+                            close(cgi.responseFd);
+                        }
+                    }
+                } catch (const std::exception &e)
+                {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                    activeClient.setState(ERROR);
+                    std::cout << activeClient.getState() << std::endl;
+                    std::cout << "Client fd: " << activeClient.getFd()
+                        << " marked ERROR"
+                        << std::endl;
+                }
             }
         }
-        activeClient.getRequest().cleanupBodyFile();
-        _clients.erase(currentFd);
-        close(_fds[i].fd);
-        _fds[i].fd = -1;
+
+        std::cout << "2test " << activeClient.getState() << std::endl;
+        if (activeClient.getState() == ERROR || activeClient.getState() == FINISHED)
+        {
+            if (activeClient.getState() == ERROR)
+            {
+                try {
+                    std::cout << "Returning page from error block" << std::endl;
+                    returnErrorPage(activeClient);
+                } catch (const std::exception &e)
+                {
+                    std::cerr << "Error: " << e.what() << std::endl;
+                }
+            }
+            std::cout << "process is finished" << std::endl;
+            activeClient.getRequest().cleanupBodyFile();
+            _clients.erase(currentFd);
+            close(_fds[i].fd);
+            _fds[i].fd = -1;
+        }
     }
-}
-   if (_fds[i].revents & POLLOUT)
+    if (_fds[i].revents & POLLOUT)
     {
-      std::string& buffer = activeClient.getResponse().getBuffer();
-      //std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
-             // << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
+        std::string& buffer = activeClient.getResponse().getBuffer();
+        std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
+            << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
 
         // pump data 
         if (buffer.empty() && activeClient.getResponse().isStreaming())
@@ -550,13 +539,13 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             char chunk[8192];
             int fd = activeClient.getResponse().getFileFd();
 
-            
+
             // read from fd
             ssize_t bytesRead = read(fd, chunk, sizeof(chunk));
-            
+
             if (bytesRead > 0)
             {
-        
+
                 buffer.append(chunk, bytesRead);
             }
             else if (bytesRead == 0)
@@ -573,7 +562,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         {
             // FIXED: Using currentFd instead of triggered_fd
             ssize_t bytesSent = write(currentFd, buffer.c_str(), buffer.size());
-            
+
             if (bytesSent > 0) {
                 buffer.erase(0, bytesSent); 
             }
@@ -588,13 +577,14 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         
 
         // reset when fully finished
+        std::cout << "is streaming: " << activeClient.getResponse().isStreaming() << std::endl;
         if (buffer.empty() && !activeClient.getResponse().isStreaming())
         {
-            //std::cout << "DEBUG: Streaming complete. Finishing client." << std::endl;
+            std::cout << "DEBUG: Streaming complete. Finishing client." << std::endl;
             activeClient.setState(FINISHED);
             _fds[i].events = POLLIN; 
         }
-}
+    }
 }
 
 void ServerEngine::run()

@@ -217,3 +217,8 @@ void    HttpResponse::setStreamingFlag(bool state)
 {
     _isStreamingFile = state;
 }
+
+void	HttpResponse::setResponseBuffer(std::string response)
+{
+    _responseBuffer = response;
+}
