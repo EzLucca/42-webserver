@@ -25,6 +25,7 @@ class HttpRequest
             std::string                         _bodyFilePath;
             size_t                              _bytesWritten;
             bool                                _keepAlive;
+            bool                                _hasAutoindex;
 
     public:
             HttpRequest();
@@ -49,7 +50,8 @@ class HttpRequest
             void	setUriPath(std::string uriPath);
             void	setFilename(std::string filename);
             void	setLocation(std::string location);
-
+            void    setAutoindex(bool autoindex);
+            bool    getAutoindex();
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
             size_t                              getContentLength();
