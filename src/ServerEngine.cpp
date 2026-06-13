@@ -238,7 +238,6 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                         _fds[i].fd = -1;
                         _fdRegistry.erase(triggered_fd);
                         _cgiProcesses.erase(triggered_fd);
-
                         activeClient.setState(WRITING_RESPONSE);
 
                     }
@@ -366,6 +365,18 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
                 if (activeClient.getRequest().getMethod() == "POST")
                 {
+                    std::string targetDir = "";
+                    std::unordered_map<std::string, std::vector<std::string>>::const_iterator rootIt = route->vectorRoute.find("root");
+
+                    if (rootIt != route->vectorRoute.end() && !rootIt->second.empty())
+                    {
+                        targetDir = rootIt->second[0]; 
+                    }
+                    else
+                    {
+                        targetDir = "var/www/uploads"; 
+                        std::cout << "Warning: No root found in config for upload, using fallback." << std::endl;
+                    }
                     std::string contentType = activeClient.getRequest().getHeaders()["content-type"];
 
                     //if its not html form, it must be raw file
@@ -381,7 +392,8 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                             filename = "dumped_file_" + std::to_string(time(NULL)); 
                         }
 
-                        std::string finalPath = "var/www/uploads/" + filename; 
+                        std::string finalPath = targetDir + "/" + filename; 
+                        std::cout << "FINAL PATH: " << finalPath << std::endl; 
 
                         std::cout << ">>> RAW UPLOAD DETECTED (" << contentType << "): Bypassing CGI! <<<" << std::endl;
 
@@ -434,7 +446,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                 std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
                 activeClient.setState(CGI_CALL);
             }
-            else
+            else if (activeClient.getState() == PROCESSING)
             {
                 try {
                     std::cout << "Static file request. Calling returnPage." << std::endl;

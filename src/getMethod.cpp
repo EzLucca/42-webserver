@@ -236,12 +236,7 @@ void    returnPage(Client& activeClient)
 
         return ;
     }
-    // else
-    //     response = createResponse(activeClient, filepath);
-
-
-
-    // Warning: Direct write() is blocking. We will move this to POLLOUT later!
+    
     //preparing for filestreaming
     activeClient.getResponse().prepareFileStream(filepath, activeClient);
     activeClient.setState(WRITING_RESPONSE);

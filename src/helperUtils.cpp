@@ -104,3 +104,4 @@ bool endsWith(const std::string& fullString, const std::string& ending)
     }
     return false;
 }
+
