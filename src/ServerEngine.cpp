@@ -412,6 +412,15 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                             activeClient.setState(WRITING_RESPONSE);
 
                         }
+                        else
+                        {
+                            //if rename fails
+                            std::cerr << "FATAL: rename() failed! Error: " << strerror(errno) << std::endl;
+
+                            activeClient.getResponse().setStatusCode(500);
+                            activeClient.getResponse().setStatusMessage("Internal Server Error");
+                            activeClient.setState(ERROR);
+                        }
                     }
                     else 
                     {
