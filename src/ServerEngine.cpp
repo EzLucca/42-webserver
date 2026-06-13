@@ -500,25 +500,36 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             }
         }
 
-        if (activeClient.getState() == ERROR || activeClient.getState() == FINISHED)
+        if (activeClient.getState() == ERROR)
         {
-            if (activeClient.getState() == ERROR)
-            {
-                try {
-                    std::cout << "Returning page from error block" << std::endl;
-                    returnErrorPage(activeClient);
-                } catch (const std::exception &e)
+            try {
+                std::cout << "Returning page from error block" << std::endl;
+                returnErrorPage(activeClient); 
+                
+                if (activeClient.getState() == WRITING_RESPONSE)
                 {
-                    std::cerr << "Error: " << e.what() << std::endl;
+                    _fds[i].events = POLLOUT;
                 }
+            } 
+            catch (const std::exception &e)
+            {
+                std::cerr << "Fatal Error building error page: " << e.what() << std::endl;
+                activeClient.setState(FINISHED);
             }
-            std::cout << "process is finished" << std::endl;
+        }
+        if (activeClient.getState() == FINISHED)
+        {
+            std::cout << "Process is finished. Dropping connection." << std::endl;
+            
+            // Siivotaan roskat ja tuhotaan fd
             activeClient.getRequest().cleanupBodyFile();
             _clients.erase(currentFd);
             close(_fds[i].fd);
             _fds[i].fd = -1;
+            return ;
         }
     }
+
     if (_fds[i].revents & POLLOUT)
     {
         std::string& buffer = activeClient.getResponse().getBuffer();
@@ -560,10 +571,11 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             }
             else if (bytesSent < 0) 
             {
-                // FATAL ERROR: The client disconnected during the write!
-                // You MUST clear the buffer completely and set the activeClient state to ERROR here.
-                // This breaks the loop and allows the server to clean up the dead client.
+            
                 std::cout << "fatal error" << std::endl;
+                _clients.erase(currentFd);
+                close(_fds[i].fd);
+                _fds[i].fd = -1; 
             }
             }
         // reset when fully finished
