@@ -459,7 +459,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                 } catch (const std::exception &e)
                 {
                     std::cerr << "Error: " << e.what() << std::endl;
-                    activeClient.setState(ERROR);
+                    activeClient.setState(ERROR);   
                     std::cout << activeClient.getState() << std::endl;
                     std::cout << "Client fd: " << activeClient.getFd()
                         << " marked ERROR"
@@ -533,7 +533,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
         {
             std::cout << "Process is finished. Dropping connection." << std::endl;
             
-            // Siivotaan roskat ja tuhotaan fd
+            
             activeClient.getRequest().cleanupBodyFile();
             _clients.erase(currentFd);
             close(_fds[i].fd);

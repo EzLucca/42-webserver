@@ -266,7 +266,7 @@ void    HttpRequest::setupPathKeys(Client &activeClient)
 
     if (getFilename() != "")
     {
-        setFilename(objstring.substr(finalpos + 1));
+        setFilename(objstring.substr(finalpos));
     }
 
     std::cout << getUriPath() << std::endl;
