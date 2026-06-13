@@ -31,7 +31,7 @@ class HttpRequest
             HttpRequest();
             ~HttpRequest();
 
-            //setters
+
             void	setMethod(std::string method);
             void	setUri(std::string uri);
             void	setVersion(std::string version);
@@ -43,15 +43,14 @@ class HttpRequest
             void	setCurrentChunkSize(std::string chunkLine);
             void	setFullChunkBodySize(size_t amount);
             void	printHeaders();
-            //void printBody();
             void	setBodyFilePath(std::string setBodyFilePath);
             void	setKeepAlive(bool keepAlive);
             void	setQueryString(void);
             void	setUriPath(std::string uriPath);
             void	setFilename(std::string filename);
             void	setLocation(std::string location);
-            void    setAutoindex(bool autoindex);
-            bool    getAutoindex();
+            void        setAutoindex(bool autoindex);
+            bool        getAutoindex();
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
             size_t                              getContentLength();

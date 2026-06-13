@@ -229,15 +229,6 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                        
                         cgi.output.insert(headerEnd + 2, contentLengthHeader);
                     }
-
-                    std::cout
-                        << "\n--- CGI SCRIPT FINISHED! OUTPUT: ---\n"
-                        << "CGI OUTPUT: "
-                        << cgi.output
-                        << std::endl
-                        << "\n------------------------------------\n";
-
-                    
                         std::string final_response =
                             "HTTP/1.1 200 OK\r\n" + cgi.output;
                         activeClient.getResponse().setResponseBuffer(final_response);
@@ -509,7 +500,6 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             }
         }
 
-        std::cout << "2test " << activeClient.getState() << std::endl;
         if (activeClient.getState() == ERROR || activeClient.getState() == FINISHED)
         {
             if (activeClient.getState() == ERROR)
@@ -532,8 +522,8 @@ void ServerEngine::handleClientFd(int i, int currentFd)
     if (_fds[i].revents & POLLOUT)
     {
         std::string& buffer = activeClient.getResponse().getBuffer();
-        std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
-            << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
+        //std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
+          //  << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
 
         // pump data 
         if (buffer.empty() && activeClient.getResponse().isStreaming())
@@ -576,15 +566,24 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                 std::cout << "fatal error" << std::endl;
             }
             }
-        
-
         // reset when fully finished
-        std::cout << "is streaming: " << activeClient.getResponse().isStreaming() << std::endl;
+        //std::cout << "is streaming: " << activeClient.getResponse().isStreaming() << std::endl;
         if (buffer.empty() && !activeClient.getResponse().isStreaming())
         {
-            std::cout << "DEBUG: Streaming complete. Finishing client." << std::endl;
-            activeClient.setState(FINISHED);
+
+            if (activeClient.getRequest().getKeepAlive() == false)
+            {
+                std::cout << "DEBUG: Streaming complete. closing connection" << std::endl;
+                _clients.erase(currentFd);
+                close(_fds[i].fd);
+                _fds[i].fd = -1; 
+            }
+            else
+            {
+            std::cout << "DEBUG: Streaming complete. Resetting client" << std::endl;
+            activeClient.resetForNextRequest();
             _fds[i].events = POLLIN; 
+            }
         }
     }
 }

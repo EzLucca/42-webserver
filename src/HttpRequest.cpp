@@ -128,21 +128,13 @@ void HttpRequest::printHeaders()
 
     for (it = _headers.begin(); it != _headers.end(); ++it) 
     {
-        //first is header (key)
-        //second is the value
 
         std::cout << "Header: [" << it->first << "] " 
             << "Value: [" << it->second << "]" << std::endl;
     }
 }
 
-/*
-   void HttpRequest::printBody()
-   {
-   std::cout << "Printing the body!" << std::endl;
-   std::cout << _body << std::endl;
-   }
-   */
+
 void HttpRequest::setFullChunkBodySize(size_t amount)
 {
     _fullChunkBodySize += amount;
@@ -197,15 +189,6 @@ void HttpRequest::setQueryString(void)
         _uriPath = uriRequest;
         _queryString = "";
     }
-    //uriPath = /cgi-bin/file.py  
-    // size_t pos = klist.find(uriPath)
-    // if(pos != std::string::npos)
-    // {
-    //         size_t finalpos;
-    //         if(pos > finalpos)
-    //             finalpos = pos;
-    // }
-    // uriPath = raw.substr(0, finalpos);
 }
 
 void HttpRequest::setUriPath(std::string uriPath)
@@ -256,11 +239,10 @@ void    HttpRequest::setupPathKeys(Client &activeClient)
     std::string uriRequest = activeClient.getRequest().getUri();
     std::cout << "Requested URI: " << uriRequest << std::endl;
 
-    // 2. Grab the direct pointer to the rulebook!
+    //Grab the direct pointer to the rulebook!
     const ServerConfig *activeConfig = activeClient.getConfig();
 
     std::vector<std::string> klist = activeConfig->getLocationList();
-    // activeClient.getRequest().setQueryString();
     setQueryString();
 
     std::cout << getUriPath() << std::endl;

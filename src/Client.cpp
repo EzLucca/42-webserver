@@ -79,9 +79,10 @@ const ServerConfig* Client::getConfig()
 {
     return (_config);
 }
-/*
-void Client::setConfig(ServerConfig config)
+
+void Client::resetForNextRequest() 
 {
-    _config = config;
+    this->_request = HttpRequest();   
+    this->_response = HttpResponse(); 
+    this->_state = READING_REQUESTLINE;
 }
-    */

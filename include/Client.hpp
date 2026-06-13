@@ -8,7 +8,6 @@
 #include "HttpResponse.hpp"
 #include "ServerConfig.hpp"
 
-//these are possible states (these can change still)
 enum ClientState {
     READING_REQUESTLINE,
     READING_HEADERS,        // POST Master is waiting for \r\n\r\n
@@ -56,6 +55,7 @@ class   Client
             const	std::string getBuffer() const;
             void	eraseFromBuffer(size_t length);
 			void	updateLastActivity();
+            void    resetForNextRequest(); 
 
 
             HttpRequest& getRequest();

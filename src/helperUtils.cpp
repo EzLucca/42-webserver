@@ -87,7 +87,6 @@ std::string buildSafeTargetPath(const RouteConfig* route, const std::string& uri
     // Glue them together
     std::string fullPath = root + "/" + uri;
 
-    //  The Scrub: Find any double slashes "//" and replace them with a single "/"
     size_t pos = 0;
     while ((pos = fullPath.find("//", pos)) != std::string::npos) 
     {
@@ -99,10 +98,8 @@ std::string buildSafeTargetPath(const RouteConfig* route, const std::string& uri
 
 bool endsWith(const std::string& fullString, const std::string& ending) 
 {
-    // 1. If the ending is longer than the string, it's impossible.
     if (fullString.length() >= ending.length()) 
     {
-        // 2. Compare the very end of the fullString against the ending
         return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
     }
     return false;

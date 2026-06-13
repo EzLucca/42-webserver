@@ -43,7 +43,6 @@ void ServerManager::printServers() const
         std::cout << "ServerName: " << server.getServerName() << std::endl;
         std::cout << "ClientMaxBodySize: " << server.getClientMaxBodySize() << std::endl;
 
-        // C++98 tapa iteroida map-rakennetta (Error Pages)
         std::map<int, std::string>::const_iterator errIt;
         const std::map<int, std::string>& errorPages = server.getErrorPages();
         

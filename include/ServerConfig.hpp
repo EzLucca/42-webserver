@@ -23,8 +23,6 @@ class ServerConfig
         std::map<int, std::string>          _errorPages;        // indexed error pages
         std::map<std::string, RouteConfig>  _routes;            // routing tables
         std::vector<std::string>            _locationList;
-        // TEST:
-        // ~TEST:
 
     public:
         // Constructors & Destructors
@@ -55,7 +53,7 @@ class ServerConfig
         // Useful helpers
         std::string         getErrorPage(int code) const;
         const RouteConfig*  getRoute(const std::string& location) const;
-        // const std::unordered_map<std::string, std::vector<std::string>> getLocationBlock() const;
+
 };
 
 std::ostream& operator<<(std::ostream& os, const std::map<int, std::string>& m);

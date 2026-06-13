@@ -9,13 +9,9 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
     size_t secondSpace = line.find(' ', firstSpace + 1);
     if (firstSpace != std::string::npos && secondSpace != std::string::npos)
     {
-        // now we parse
         request.setMethod(line.substr(0, firstSpace));
-        //Validate method, if not valid, return
         request.setUri(line.substr(firstSpace + 1, secondSpace - firstSpace - 1));
-        //validate Uri, if not valid return
         request.setVersion(line.substr(secondSpace +1));
-        //validate version, if not valid return
 
         //validating methods
         if(request.getMethod() != "GET" && request.getMethod() != "POST" && request.getMethod() != "DELETE")
@@ -66,7 +62,7 @@ void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
     }
 }
 
-// void HttpParser::parseAllHeaders(std::string& rawHeaders, HttpRequest& request)
+
 void HttpParser::parseAllHeaders(std::string& rawHeaders, Client& client)
 {
     // main logic here is that we parse line by line calli singleheader parse function, and after the parse, we erase that part from rawHeaders
@@ -110,7 +106,6 @@ std::string HttpParser::stringToLower(std::string value)
     return (s);
 }
 
-// void HttpParser::parseSingleHeader(std::string& line, HttpRequest& request)
 void HttpParser::parseSingleHeader(std::string& line, Client& client)
 {
     size_t colonPos = line.find(':');
@@ -139,7 +134,7 @@ void HttpParser::parseSingleHeader(std::string& line, Client& client)
         {
           client.getRequest().setHeader(key, value);
         }
-        if (key == "connection"  && value == "closed")
+        if (key == "connection"  && value == "close")
         {
                 client.getRequest().setKeepAlive(false);
         }
