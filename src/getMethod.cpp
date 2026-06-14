@@ -37,12 +37,10 @@ std::string createResponse(Client& activeClient, std::string filepath)
     if (!file.is_open())
     {
         std::cerr << "Could not open: " << filepath << std::endl;
-        // In the future, this should change the status to 404/500 and recursively call returnPage
         activeClient.getResponse().setStatusCode(404);
-        //why we call returnpage here? loop danger???
-        //returnPage(activeClient);
         activeClient.setState(ERROR);
-        return filepath;
+        //return response not filepath
+        return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 48\r\n\r\n<html><body><h1>404 File Not Found</h1></body></html>");
     }
     // this is the ram killer
     std::stringstream buffer;
@@ -50,7 +48,6 @@ std::string createResponse(Client& activeClient, std::string filepath)
     std::string body = buffer.str();
 
     activeClient.getResponse().setResponseBody(body);
-    // 4. C++98 String conversion for Content-Length
     std::stringstream lengthStream;
     lengthStream << body.size();
     std::string contentLength = lengthStream.str();
@@ -68,22 +65,19 @@ void    returnErrorPage(Client& activeClient)
 {
     std::string filepath;
     std::string response;
-
     std::string uriRequest = activeClient.getRequest().getUri();
+
     std::cout << "URI from inside returnErrorPage: " << uriRequest << std::endl; 
     std::cout << "ERROR STATUS CODE: " << activeClient.getResponse().getStatusCode() << std::endl;
 
     const ServerConfig *config = activeClient.getConfig();
     int code = activeClient.getResponse().getStatusCode();
-
+    // what if we cant find that file?
     filepath = config->getErrorPage(code);
-
     response = createResponse(activeClient, filepath);
-
     activeClient.getResponse().setResponseBuffer(response);
     activeClient.setState(WRITING_RESPONSE);
-    // this direct write needs to be deleted
-    // write(activeClient.getFd(), response.c_str(), response.size());
+    
 }
 
 static std::string html_escape(const std::string &s)
