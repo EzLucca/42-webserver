@@ -72,7 +72,7 @@ void    returnErrorPage(Client& activeClient)
 
     const ServerConfig *config = activeClient.getConfig();
     int code = activeClient.getResponse().getStatusCode();
-    // what if we cant find that file?
+    
     filepath = config->getErrorPage(code);
     response = createResponse(activeClient, filepath);
     activeClient.getResponse().setResponseBuffer(response);
