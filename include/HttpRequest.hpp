@@ -49,8 +49,9 @@ class HttpRequest
             void	setUriPath(std::string uriPath);
             void	setFilename(std::string filename);
             void	setLocation(std::string location);
-            void        setAutoindex(bool autoindex);
-            bool        getAutoindex();
+
+            void    setAutoindex(bool autoindex);
+            bool    getAutoindex();
             //getters
             std::map<std::string, std::string>  getHeaders() const; // Check that this works
             size_t                              getContentLength();
@@ -74,5 +75,6 @@ class HttpRequest
             void                                resetCurrentChunkSize();
             void                                handleDeleteRequest(Client& activeClient);
         
+void    validateAutoindex(Client& activeClient);
 
 };

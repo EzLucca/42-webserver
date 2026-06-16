@@ -1,31 +1,6 @@
 #include "getMethod.hpp"
 #include <filesystem>
 
-bool    validateMethod(const RouteConfig *routeLocation, std::string method)
-{
-    std::unordered_map<std::string, std::vector<std::string>>::const_iterator it = routeLocation->vectorRoute.find("allowed_methods");
-
-    std::cout << "validateMethod function" << std::endl;
-    std::cout << method << std::endl;
-
-    if (it == routeLocation->vectorRoute.end())
-    {
-        std::cout << "allowed_methods not found" << std::endl;
-        return false;
-    }
-    const std::vector<std::string> methods = it->second;
-    for (std::vector<std::string>::const_iterator mit = methods.begin();
-            mit != methods.end();
-            ++mit)
-    {
-        std::cout << "Allowed method: [" << *mit << "]" << std::endl;
-        if (*mit == method)
-            return true;
-    }
-    std::cout << "return end here" << std::endl;
-    return false;
-}
-
 std::string createResponse(Client& activeClient, std::string filepath)
 {
     int code = activeClient.getResponse().getStatusCode();
@@ -38,6 +13,7 @@ std::string createResponse(Client& activeClient, std::string filepath)
     {
         std::cerr << "Could not open: " << filepath << std::endl;
         activeClient.getResponse().setStatusCode(404);
+        activeClient.getResponse().setStatusMessage("Not found");
         activeClient.setState(ERROR);
         //return response not filepath
         return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 48\r\n\r\n<html><body><h1>404 File Not Found</h1></body></html>");
@@ -72,12 +48,12 @@ void    returnErrorPage(Client& activeClient)
 
     const ServerConfig *config = activeClient.getConfig();
     int code = activeClient.getResponse().getStatusCode();
-    
+
     filepath = config->getErrorPage(code);
     response = createResponse(activeClient, filepath);
     activeClient.getResponse().setResponseBuffer(response);
     activeClient.setState(WRITING_RESPONSE);
-    
+
 }
 
 static std::string html_escape(const std::string &s)
@@ -172,17 +148,36 @@ void    returnPage(Client& activeClient)
                     break;
                 }
 
-                //  validate methods
-                // if(!validateMethod(route, activeClient.getRequest().getMethod()))
-                // {
-                //     activeClient.getResponse().setStatusCode(405);
-                //     returnPage(activeClient);
-                //     activeClient.setState(FINISHED);
-                //     return;
-                // }
+                std::unordered_map<std::string, std::vector<std::string> >::const_iterator redirectIt =
+                    route->vectorRoute.find("return");
+                if (redirectIt != route->vectorRoute.end() &&
+                        redirectIt->second.size() >= 2)
+                {
+                    int code = std::stoi(redirectIt->second[0]);
+                    std::string target = redirectIt->second[1];
+
+                    std::stringstream response;
+
+                    response << "HTTP/1.1 "
+                        << code
+                        << " Moved Permanently\r\n";
+
+                    response << "Location: "
+                        << target
+                        << "\r\n";
+
+                    response << "Content-Length: 0\r\n";
+                    response << "\r\n";
+
+                    activeClient.getResponse().setResponseBuffer(response.str());
+                    activeClient.setState(WRITING_RESPONSE);
+
+                    return;
+                }
 
                 //  NOW it is safe to touch the route's internals!
                 std::string root = route->vectorRoute.at("root").at(0); 
+                std::cout << "testing redirection" << std::endl;
 
                 if (filename.empty() || filename == "/")
                 {
@@ -193,8 +188,18 @@ void    returnPage(Client& activeClient)
                         filepath = root + "/" + it->second.at(0);
                     } else 
                     {
-                        autoindexbody = generateAutoindex(root, uriRequest);
-                        std::cout << "autoindex build" << std::endl;
+                        if (activeClient.getRequest().getAutoindex() == true)
+                        {
+                            autoindexbody = generateAutoindex(root, uriRequest);
+                            std::cout << "autoindex build" << std::endl;
+                        }
+                        else
+                        {
+                            activeClient.getResponse().setStatusCode(403);
+                            activeClient.getResponse().setStatusMessage("Access denied");
+                            activeClient.setState(ERROR);
+                            return;
+                        }
                     }
                 } 
                 else 
@@ -217,12 +222,11 @@ void    returnPage(Client& activeClient)
     {
         std::string body = autoindexbody;
 
-        std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
-            "Content-Length: " + std::to_string(body.size()) + "\r\n"
-            "\r\n" +
-            body;
+        std::string response = "HTTP/1.1 " + std::to_string(activeClient.getResponse().getStatusCode()) + " " + activeClient.getResponse().getStatusMessage() + "\r\n";
+        response += "Content-Type: text/html\r\n";
+        response += "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n";
+        // response += "Connection: keep-alive\r\n\r\n";
+        response += body;
 
         std::cout << "Response autoindex build" << std::endl;
         activeClient.getResponse().setResponseBuffer(response);
@@ -230,7 +234,7 @@ void    returnPage(Client& activeClient)
 
         return ;
     }
-    
+
     //preparing for filestreaming
     activeClient.getResponse().prepareFileStream(filepath, activeClient);
     activeClient.setState(WRITING_RESPONSE);

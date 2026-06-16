@@ -211,28 +211,28 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                     break;
 
                 case CGI_IO_DONE:
-                    
+
                     activeClient.getRequest().cleanupBodyFile();
                     activeClient.getResponse().setResponseBody(cgi.output);
 
                     {
-                    size_t headerEnd = cgi.output.find("\r\n\r\n");
-    
-                    if (headerEnd != std::string::npos) 
-                    {
-                      
-                        size_t bodySize = cgi.output.length() - (headerEnd + 4); 
-                        
-                      
-                        std::string contentLengthHeader = "Content-Length: " + std::to_string(bodySize) + "\r\n";
-                        
-                       
-                        cgi.output.insert(headerEnd + 2, contentLengthHeader);
-                    }
+                        size_t headerEnd = cgi.output.find("\r\n\r\n");
+
+                        if (headerEnd != std::string::npos) 
+                        {
+
+                            size_t bodySize = cgi.output.length() - (headerEnd + 4); 
+
+
+                            std::string contentLengthHeader = "Content-Length: " + std::to_string(bodySize) + "\r\n";
+
+
+                            cgi.output.insert(headerEnd + 2, contentLengthHeader);
+                        }
                         std::string final_response =
                             "HTTP/1.1 200 OK\r\n" + cgi.output;
                         activeClient.getResponse().setResponseBuffer(final_response);
-                    
+
 
                         close(_fds[i].fd);
                         _fds[i].fd = -1;
@@ -252,19 +252,19 @@ void ServerEngine::handleCgiFd(int i, int triggered_fd)
                     }
                     break;
                 case CGI_IO_ERROR:
-                    
-                        activeClient.getRequest().cleanupBodyFile();
-                        std::cerr << "CGI Error encountered."
-                            << std::endl;
 
-                        close(_fds[i].fd);
-                        _fds[i].fd = -1;
+                    activeClient.getRequest().cleanupBodyFile();
+                    std::cerr << "CGI Error encountered."
+                        << std::endl;
 
-                        _fdRegistry.erase(triggered_fd);
-                        _cgiProcesses.erase(triggered_fd);
-                        _clients.erase(originalClientFd);
-                        break;
-                    
+                    close(_fds[i].fd);
+                    _fds[i].fd = -1;
+
+                    _fdRegistry.erase(triggered_fd);
+                    _cgiProcesses.erase(triggered_fd);
+                    _clients.erase(originalClientFd);
+                    break;
+
                 default:
                     return;
             }
@@ -355,10 +355,10 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     activeClient.getResponse().setStatusMessage("Method no allowed");
                     activeClient.setState(ERROR);
                 }
-                
+
                 if (activeClient.getState() != ERROR)
                 {
-                    
+
                     std::unordered_map<std::string, std::vector<std::string> >::const_iterator cgiIt = route->vectorRoute.find("cgi_pass");
                     std::unordered_map<std::string, std::vector<std::string> >::const_iterator uploadIt = route->vectorRoute.find("upload_enable");
                     std::cout << filename << " <------------------------FILENAME" << std::endl;
@@ -370,7 +370,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     {
                         std::string contentType = activeClient.getRequest().getHeaders()["content-type"];
                         if (contentType.find("multipart/form-data") != std::string::npos || 
-                            contentType.find("application/x-www-form-urlencoded") != std::string::npos)
+                                contentType.find("application/x-www-form-urlencoded") != std::string::npos)
                         {
                             // HTML form hijack
                             isCgi = true;
@@ -379,7 +379,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                         }
                     }
 
-               
+
                     if (isCgi)
                     {
                         std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
@@ -400,9 +400,9 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
                         std::string tempPath = activeClient.getRequest().getBodyFilePath();
                         std::string uploadFilename = activeClient.getRequest().getFilename();
-                        
+
                         if (uploadFilename.empty() || uploadFilename == "/") {
-                        
+
                             std::stringstream ss;
                             ss << time(NULL);
                             uploadFilename = "dumped_file_" + ss.str(); 
@@ -441,7 +441,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                         activeClient.getResponse().setStatusMessage("No Content");
                         activeClient.getResponse().setResponseBody(""); // 204 has no body!
                         activeClient.getResponse().buildRawResponse();
-                        
+
                         _fds[i].events = POLLOUT;
                         activeClient.setState(WRITING_RESPONSE);
                     }
@@ -457,6 +457,8 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                             }
                         } catch (const std::exception &e) {
                             std::cerr << "Error: " << e.what() << std::endl;
+                            activeClient.getResponse().setStatusCode(404);
+                            activeClient.getResponse().setStatusMessage("Not Found");
                             activeClient.setState(ERROR);   
                             std::cout << "Client fd: " << activeClient.getFd() << " marked ERROR" << std::endl;
                         }
@@ -467,6 +469,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             {
                 // Safety catch for missing routes
                 activeClient.getResponse().setStatusCode(404);
+                activeClient.getResponse().setStatusMessage("Not found");
                 activeClient.setState(ERROR);
             }
         }
@@ -476,7 +479,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             std::cout << "Original URI: " << activeClient.getRequest().getUri() << std::endl;
             std::cout << "Target Script: " << activeClient.getRequest().getFilename() << std::endl;
             std::cout << "----------------------------\n" << std::endl;
-            
+
             try {
                 CgiHandler CgiObject(activeClient);
                 CgiProcess cgi = CgiObject.CgiStart(activeClient.getRequest());
@@ -508,38 +511,38 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             }
         }
     }
-     if (activeClient.getState() == ERROR)
+    if (activeClient.getState() == ERROR)
+    {
+        try {
+            std::cout << "Returning page from error block" << std::endl;
+            returnErrorPage(activeClient); 
+
+            activeClient.setState(WRITING_RESPONSE);
+            _fds[i].events = POLLOUT;
+        } 
+        catch (const std::exception &e)
         {
-            try {
-                std::cout << "Returning page from error block" << std::endl;
-                returnErrorPage(activeClient); 
-                
-                activeClient.setState(WRITING_RESPONSE);
-                _fds[i].events = POLLOUT;
-            } 
-            catch (const std::exception &e)
-            {
-                std::cerr << "Fatal Error building error page: " << e.what() << std::endl;
-                activeClient.setState(FINISHED);
-            }
+            std::cerr << "Fatal Error building error page: " << e.what() << std::endl;
+            activeClient.setState(FINISHED);
         }
+    }
     if (activeClient.getState() == FINISHED)
-        {
-            std::cout << "Process is finished. Dropping connection." << std::endl;
-            
-            
-            activeClient.getRequest().cleanupBodyFile();
-            _clients.erase(currentFd);
-            close(_fds[i].fd);
-            _fds[i].fd = -1;
-            return ;
-        }
+    {
+        std::cout << "Process is finished. Dropping connection." << std::endl;
+
+
+        activeClient.getRequest().cleanupBodyFile();
+        _clients.erase(currentFd);
+        close(_fds[i].fd);
+        _fds[i].fd = -1;
+        return ;
+    }
 
     if (_fds[i].revents & POLLOUT)
     {
         std::string& buffer = activeClient.getResponse().getBuffer();
         //std::cout << "DEBUG: POLLOUT triggered. Buffer size: " << buffer.size() 
-          //  << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
+        //  << " | IsStreaming: " << activeClient.getResponse().isStreaming() << std::endl;
 
         // pump data 
         if (buffer.empty() && activeClient.getResponse().isStreaming())
@@ -557,14 +560,14 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                 buffer.append(chunk, bytesRead);
             }
             else if (bytesRead <= 0)
-        {   
-            if (bytesRead < 0) {
-                std::cerr << "File stream error!" << std::endl;
+            {   
+                if (bytesRead < 0) {
+                    std::cerr << "File stream error!" << std::endl;
+                }
+                std::cout << "DEBUG: EOF or Error reached, closing FD " << fd << std::endl;
+                close(fd);
+                activeClient.getResponse().setStreamingFlag(false);
             }
-            std::cout << "DEBUG: EOF or Error reached, closing FD " << fd << std::endl;
-            close(fd);
-            activeClient.getResponse().setStreamingFlag(false);
-        }
         }
 
         // send data to browser
@@ -578,13 +581,13 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             }
             else if (bytesSent < 0) 
             {
-            
+
                 std::cout << "fatal error" << std::endl;
                 _clients.erase(currentFd);
                 close(_fds[i].fd);
                 _fds[i].fd = -1; 
             }
-            }
+        }
         // reset when fully finished
         //std::cout << "is streaming: " << activeClient.getResponse().isStreaming() << std::endl;
         if (buffer.empty() && !activeClient.getResponse().isStreaming())
@@ -599,9 +602,9 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             }
             else
             {
-            std::cout << "DEBUG: Streaming complete. Resetting client" << std::endl;
-            activeClient.resetForNextRequest();
-            _fds[i].events = POLLIN; 
+                std::cout << "DEBUG: Streaming complete. Resetting client" << std::endl;
+                activeClient.resetForNextRequest();
+                _fds[i].events = POLLIN; 
             }
         }
     }

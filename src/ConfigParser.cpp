@@ -195,7 +195,7 @@ void ConfigParser::parselocation(std::istream &stream, RouteConfig &nestedLocati
         {
             validatePath(value);
         }
-        if (key == "allowed_methods")
+        if (key == "allowed_methods" || key == "return")
         {
             std::stringstream ss(value);
             std::string word;

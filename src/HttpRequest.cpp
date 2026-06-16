@@ -11,7 +11,8 @@ HttpRequest::HttpRequest() :
     _fullChunkBodySize(0),
     _bodyFilePath("not-set"),
     _bytesWritten(0),
-    _keepAlive(true)
+    _keepAlive(true),
+    _hasAutoindex(false)
 {
     std::cout << "HttpRequest default constructor called" << std::endl;
 }
@@ -286,6 +287,7 @@ void HttpRequest::handleDeleteRequest(Client& activeClient)
     if (access(targetPath.c_str(), F_OK) != 0) 
     {
         response.setStatusCode(404);
+        activeClient.getResponse().setStatusMessage("Not found");
         response.setResponseBody("<html><body>404 Not Found: File does not exist</body></html>");
         return;
     }
@@ -323,3 +325,26 @@ bool    HttpRequest::getAutoindex()
     return(_hasAutoindex);
 }
 
+void HttpRequest::validateAutoindex(Client& activeClient)
+{
+    const RouteConfig* route =
+        activeClient.getConfig()->getRoute(
+            activeClient.getRequest().getLocationKey());
+
+    if (!route)
+        return;
+
+    std::unordered_map<std::string,
+        std::vector<std::string> >::const_iterator autoindexIt =
+        route->vectorRoute.find("autoindex");
+
+    if (autoindexIt == route->vectorRoute.end())
+        return;
+
+    const std::vector<std::string>& values = autoindexIt->second;
+
+    if (!values.empty() && values[0] == "on")
+        setAutoindex(true);
+    else
+        setAutoindex(false);
+}

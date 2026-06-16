@@ -36,6 +36,7 @@ bool    validateUriPath(Client &activeClient)
         return (true);
     }
     activeClient.getResponse().setStatusCode(404);
+    activeClient.getResponse().setStatusMessage("Not found");
     activeClient.setState(ERROR); 
     return (false);
 }

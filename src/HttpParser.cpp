@@ -275,6 +275,7 @@ void HttpParser::parse(Client& client)
             std::string line = workBuffer.substr(0, pos);
             parseRequestLine(line, client.getRequest());
             client.getRequest().setupPathKeys(client);
+            client.getRequest().validateAutoindex(client);
             // then we need to erase the requestline part from the client buffer and change state
             client.eraseFromBuffer(pos + 2); // +2 because we are infront of \r\n
             client.setState(READING_HEADERS); // set state to the next thing, so reading headers.
