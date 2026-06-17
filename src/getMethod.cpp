@@ -51,6 +51,7 @@ void    returnErrorPage(Client& activeClient)
 
     filepath = config->getErrorPage(code);
     response = createResponse(activeClient, filepath);
+    // std::cout << "REsponse: " << response << std::endl;
     activeClient.getResponse().setResponseBuffer(response);
     activeClient.setState(WRITING_RESPONSE);
 

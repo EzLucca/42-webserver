@@ -2,6 +2,9 @@
 #include "HttpException.hpp"
 #include "helperUtils.hpp"
 
+#define MAX_REQUEST_LINE 8192
+#define MAX_HEADER_BYTES 65536 
+
 void HttpParser::parseRequestLine(std::string& line, HttpRequest& request)
 {
     //we got the line with all of the information
@@ -269,6 +272,8 @@ void HttpParser::parse(Client& client)
     {
         const std::string& workBuffer = client.getBuffer(); //lets have a reference, for optimization reasons
         size_t pos = workBuffer.find("\r\n");
+        if (workBuffer.size() > MAX_REQUEST_LINE)
+            throw HttpException(400, "Malformed request line");
         if (pos != std::string::npos)
         {
             //we found the \r\n, so our request line is fully in received.
@@ -289,6 +294,8 @@ void HttpParser::parse(Client& client)
     {
         const std::string& workBuffer = client.getBuffer();
         size_t pos = workBuffer.find("\r\n\r\n"); //checking for the end of the headers 
+        if (workBuffer.size() > MAX_HEADER_BYTES)
+            throw HttpException(400, "Malformed header");
         if (pos != std::string::npos)
         {
             //we found the \r\n\r\n, so our hearders are fully in received.
@@ -302,7 +309,7 @@ void HttpParser::parse(Client& client)
 
             // WE ARE SETTING THE STATE OF READIING BODY ONLY if we have headers like "Content length" and or "Transfer-Encoding chunked."
             HttpRequest request = client.getRequest();
-            // request.printHeaders();
+            request.printHeaders();
             // std::cout << "contentlength: " << request.getContentLength() << std::endl;
 
             if (request.getIsChunked())

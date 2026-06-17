@@ -300,19 +300,22 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
         activeClient.appendToBuffer(shovelBuffer, valRead); // append the buffer
         activeClient.updateLastActivity();
-
-        try
+        if (activeClient.getState() != ERROR)
         {
-            _httpParser.parse(activeClient);
+            try
+            {
+                _httpParser.parse(activeClient);
+            }
+            catch (const HttpException &e)
+            {
+                activeClient.setState(ERROR);
+                std::cout << e.getStatusCode() << " <--- statuscode." << std::endl;
+                activeClient.getResponse().setStatusCode(e.getStatusCode());
+                activeClient.getResponse().setStatusMessage(e.getStatusMessage());
+            }
         }
-        catch (const HttpException &e)
-        {
-            activeClient.setState(ERROR);
-            std::cout << e.getStatusCode() << " <--- statuscode." << std::endl;
-            activeClient.getResponse().setStatusCode(e.getStatusCode());
-            activeClient.getResponse().setStatusMessage(e.getStatusMessage());
-        }
-
+        std::cout << "ERROR STATUS CODE: " << activeClient.getResponse().getStatusCode() << std::endl;
+        std::cout << "STATUS: " << activeClient.getState() << std::endl;
         if (activeClient.getState() == PROCESSING)
         {
 
@@ -515,6 +518,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
     {
         try {
             std::cout << "Returning page from error block" << std::endl;
+            std::cout << "ERROR STATUS CODE: " << activeClient.getResponse().getStatusCode() << std::endl;
             returnErrorPage(activeClient); 
 
             activeClient.setState(WRITING_RESPONSE);
