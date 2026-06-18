@@ -8,17 +8,14 @@ std::string createResponse(Client& activeClient, std::string filepath)
     std::string statusmsg = activeClient.getResponse().getStatusMessage();
     std::string contentType = activeClient.getResponse().getMimeType(filepath);
     std::ifstream file(filepath.c_str(), std::ios::binary); // NEED TO OPEN IN BINARY MODE
-    std::cout << "content type: " << contentType << " | filepath: " << filepath << std::endl;
     if (!file.is_open())
     {
         std::cerr << "Could not open: " << filepath << std::endl;
         activeClient.getResponse().setStatusCode(404);
         activeClient.getResponse().setStatusMessage("Not found");
         activeClient.setState(ERROR);
-        //return response not filepath
         return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 48\r\n\r\n<html><body><h1>404 File Not Found</h1></body></html>");
     }
-    // this is the ram killer
     std::stringstream buffer;
     buffer << file.rdbuf();
     std::string body = buffer.str();
@@ -51,7 +48,6 @@ void    returnErrorPage(Client& activeClient)
 
     filepath = config->getErrorPage(code);
     response = createResponse(activeClient, filepath);
-    // std::cout << "REsponse: " << response << std::endl;
     activeClient.getResponse().setResponseBuffer(response);
     activeClient.setState(WRITING_RESPONSE);
 
@@ -124,11 +120,10 @@ void    returnPage(Client& activeClient)
     std::string locationKey = activeClient.getRequest().getLocationKey();
     std::string uriRequest = activeClient.getRequest().getUri();
     std::string filename = activeClient.getRequest().getFilename();
-    std::cout << "FILENAME: " << filename << std::endl;
+    
     const ServerConfig *config = activeClient.getConfig();
     std::string autoindexbody;
-    // MUST RETURN AFTER ERROR! 
-    // if we fail here, stop the entire function immediately.
+
     if (activeClient.getResponse().getStatusCode() != 200)
     {
         returnErrorPage(activeClient);
@@ -139,10 +134,8 @@ void    returnPage(Client& activeClient)
     {
         case 200:
             {
-                // was using hete uri, when we should use key, this was previously returning null with the uri
                 const RouteConfig *route = config->getRoute(locationKey); 
 
-                // safely handle missing routes FIRST
                 if (route == NULL)
                 {
                     filepath = "var/www/html/index.html"; // Fallback
@@ -178,7 +171,6 @@ void    returnPage(Client& activeClient)
 
                 //  NOW it is safe to touch the route's internals!
                 std::string root = route->vectorRoute.at("root").at(0); 
-                std::cout << "testing redirection" << std::endl;
 
                 if (filename.empty() || filename == "/")
                 {

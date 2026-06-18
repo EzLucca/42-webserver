@@ -57,11 +57,9 @@ size_t getBodyClient(Client &activeClient)
         if (val.back() == 'M') {
             int size = std::stoi(val.substr(0, val.size() - 1));
             bodyClientMax = size * 1024 * 1024;
-            std::cout << bodyClientMax << " body size of the location" << std::endl;
             return (bodyClientMax);
         }
     }
-    std::cout << bodyClientMax << " body size" << std::endl;
     return (bodyClientMax);
 }
 

@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     ServerManager manager;
 
     if (config.parse(configFile, manager))
-        exit(1); // TODO: handle errors properly on finish version
+        exit(1);
 
     struct pollfd fds[MAX_FDS];
 
@@ -107,9 +107,11 @@ int main(int argc, char **argv)
     }
     catch (...)
     {
+        manager.shutDownServers();
         std::cerr << "[FATAL ERROR] An unknown, non-standard exception occurred!" << std::endl;
         return EXIT_FAILURE;
     }
+    manager.shutDownServers();
     std::cout << "Server shutdown complete. Exiting program." << std::endl;
     return EXIT_SUCCESS;
 }

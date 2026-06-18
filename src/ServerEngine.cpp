@@ -322,7 +322,6 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
             std::string filename = activeClient.getRequest().getFilename();
             std::string currentMethod = activeClient.getRequest().getMethod();
-            std::cout << filename << " name script" << std::endl;
             bool isCgi = false;
 
             const ServerConfig *config = activeClient.getConfig();
@@ -505,14 +504,14 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     }
                     if (!added)
                     {
-						throw HttpException(500, "Internal server error");
+                        throw HttpException(500, "Internal server error");
                         close(cgi.responseFd);
                     }
                 }
-				else
-				{
-					throw HttpException(500, "Internal server error");
-				}
+                else
+                {
+                    throw HttpException(500, "Internal server error");
+                }
             } catch (const HttpException &e) {
                 std::cerr << "Error: " << e.what() << std::endl;
                 activeClient.setState(ERROR);
@@ -540,7 +539,6 @@ void ServerEngine::handleClientFd(int i, int currentFd)
     if (activeClient.getState() == FINISHED)
     {
         std::cout << "Process is finished. Dropping connection." << std::endl;
-
 
         activeClient.getRequest().cleanupBodyFile();
         _clients.erase(currentFd);
@@ -626,55 +624,54 @@ void ServerEngine::run()
 
     while (g_serverRunning)
     {
-    std::cout << "Server engine starting event loop..." << std::endl;
-    while (true)
-    {
-        int poll_count = poll(_fds, MAX_FDS, POLL_TIMEOUT_MS);
-        if (poll_count < 0)
+        std::cout << "Server engine starting event loop..." << std::endl;
+        while (true)
         {
-           if (!g_serverRunning)
+            int poll_count = poll(_fds, MAX_FDS, POLL_TIMEOUT_MS);
+            if (poll_count < 0)
+            {
+                if (!g_serverRunning)
+                    break;
+                std::cerr << "Poll error" << std::endl;
                 break;
-            std::cerr << "Poll error" << std::endl;
-            break;
-        }
-
-        time_t now = time(NULL);
-        checkClientTimeouts(now);
-        checkCgiTimeouts(now);
-
-        for (int i = 0; i < MAX_FDS; i++)
-        {
-            if (_fds[i].fd == -1)
-                continue;
-
-            if (_fds[i].revents != 0)
-            {
-                std::cout << ">>> POLL WOKE UP! FD: " << _fds[i].fd
-                    << " | Revents code: " << _fds[i].revents << " <<<" << std::endl;
             }
 
-            if (!(_fds[i].revents & (POLLIN | POLLHUP | POLLOUT)))
-            {
-                continue;
-            }
+            time_t now = time(NULL);
+            checkClientTimeouts(now);
+            checkCgiTimeouts(now);
 
-            int triggered_fd = _fds[i].fd;
-            std::map<int, const ServerConfig *>::const_iterator it = _masterSocketRegistry.find(triggered_fd);
-            if (it != _masterSocketRegistry.end())
+            for (int i = 0; i < MAX_FDS; i++)
             {
-                acceptNewClient(triggered_fd);
-                continue;
-            }
+                if (_fds[i].fd == -1)
+                    continue;
 
-            if (_fdRegistry.find(triggered_fd) != _fdRegistry.end())
-            {
-                handleCgiFd(i, triggered_fd);
-                continue;
-            }
+                if (_fds[i].revents != 0)
+                {
+                    std::cout << ">>> POLL WOKE UP! FD: " << _fds[i].fd
+                        << " | Revents code: " << _fds[i].revents << " <<<" << std::endl;
+                }
 
-            handleClientFd(i, _fds[i].fd);
+                if (!(_fds[i].revents & (POLLIN | POLLHUP | POLLOUT)))
+                {
+                    continue;
+                }
+
+                int triggered_fd = _fds[i].fd;
+                std::map<int, const ServerConfig *>::const_iterator it = _masterSocketRegistry.find(triggered_fd);
+                if (it != _masterSocketRegistry.end())
+                {
+                    acceptNewClient(triggered_fd);
+                    continue;
+                }
+
+                if (_fdRegistry.find(triggered_fd) != _fdRegistry.end())
+                {
+                    handleCgiFd(i, triggered_fd);
+                    continue;
+                }
+
+                handleClientFd(i, _fds[i].fd);
+            }
         }
     }
 }
-}
-

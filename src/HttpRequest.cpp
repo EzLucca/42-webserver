@@ -122,7 +122,6 @@ std::string HttpRequest::getVersion()
 
 void HttpRequest::printHeaders()
 {
-    //create iterator, we use const because we are not gonna change anything
     std::map<std::string, std::string>::const_iterator it;
     std::cout << "Printing Headers!" << std::endl;
 
@@ -246,9 +245,6 @@ void    HttpRequest::setupPathKeys(Client &activeClient)
     std::vector<std::string> klist = activeConfig->getLocationList();
     setQueryString();
 
-    std::cout << getUriPath() << std::endl;
-    std::cout << getQueryString() << std::endl;
-
     std::string objstring = getUriPath();
     size_t finalpos = 0;
     for (const std::string &s : klist) {
@@ -258,7 +254,6 @@ void    HttpRequest::setupPathKeys(Client &activeClient)
             pos = s.size();
             if(pos > finalpos)
                 finalpos = pos;
-            std::cout << finalpos << std::endl;
         }
 
     }
@@ -267,12 +262,13 @@ void    HttpRequest::setupPathKeys(Client &activeClient)
 
     if (getFilename() != "")
     {
-        setFilename(objstring.substr(finalpos + 1));
+        std::string name = objstring.substr(finalpos);
+        while(name[0] == '/')
+        {
+            name.erase(0,1);
+        }
+        setFilename(name);
     }
-
-    std::cout << getUriPath() << std::endl;
-    std::cout << getLocationKey() << std::endl;
-    std::cout << getFilename() << std::endl;
 }
 
 

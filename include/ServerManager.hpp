@@ -23,11 +23,12 @@ class ServerManager
         int    getServerCount() const;
 
 
-        //void setupNetwork(); // TODO
+        void cleanExitServers();
         const ServerConfig* getServerByFd(int fd);
         std::vector<ServerConfig> getServers();
         std::vector<int> getMasterFds() const;
 
         bool setupMasterSockets(struct pollfd fds[], std::map<int, const ServerConfig*>& masterSocketRegistry);
         const std::map<int, const ServerConfig*>& getMasterSocketRegistry() const;
+        void shutDownServers();
 };

@@ -29,7 +29,7 @@ std::vector<ServerConfig> ServerManager::getServers()
 // TEST:
 void ServerManager::printServers() const
 {
-    
+
     for (size_t i = 0; i < _servers.size(); ++i)
     {
         const ServerConfig& server = _servers[i];
@@ -45,24 +45,24 @@ void ServerManager::printServers() const
 
         std::map<int, std::string>::const_iterator errIt;
         const std::map<int, std::string>& errorPages = server.getErrorPages();
-        
+
         for (errIt = errorPages.begin(); errIt != errorPages.end(); ++errIt)
         {
             std::cout << "ErrorPage[" << errIt->first << "] = "
-                      << errIt->second << std::endl;
+                << errIt->second << std::endl;
         }
 
-       
+
         std::map<std::string, RouteConfig>::const_iterator routeIt;
         const std::map<std::string, RouteConfig>& routes = server.getRoutes();
-        
+
         for (routeIt = routes.begin(); routeIt != routes.end(); ++routeIt)
         {
             std::cout << "----------------------" << std::endl;
             std::cout << "  location: " << routeIt->first << std::endl;
 
             const RouteConfig& route = routeIt->second;
-             std::unordered_map<std::string, std::vector<std::string>>::const_iterator vecIt;
+            std::unordered_map<std::string, std::vector<std::string>>::const_iterator vecIt;
 
             for (vecIt = route.vectorRoute.begin(); vecIt != route.vectorRoute.end(); ++vecIt)
             {
@@ -88,11 +88,11 @@ int    ServerManager::getServerCount() const
 const ServerConfig* ServerManager::getServerByFd(int fd)
 {
     std::map<int, const ServerConfig*>::iterator it = _masterSocketRegistry.find(fd);
-            if (it != _masterSocketRegistry.end()) 
-            {
-                const ServerConfig* matchedConfig = it->second;
-                return (matchedConfig);
-            }
+    if (it != _masterSocketRegistry.end()) 
+    {
+        const ServerConfig* matchedConfig = it->second;
+        return (matchedConfig);
+    }
     return (NULL); // check for the null if it cant find the server
 }
 
@@ -101,12 +101,12 @@ std::vector<int> ServerManager::getMasterFds() const
     std::vector<int> masterFds;
 
     for (std::map<int, const ServerConfig*>::const_iterator it = _masterSocketRegistry.begin(); 
-     it != _masterSocketRegistry.end(); 
-     ++it)
-     {
+            it != _masterSocketRegistry.end(); 
+            ++it)
+    {
         masterFds.push_back(it->first);
-     }
-     return masterFds;
+    }
+    return masterFds;
 }
 
 bool ServerManager::setupMasterSockets(struct pollfd fds[], std::map<int, const ServerConfig*>& masterSocketRegistry)
@@ -179,3 +179,21 @@ const std::map<int, const ServerConfig*>& ServerManager::getMasterSocketRegistry
 {
     return _masterSocketRegistry;
 }
+
+void ServerManager::shutDownServers()
+{
+    for (std::map<int, const ServerConfig*>::const_iterator it =
+            _masterSocketRegistry.begin();
+            it != _masterSocketRegistry.end();
+            ++it)
+    {
+        int fd = it->first;
+
+        if (fd >= 0)
+        {
+            close(fd);
+            std::cout << "Closed master socket " << fd << '\n';
+        }
+    }
+}
+
