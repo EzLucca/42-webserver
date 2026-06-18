@@ -289,7 +289,6 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
         if (valRead <= 0)
         {
-            // MORE CLEANING HERE 
             close(_fds[i].fd);
             _fds[i].fd = -1;
             _clients.erase(currentFd);
@@ -504,13 +503,19 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     }
                     if (!added)
                     {
-                        std::cerr << "Server full, rejecting CGI process." << std::endl;
+						throw HttpException(500, "Internal server error");
                         close(cgi.responseFd);
                     }
                 }
-            } catch (const std::exception &e) {
+				else
+				{
+					throw HttpException(500, "Internal server error");
+				}
+            } catch (const HttpException &e) {
                 std::cerr << "Error: " << e.what() << std::endl;
                 activeClient.setState(ERROR);
+                activeClient.getResponse().setStatusCode(e.getStatusCode());
+                activeClient.getResponse().setStatusMessage(e.getStatusMessage());
             }
         }
     }

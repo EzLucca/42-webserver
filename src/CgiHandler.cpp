@@ -2,52 +2,21 @@
 #include "Client.hpp"
 #include "helperUtils.hpp"
 
-//****************************************************
-// static void printconfig(ServerConfig config) // DEBUG:
-// {
-//     // to print
-//     std::cout << config.getPort() << std::endl;
-//     std::cout << config.getHost() << std::endl;
-//     std::cout << config.getServerName() << std::endl;
-//     std::cout << config.getClientMaxBodySize() << std::endl;
-//     std::cout << config.getErrorPages() << std::endl;
-//     std::cout << std::endl;
-//
-//     const auto& routes = config.getRoutes();
-//
-//     for (const auto& [path, route] : routes) {
-//         std::cout << "Route path: " << path << "\n";
-//         std::cout << "Root: " << route.root << "\n";
-//         std::cout << "Index: " << route.index << "\n";
-//         std::cout << "Methods: ";
-//         for (const auto& m : route.allowedMethods)
-//             std::cout << m << " ";
-//         std::cout << "\nAutoIndex: " << route.autoIndex << "\n\n";
-//     }
-// }
-//****************************************************
-
 CgiHandler::CgiHandler()
 {
 }
 
-// CgiHandler::CgiHandler(HttpRequest &request, ServerConfig &server) //location info for cgi scripts
-CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
-    : _cgiPass(""), //cgiPass
+CgiHandler::CgiHandler(Client &activeClient)
+    : _cgiPass(""),
     _method(activeClient.getRequest().getMethod()),
-    // _queryString(activeClient.getRequest().getQueryString()),
     _queryString(""),
     _contentType(""),
     _serverName("")
 {
     //SCRIPT PATH = ROOT FROM CONFIG + SCRIPT NAME FROM RAW URI(e.g. /cgi-bin/process.pl) + PATH_INFO FROM RAW URI BEFORE '?'
-    _headers = activeClient.getRequest().getHeaders(); //TODO guard against malformed requests
+    _headers = activeClient.getRequest().getHeaders();
     _bodyFilePath = activeClient.getRequest().getBodyFilePath();
     _queryString = activeClient.getRequest().getQueryString();
-
-    //***************************
-    // printconfig(location);
-    //***************************
 
     const RouteConfig *config;
     config = activeClient.getConfig()->getRoute(activeClient.getRequest().getLocationKey());
@@ -73,7 +42,6 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
         _scriptPath = _root + activeClient.getRequest().getUriPath();  
     }
     validatePath(_scriptPath);
-    std::cout << _scriptPath << " ########62384623" << std::endl;
 
     //  Safe extraction for Content-Type
     std::map<std::string, std::string>::const_iterator ct_it = _headers.find("content-type");
@@ -90,17 +58,11 @@ CgiHandler::CgiHandler(Client &activeClient) //location info for cgi scripts
     } else {
         _serverName = ""; // Or handle as a fatal error since Host is mandatory in HTTP/1.1
     }
-
-    //***********************************
-    std::cout << "_serverName: " + _serverName << std::endl;
-    std::cout << "_contentType: " + _contentType << std::endl;
-    //***********************************
 }
 
 CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
 {
     int	response_fd[2];
-    // int	status;
     CgiProcess	cgi;
 
     cgi.startedAt = time(NULL); //to track timeout in main
@@ -150,7 +112,7 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
         close(response_fd[1]);
         _envs.push_back("REQUEST_METHOD=" + _method);
         _envs.push_back("QUERY_STRING=" + _queryString);
-        if (request.getIsChunked()) //validate content_length to be under the maximum allowed
+        if (request.getIsChunked())
             _envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getFullChunkBodySize()));
         else
             _envs.push_back("CONTENT_LENGTH=" + std::to_string(request.getContentLength()));
@@ -168,8 +130,7 @@ CgiProcess	CgiHandler::CgiStart(HttpRequest &request)
         std::vector<char *> _args;
         _args.push_back(const_cast<char *>(_scriptPath.c_str()));
         _args.push_back(NULL);
-        execve(_args[0], _args.data(), _envp.data()); // _path is cgiPath, argv consists of cgiPath, scriptpath and null 
-        std::cout << "It is stuck here4 from child" << std::endl;
+        execve(_args[0], _args.data(), _envp.data());
         std::cerr << "CGI execve failed\n";
         _exit(1);
     }
