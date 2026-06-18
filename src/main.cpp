@@ -22,6 +22,8 @@
 
 #define MAX_FDS 100
 
+volatile sig_atomic_t g_serverRunning = 1;
+
 
 bool validateConfigFile(std::string_view &fileName)
 {
@@ -40,10 +42,22 @@ bool validateConfigFile(std::string_view &fileName)
     return (true);
 }
 
+void signalHandler(int signum)
+{
+
+    (void)signum; 
+    
+    std::cout << "\n[Signal Received] Shutting down server gracefully..." << std::endl;
+    
+    g_serverRunning = 0; 
+}
+
 int main(int argc, char **argv)
 {
 
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGINT, signalHandler);
+    signal(SIGQUIT, signalHandler);
 
     if (argc != 2) {
         std::cout << "Usage:\n\t./webserv [configuration_file]" << std::endl;
@@ -86,9 +100,16 @@ int main(int argc, char **argv)
     }
 
     manager.printServers();
-
+    try 
+    {
     ServerEngine engine(fds, masterSocketRegistry);
     engine.run();
-
-    return 0;
+    }
+    catch (...)
+    {
+        std::cerr << "[FATAL ERROR] An unknown, non-standard exception occurred!" << std::endl;
+        return EXIT_FAILURE;
+    }
+    std::cout << "Server shutdown complete. Exiting program." << std::endl;
+    return EXIT_SUCCESS;
 }

@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include "getMethod.hpp"
 
+extern volatile sig_atomic_t g_serverRunning;
+
 ServerEngine::ServerEngine(struct pollfd fds[],
         std::map<int, const ServerConfig*>& masterSocketRegistry)
     : _masterSocketRegistry(masterSocketRegistry),
@@ -621,12 +623,17 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
 void ServerEngine::run()
 {
+
+    while (g_serverRunning)
+    {
     std::cout << "Server engine starting event loop..." << std::endl;
     while (true)
     {
         int poll_count = poll(_fds, MAX_FDS, POLL_TIMEOUT_MS);
         if (poll_count < 0)
         {
+           if (!g_serverRunning)
+                break;
             std::cerr << "Poll error" << std::endl;
             break;
         }
@@ -668,5 +675,6 @@ void ServerEngine::run()
             handleClientFd(i, _fds[i].fd);
         }
     }
+}
 }
 

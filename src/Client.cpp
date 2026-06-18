@@ -5,6 +5,7 @@ Client::Client()
     _fd = -1;
     _state = READING_REQUESTLINE;
     _config = NULL;
+    _lastActivity = time(NULL);
     std::cout << "Client default constructor called." << std::endl;
 }
 
