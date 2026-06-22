@@ -410,23 +410,6 @@ ConfigParser::~ConfigParser() {
     std::cout << "ConfigParser destructor called." << std::endl;
 }
 
-/**
- * @param file_path contain the path of the config file
- * @param fstream file stream
- * Return a int 
- */
-static int openFile(const std::string &file_path, std::fstream *fstream) {
-    if (fstream->is_open())
-        fstream->close();
-
-    fstream->open(file_path.c_str(), std::ios::in);
-    if (!fstream->is_open()) {
-        fstream->clear();
-        return (1);
-    }
-    return (0);
-}
-
 void ConfigParser::setConfigBuffer(std::string line) {
     _configBuffer.append(line);
     _configBuffer.append("\n");
@@ -441,16 +424,20 @@ std::string ConfigParser::getConfigBuffer() { return (_configBuffer); }
  */
 int ConfigParser::parse(std::string configFile, ServerManager& server) 
 {
-    // TODO: check if file is open and permissions
     std::fstream fstream;
-    if (configFile.empty() || openFile(configFile, &fstream)) {
+    if (configFile.empty()) {
         // throw std::invalid_argument("Config file error");
         std::cerr << "Config file name is not correct." << std::endl;
         return (1);
     }
     std::string line;
 
-    std::ifstream file(configFile);
+    std::ifstream file(configFile.c_str());
+    if (!file.is_open())
+    {
+        std::cerr << "Config file name is not correct." << std::endl;
+        return 1;
+    }
     while (std::getline(file, line))
     {
         size_t pos = line.find("#");

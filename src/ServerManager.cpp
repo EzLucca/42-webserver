@@ -1,7 +1,4 @@
-#include "ServerManager.hpp"
 #include <iostream>
-#include <fstream>
-#include <filesystem>
 #include <arpa/inet.h>
 #include <vector>
 #include <sys/socket.h>
@@ -9,6 +6,8 @@
 #include <cstring>
 #include <fcntl.h>
 #include <unistd.h>
+
+#include "ServerManager.hpp"
 
 /**
  * @param server the object to add
@@ -140,16 +139,36 @@ bool ServerManager::setupMasterSockets(struct pollfd fds[], std::map<int, const 
         }
 
         // define address and port (bind)
+        // struct sockaddr_in address;
+        // std::memset(&address, 0, sizeof(address));
+        // address.sin_family = AF_INET;
+        // address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
+        // address.sin_port = htons(
+        //         _servers[i]
+        //         .getPort()); // hardcoded
+        // if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+        // {
+        //     std::cerr << "Bind failed. Is the port already in use?" << std::endl;
+        //     close(server_fd);
+        //     return false;
+        // }
+
         struct sockaddr_in address;
         std::memset(&address, 0, sizeof(address));
+
         address.sin_family = AF_INET;
-        address.sin_addr.s_addr = INADDR_ANY; // Listen all interfaces CHECK THIS
-        address.sin_port = htons(
-                _servers[i]
-                .getPort()); // hardcoded
-        if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+        address.sin_port = htons(_servers[i].getPort());
+
+        if (inet_pton(AF_INET, _servers[i].getHost().c_str(), &address.sin_addr) <= 0)
         {
-            std::cerr << "Bind failed. Is the port already in use?" << std::endl;
+            std::cerr << "Invalid host address: " << _servers[i].getHost() << std::endl;
+            close(server_fd);
+            return false;
+        }
+
+        if (bind(server_fd, reinterpret_cast<struct sockaddr*>(&address), sizeof(address)) < 0)
+        {
+            perror("bind");
             close(server_fd);
             return false;
         }

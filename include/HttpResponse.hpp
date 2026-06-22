@@ -1,7 +1,5 @@
 # pragma once
 
-#include <iostream>
-
 #include "CgiHandler.hpp"
 
 // Hold the status code and the final formatted body data

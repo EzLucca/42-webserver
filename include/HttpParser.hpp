@@ -1,7 +1,6 @@
 # pragma once
 
 #include <iostream>
-#include <ctype.h>
 #include <fstream>
 
 #include "HttpRequest.hpp"

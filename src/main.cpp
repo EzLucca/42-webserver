@@ -1,6 +1,5 @@
 #include <cstring> // For memset()
 #include <fcntl.h> // For fcntl() and O_NONBLOCK
-#include <fstream> //For ile manipulation
 #include <iostream>
 #include <netinet/in.h> // For struct sockaddr_in
 #include <poll.h>       // For poll() and struct pollfd
@@ -9,16 +8,8 @@
 #include <unistd.h>     // For close(), read(), write()
 #include <signal.h>
 
-#include "CgiHandler.hpp"
-#include "Client.hpp"
 #include "ConfigParser.hpp" // For parsing
-#include "HttpException.hpp"
-#include "HttpParser.hpp" // For parsing
-#include "HttpRequest.hpp"
-#include "HttpResponse.hpp"
 #include "ServerEngine.hpp"
-#include "getMethod.hpp"
-#include "helperUtils.hpp"
 
 #define MAX_FDS 100
 

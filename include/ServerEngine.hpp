@@ -3,14 +3,12 @@
 # include <map>
 # include <poll.h>
 # include <ctime>
-# include <signal.h>
 # include <sys/wait.h>
 
-# include "ServerManager.hpp"
+# include "HttpException.hpp"
 # include "Client.hpp"
 # include "CgiHandler.hpp"
 # include "HttpParser.hpp"
-# include "HttpException.hpp"
 # include "helperUtils.hpp"
 
 # define MAX_FDS 100

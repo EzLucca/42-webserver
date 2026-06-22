@@ -365,9 +365,30 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     std::unordered_map<std::string, std::vector<std::string> >::const_iterator cgiIt = route->vectorRoute.find("cgi_pass");
                     std::unordered_map<std::string, std::vector<std::string> >::const_iterator uploadIt = route->vectorRoute.find("upload_enable");
                     std::cout << filename << " <------------------------FILENAME" << std::endl;
-                    if (cgiIt != route->vectorRoute.end() && endsWith(filename, ".py"))
+
+                    std::unordered_map<std::string, std::vector<std::string> >::const_iterator cgiExtIt = route->vectorRoute.find("cgi_ext");
+                    if (cgiIt != route->vectorRoute.end())
                     {
-                        isCgi = true;
+                        bool validExtensionFound = false;
+
+                        if (cgiExtIt != route->vectorRoute.end())
+                        {
+                            std::string allowedExtensions = cgiExtIt->second[0];
+                            if (endsWith(filename, allowedExtensions))
+                            {
+                                validExtensionFound = true;
+                            }
+                        }
+                        if (validExtensionFound)
+                        {
+                            isCgi = true; // Perfect match, proceed to CGI execution
+                        }
+                        else
+                        {
+                            activeClient.getResponse().setStatusCode(403);
+                            activeClient.getResponse().setStatusMessage("Forbidden");
+                            activeClient.setState(ERROR);
+                        }
                     }
                     else if (currentMethod == "POST" && uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] == "on")
                     {
@@ -388,54 +409,65 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                         std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
                         activeClient.setState(CGI_CALL);
                     }
-                    else if (currentMethod == "POST")
+                    else if (activeClient.getState() == PROCESSING && currentMethod == "POST")
                     {
-                        // RAW UPLOAD LOGIC
-                        std::string targetDir = "";
-                        std::unordered_map<std::string, std::vector<std::string> >::const_iterator rootIt = route->vectorRoute.find("root");
-
-                        if (rootIt != route->vectorRoute.end() && !rootIt->second.empty()) {
-                            targetDir = rootIt->second[0]; 
-                        } else {
-                            targetDir = "var/www/uploads"; 
-                            std::cout << "Warning: No root found in config for upload, using fallback." << std::endl;
-                        }
-
-                        std::string tempPath = activeClient.getRequest().getBodyFilePath();
-                        std::string uploadFilename = activeClient.getRequest().getFilename();
-
-                        if (uploadFilename.empty() || uploadFilename == "/") {
-
-                            std::stringstream ss;
-                            ss << time(NULL);
-                            uploadFilename = "dumped_file_" + ss.str(); 
-                        }
-
-                        std::string finalPath = targetDir + "/" + uploadFilename; 
-                        std::cout << "FINAL PATH: " << finalPath << std::endl; 
-
-                        if (rename(tempPath.c_str(), finalPath.c_str()) == 0)
+                        if (uploadIt == route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] != "on")
                         {
-                            std::cout << "SUCCESS! File explicitly saved to: " << finalPath << std::endl;
-                            activeClient.getRequest().setBodyFilePath("not-set"); 
-
-                            activeClient.getResponse().setStatusCode(201);
-                            activeClient.getResponse().setStatusMessage("Created");
-                            activeClient.getResponse().setResponseBody("File dumped perfectly via C++!");
-                            activeClient.getResponse().buildRawResponse();
-
-                            _fds[i].events = POLLOUT;
-                            activeClient.setState(WRITING_RESPONSE);
+                            // Uploads are not explicitly enabled for this route!
+                            activeClient.getResponse().setStatusCode(403);
+                            activeClient.getResponse().setStatusMessage("Forbidden");
+                            activeClient.setState(ERROR);
                         }
                         else
                         {
-                            std::cerr << "FATAL: rename() failed! Error: " << strerror(errno) << std::endl;
-                            activeClient.getResponse().setStatusCode(500);
-                            activeClient.getResponse().setStatusMessage("Internal Server Error");
-                            activeClient.setState(ERROR);
+                            // RAW UPLOAD LOGIC
+                            std::string targetDir = "";
+                            std::unordered_map<std::string, std::vector<std::string> >::const_iterator rootIt = route->vectorRoute.find("root");
+
+                            if (rootIt != route->vectorRoute.end() && !rootIt->second.empty()) {
+                                targetDir = rootIt->second[0]; 
+                            } else {
+                                targetDir = "var/www/uploads"; 
+                                std::cout << "Warning: No root found in config for upload, using fallback." << std::endl;
+                            }
+
+                            std::string tempPath = activeClient.getRequest().getBodyFilePath();
+                            std::string uploadFilename = activeClient.getRequest().getFilename();
+
+                            if (uploadFilename.empty() || uploadFilename == "/") {
+
+                                std::stringstream ss;
+                                ss << time(NULL);
+                                uploadFilename = "dumped_file_" + ss.str(); 
+                            }
+
+                            std::string finalPath = targetDir + "/" + uploadFilename; 
+                            std::cout << "FINAL PATH: " << finalPath << std::endl; 
+
+                            if (rename(tempPath.c_str(), finalPath.c_str()) == 0)
+                            {
+                                std::cout << "SUCCESS! File explicitly saved to: " << finalPath << std::endl;
+                                activeClient.getRequest().setBodyFilePath("not-set"); 
+
+                                activeClient.getResponse().setStatusCode(201);
+                                activeClient.getResponse().setStatusMessage("Created");
+                                activeClient.getResponse().setResponseBody("File dumped perfectly via C++!");
+                                activeClient.getResponse().buildRawResponse();
+
+                                _fds[i].events = POLLOUT;
+                                activeClient.setState(WRITING_RESPONSE);
+                            }
+                            else
+                            {
+                                std::cerr << "FATAL: rename() failed! Error: " << strerror(errno) << std::endl;
+                                activeClient.getResponse().setStatusCode(500);
+                                activeClient.getResponse().setStatusMessage("Internal Server Error");
+                                activeClient.setState(ERROR);
+                            }
+
                         }
                     }
-                    else if (currentMethod == "DELETE")
+                    else if (activeClient.getState() == PROCESSING && currentMethod == "DELETE")
                     {
                         // DELETE LOGIC
                         activeClient.getRequest().handleDeleteRequest(activeClient);
@@ -450,22 +482,26 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     }
                     else
                     {
-                        // STATIC GET LOGIC
-                        try {
-                            std::cout << "Static file request. Calling returnPage." << std::endl;
-                            returnPage(activeClient);
-                            if (activeClient.getState() == WRITING_RESPONSE)
-                            {
-                                _fds[i].events = POLLOUT;
+                        if (activeClient.getState() == PROCESSING)
+                        {
+                            // STATIC GET LOGIC
+                            try {
+                                std::cout << "Static file request. Calling returnPage." << std::endl;
+                                returnPage(activeClient);
+                                if (activeClient.getState() == WRITING_RESPONSE)
+                                {
+                                    _fds[i].events = POLLOUT;
+                                }
+                            } catch (const std::exception &e) {
+                                std::cerr << "Error: " << e.what() << std::endl;
+                                activeClient.getResponse().setStatusCode(404);
+                                activeClient.getResponse().setStatusMessage("Not Found");
+                                activeClient.setState(ERROR);   
+                                std::cout << "Client fd: " << activeClient.getFd() << " marked ERROR" << std::endl;
                             }
-                        } catch (const std::exception &e) {
-                            std::cerr << "Error: " << e.what() << std::endl;
-                            activeClient.getResponse().setStatusCode(404);
-                            activeClient.getResponse().setStatusMessage("Not Found");
-                            activeClient.setState(ERROR);   
-                            std::cout << "Client fd: " << activeClient.getFd() << " marked ERROR" << std::endl;
                         }
                     }
+
                 }
             }
             else
@@ -526,6 +562,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             std::cout << "Returning page from error block" << std::endl;
             std::cout << "ERROR STATUS CODE: " << activeClient.getResponse().getStatusCode() << std::endl;
             returnErrorPage(activeClient); 
+            activeClient.getRequest().cleanupBodyFile();
 
             activeClient.setState(WRITING_RESPONSE);
             _fds[i].events = POLLOUT;
