@@ -403,8 +403,25 @@ void ServerEngine::handleClientFd(int i, int currentFd)
 
                     if (isCgi)
                     {
-                        std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
-                        activeClient.setState(CGI_CALL);
+                        if (access(activeClient.getRequest().getFilename().c_str(), F_OK) != 0)
+                        {
+                            std::cerr << "[CGI ERROR] Script not found: " << activeClient.getRequest().getFilename() << std::endl;
+                            activeClient.getResponse().setStatusCode(404);
+                            activeClient.getResponse().setStatusMessage("Not Found");
+                            activeClient.setState(ERROR);
+                        }
+                        else if (access(activeClient.getRequest().getFilename().c_str(), R_OK | X_OK) != 0)
+                        {
+                            std::cerr << "[CGI ERROR] Permission denied: " << activeClient.getRequest().getFilename() << std::endl;
+                            activeClient.getResponse().setStatusCode(403);
+                            activeClient.getResponse().setStatusMessage("Forbidden");
+                            activeClient.setState(ERROR);
+                        }
+                        else
+                        {
+                            std::cout << "Valid CGI request detected. Changing state to CGI_CALL." << std::endl;
+                            activeClient.setState(CGI_CALL);
+                        }
                     }
                     else if (activeClient.getState() == PROCESSING && currentMethod == "POST")
                     {
