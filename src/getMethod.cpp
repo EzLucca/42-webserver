@@ -169,8 +169,15 @@ void    returnPage(Client& activeClient)
                     return;
                 }
 
-                //  NOW it is safe to touch the route's internals!
-                std::string root = route->vectorRoute.at("root").at(0); 
+                std::unordered_map<std::string, std::vector<std::string> >::const_iterator rootIt = route->vectorRoute.find("root");
+                if (rootIt == route->vectorRoute.end() || rootIt->second.empty())
+                {
+                    activeClient.getResponse().setStatusCode(500);
+                    activeClient.getResponse().setStatusMessage("Internal Server Error: Route configuration missing root");
+                    activeClient.setState(ERROR);
+                    return;
+                }
+                std::string root = rootIt->second.at(0);
 
                 if (filename.empty() || filename == "/")
                 {
