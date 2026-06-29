@@ -165,7 +165,12 @@ std::string& HttpResponse::getBuffer()
 
 void HttpResponse::prepareFileStream(std::string filepath, Client& activeClient)
 {
-    //  open file
+    //  check if fd already open to prevent leak
+    if (_fileFd >= 0) 
+    {
+    close(_fileFd);
+    _fileFd = -1;
+    }
     _fileFd = open(filepath.c_str(), O_RDONLY);
 
     if (_fileFd < 0) // < 0 means it failed to open
