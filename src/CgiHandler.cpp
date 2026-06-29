@@ -46,7 +46,7 @@ CgiHandler::CgiHandler(Client &activeClient)
     {
         _scriptPath = _root + activeClient.getRequest().getUriPath();  
     }
-    validatePath(_scriptPath);
+    validateScript(_scriptPath);
 
     //  Safe extraction for Content-Type
     std::map<std::string, std::string>::const_iterator ct_it = _headers.find("content-type");

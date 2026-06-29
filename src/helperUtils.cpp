@@ -1,5 +1,8 @@
 #include "helperUtils.hpp"
 #include "Client.hpp"
+#include "HttpException.hpp"
+#include <unistd.h>
+
 
 /**
  * @brief Checks if a file or directory exists.
@@ -12,8 +15,22 @@
  */
 void validatePath(const std::string &filePath)
 {
+    std::cout << "from path validation" << filePath << std::endl;
     if (!std::filesystem::exists(filePath))
         throw std::invalid_argument("path does not exist: " + filePath);
+}
+
+void validateScript(const std::string &filePath)
+{
+    if (access(filePath.c_str(), F_OK) != 0)
+    {
+        throw HttpException(404, "Not Found: " + filePath);
+    }
+    // Check if we have BOTH Read and Execute permissions
+    else if (access(filePath.c_str(), R_OK | X_OK) != 0)
+    {
+        throw HttpException(403, "Forbidden: " + filePath);
+    }
 }
 
 bool    validateUriPath(Client &activeClient)
