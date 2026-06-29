@@ -152,14 +152,11 @@ void ServerEngine::acceptNewClient(int triggered_fd)
     int new_client_fd = accept(triggered_fd, (struct sockaddr *)&client_address, &client_len);
     if (new_client_fd < 0)
     {
-        std::cerr << "Accept failed on Master FD " << triggered_fd
-            << ". Error: " << strerror(errno) << std::endl;
-        exit(1);
-    }
-    if (new_client_fd == -1)
-    {
-        std::cerr << "Failure in accepting" << std::endl;
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
         return;
+    std::cerr << "Accept failed on Master FD " << triggered_fd
+        << ". Error: " << strerror(errno) << std::endl;
+    exit(1);
     }
 
     fcntl(new_client_fd, F_SETFL, O_NONBLOCK); // set file status flags to nonblocking
