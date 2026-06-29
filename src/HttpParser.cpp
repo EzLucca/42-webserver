@@ -317,6 +317,8 @@ void HttpParser::parse(Client& client)
         }
         else
         {
+            if (chunkSize < 0) // guard before casting to size_t
+                throw HttpException(400, "Bad Request: Invalid chunk size");
             if (chunkSize == 0)
             {
                 client.setState(PROCESSING);
