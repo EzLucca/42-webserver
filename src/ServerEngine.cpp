@@ -152,11 +152,11 @@ void ServerEngine::acceptNewClient(int triggered_fd)
     int new_client_fd = accept(triggered_fd, (struct sockaddr *)&client_address, &client_len);
     if (new_client_fd < 0)
     {
-    if (errno == EAGAIN || errno == EWOULDBLOCK)
-        return;
-    std::cerr << "Accept failed on Master FD " << triggered_fd
-        << ". Error: " << strerror(errno) << std::endl;
-    exit(1);
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+        std::cerr << "Accept failed on Master FD " << triggered_fd
+            << ". Error: " << strerror(errno) << std::endl;
+        exit(1);
     }
 
     fcntl(new_client_fd, F_SETFL, O_NONBLOCK); // set file status flags to nonblocking
@@ -408,7 +408,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     }
                     else if (activeClient.getState() == PROCESSING && currentMethod == "POST")
                     {
-                        if (uploadIt == route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] != "on")
+                        if (uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] != "on")
                         {
                             // Uploads are not explicitly enabled for this route!
                             activeClient.getResponse().setStatusCode(403);
@@ -625,7 +625,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
             else if (bytesSent < 0) 
             {
 
-                std::cout << "fatal error" << std::endl;
+                std::cerr << "fatal error" << std::endl;
                 _clients.erase(currentFd);
                 close(_fds[i].fd);
                 _fds[i].fd = -1; 
