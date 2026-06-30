@@ -26,16 +26,15 @@ CgiHandler::CgiHandler(Client &activeClient)
     std::unordered_map<std::string, std::vector<std::string>>::const_iterator it;
     for (it = victorRoute.begin(); it != victorRoute.end(); it++)
     {
+        
         if (it->first == "root" && !it->second.empty())
             _root = it->second[0];
         if (it->first == "cgi_pass" && !it->second.empty())
             _cgiPass = it->second[0];
+        std::cout << "root: " << _root << " --- cgipass: " << _cgiPass << std::endl;
     }
     if (_root.empty())
         throw HttpException(500, "CGI route missing root directive");
-    if (_cgiPass.empty())
-        throw HttpException(500, "CGI route missing cgi_pass directive");
-
 
     std::string checkHijack = activeClient.getRequest().getFilename();
     if (checkHijack == "var/cgi/cgi-bin/betterUpload.py")
