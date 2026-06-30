@@ -408,7 +408,7 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                     }
                     else if (activeClient.getState() == PROCESSING && currentMethod == "POST")
                     {
-                        if (uploadIt == route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] != "on")
+                        if (uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] != "on")
                         {
                             // Uploads are not explicitly enabled for this route!
                             activeClient.getResponse().setStatusCode(403);
