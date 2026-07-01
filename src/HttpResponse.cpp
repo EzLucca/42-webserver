@@ -84,22 +84,21 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
         return ; 
     }
 
-
     if (bytesRead == 0)
     {
         // (Wait for child blocking, because we know it has closed the pipe)
         pid_t result = waitpid(cgi.pid, &status, WNOHANG);
         if (result == 0)
-		{
-			activeClient.setState(CGI_IO_OK);
-			return ;
-		}
+        {
+            activeClient.setState(CGI_IO_OK);
+            return ;
+        }
         if (result == -1)
         {
             activeClient.setState(CGI_IO_ERROR);
             return ;
         }
-		if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
         {
             activeClient.setState(CGI_IO_ERROR);
             return ;
@@ -107,8 +106,7 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
         // (Everything succeeded, tell main.cpp we are done!)
         activeClient.setState(CGI_IO_DONE);
         return ;
-        }
-
+    }
 
     activeClient.setState(CGI_IO_ERROR);
     return ;
@@ -122,8 +120,7 @@ std::string HttpResponse::getMimeType(const std::string& filePath)
 {
     // findt the last '.' dot in the filename
     size_t dotPos = filePath.find_last_of('.');
-    
-    
+
     // if no extension, return default binary data type
     if (dotPos == std::string::npos)
         return "application/octet-stream"; 
@@ -162,14 +159,13 @@ std::string& HttpResponse::getBuffer()
     return (_responseBuffer);
 }
 
-
 void HttpResponse::prepareFileStream(std::string filepath, Client& activeClient)
 {
     //  check if fd already open to prevent leak
     if (_fileFd >= 0) 
     {
-    close(_fileFd);
-    _fileFd = -1;
+        close(_fileFd);
+        _fileFd = -1;
     }
     _fileFd = open(filepath.c_str(), O_RDONLY);
 
@@ -179,7 +175,7 @@ void HttpResponse::prepareFileStream(std::string filepath, Client& activeClient)
         _statusMessage = "Not Found";
         filepath = activeClient.getConfig()->getErrorPage(404);
         _fileFd = open(filepath.c_str(), O_RDONLY);
-        
+
         if (_fileFd < 0) {
             this->_responseBuffer = "HTTP/1.1 404 Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found";
             this->_isStreamingFile = false;
@@ -194,12 +190,12 @@ void HttpResponse::prepareFileStream(std::string filepath, Client& activeClient)
 
     // build headers first
     std::string contentType = getMimeType(filepath); 
-    
+
     std::string headers = "HTTP/1.1 " + std::to_string(_statusCode) + " " + _statusMessage + "\r\n";
     headers += "Content-Type: " + contentType + "\r\n";
     headers += "Content-Length: " + std::to_string(fileSize) + "\r\n";
     headers += "Connection: keep-alive\r\n\r\n";
-    
+
     this->_responseBuffer = headers;
     this->_isStreamingFile = true;
 }
