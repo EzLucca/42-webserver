@@ -154,7 +154,7 @@ void ServerEngine::acceptNewClient(int triggered_fd)
     {
         std::cerr << "Accept failed on Master FD " << triggered_fd
             << ". Error: " << strerror(errno) << std::endl;
-            return;
+        return;
     }
 
     fcntl(new_client_fd, F_SETFL, O_NONBLOCK); // set file status flags to nonblocking
@@ -416,50 +416,59 @@ void ServerEngine::handleClientFd(int i, int currentFd)
                         else
                         {
                             // RAW UPLOAD LOGIC
-                            std::string targetDir = "";
-                            std::unordered_map<std::string, std::vector<std::string> >::const_iterator rootIt = route->vectorRoute.find("root");
-
-                            if (rootIt != route->vectorRoute.end() && !rootIt->second.empty()) {
-                                targetDir = rootIt->second[0]; 
-                            } else {
-                                targetDir = "var/www/uploads"; 
-                                std::cout << "Warning: No root found in config for upload, using fallback." << std::endl;
-                            }
-
-                            std::string tempPath = activeClient.getRequest().getBodyFilePath();
-                            std::string uploadFilename = activeClient.getRequest().getFilename();
-
-                            if (uploadFilename.empty() || uploadFilename == "/") {
-
-                                std::stringstream ss;
-                                ss << time(NULL);
-                                uploadFilename = "dumped_file_" + ss.str(); 
-                            }
-
-                            std::string finalPath = targetDir + "/" + uploadFilename; 
-                            std::cout << "FINAL PATH: " << finalPath << std::endl; 
-
-                            if (rename(tempPath.c_str(), finalPath.c_str()) == 0)
+                            if(uploadIt != route->vectorRoute.end() && !uploadIt->second.empty() && uploadIt->second[0] == "on")
                             {
-                                std::cout << "SUCCESS! File explicitly saved to: " << finalPath << std::endl;
-                                activeClient.getRequest().setBodyFilePath("not-set"); 
+                                std::string targetDir = "";
+                                std::unordered_map<std::string, std::vector<std::string> >::const_iterator rootIt = route->vectorRoute.find("root");
 
-                                activeClient.getResponse().setStatusCode(201);
-                                activeClient.getResponse().setStatusMessage("Created");
-                                activeClient.getResponse().setResponseBody("File dumped perfectly via C++!");
-                                activeClient.getResponse().buildRawResponse();
+                                if (rootIt != route->vectorRoute.end() && !rootIt->second.empty()) {
+                                    targetDir = rootIt->second[0]; 
+                                } else {
+                                    targetDir = "var/www/uploads"; 
+                                    std::cout << "Warning: No root found in config for upload, using fallback." << std::endl;
+                                }
 
-                                _fds[i].events = POLLOUT;
-                                activeClient.setState(WRITING_RESPONSE);
+                                std::string tempPath = activeClient.getRequest().getBodyFilePath();
+                                std::string uploadFilename = activeClient.getRequest().getFilename();
+
+                                if (uploadFilename.empty() || uploadFilename == "/") {
+
+                                    std::stringstream ss;
+                                    ss << time(NULL);
+                                    uploadFilename = "dumped_file_" + ss.str(); 
+                                }
+
+                                std::string finalPath = targetDir + "/" + uploadFilename; 
+                                std::cout << "FINAL PATH: " << finalPath << std::endl; 
+
+                                if (rename(tempPath.c_str(), finalPath.c_str()) == 0)
+                                {
+                                    std::cout << "SUCCESS! File explicitly saved to: " << finalPath << std::endl;
+                                    activeClient.getRequest().setBodyFilePath("not-set"); 
+
+                                    activeClient.getResponse().setStatusCode(201);
+                                    activeClient.getResponse().setStatusMessage("Created");
+                                    activeClient.getResponse().setResponseBody("File dumped perfectly via C++!");
+                                    activeClient.getResponse().buildRawResponse();
+
+                                    _fds[i].events = POLLOUT;
+                                    activeClient.setState(WRITING_RESPONSE);
+                                }
+                                else
+                                {
+                                    std::cerr << "FATAL: rename() failed! Error: " << strerror(errno) << std::endl;
+                                    activeClient.getResponse().setStatusCode(500);
+                                    activeClient.getResponse().setStatusMessage("Internal Server Error");
+                                    activeClient.setState(ERROR);
+                                }
+
                             }
                             else
                             {
-                                std::cerr << "FATAL: rename() failed! Error: " << strerror(errno) << std::endl;
-                                activeClient.getResponse().setStatusCode(500);
-                                activeClient.getResponse().setStatusMessage("Internal Server Error");
+                                activeClient.getResponse().setStatusCode(403);
+                                activeClient.getResponse().setStatusMessage("Forbidden");
                                 activeClient.setState(ERROR);
                             }
-
                         }
                     }
                     else if (activeClient.getState() == PROCESSING && currentMethod == "DELETE")
