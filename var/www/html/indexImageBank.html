@@ -210,7 +210,7 @@
 
                         // 2. Create the image element (just like before)
                         const imgElement = document.createElement('img');
-                        imgElement.src = `/upload/${filename}`; 
+                        imgElement.src = `/uploads/${filename}`; 
                         imgElement.style.cursor = "pointer"; 
                         imgElement.onclick = function() { openModal(this.src, filename); };
 
@@ -245,7 +245,7 @@
 
     document.getElementById('statusText').innerText = `Uploading ${fileInput.files.length} files...`;
             // Send the POST request to your existing Python upload script
-            fetch('/upload/target.py', {
+            fetch('/uploads/target.py', {
                 method: 'POST',
                 body: formData
             })
@@ -282,7 +282,7 @@
             }
 
             // Fire the DELETE method directly to the C++ server
-            fetch(`/upload/${currentTargetFile}`, {
+            fetch(`/uploads/${currentTargetFile}`, {
                 method: 'DELETE'
             })
             .then(response => {

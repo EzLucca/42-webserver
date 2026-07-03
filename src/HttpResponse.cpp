@@ -56,12 +56,6 @@ void	HttpResponse::CgiReadResponse(CgiProcess &cgi, Client &activeClient)
     if (bytesRead == -1)
     {
         std::cout << "This is bytes -1" << std::endl;
-        // (If no data is ready yet, just keep waiting)
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-        {
-            activeClient.setState(CGI_IO_OK);
-            return ;
-        }
         // real read error, close everything and kill the process
         close(cgi.responseFd);
         cgi.responseFd = -1;
