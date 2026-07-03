@@ -71,14 +71,19 @@ static std::string html_escape(const std::string &s)
     }
     return out;
 }
-std::string generateAutoindex(std::string filepath, std::string filename)
+std::string generateAutoindex(std::string filepath, std::string filename, std::string uriRequest)
 {
     std::ostringstream html;
 
-    html << "<html><head><title>Index of " << filepath + "/" + filename << "</title></head>";
-    html << "<body><h1>Index of " << filepath + "/" + filename << "</h1><ul>";
-    std::cout << "filepath = " << filepath << '\n';
-    std::cout << "filename = " << filename << '\n';
+    // make sure it has trailing slash
+    std::string baseUri = uriRequest;
+    if (!baseUri.empty() && baseUri.back() != '/') {
+        baseUri += "/";
+    }
+
+    html << "<html><head><title>Index of " << baseUri << "</title></head>";
+    html << "<body><h1>Index of " << baseUri << "</h1><ul>";
+
     try
     {
         for (const auto &entry : std::filesystem::directory_iterator(filepath + "/" + filename))
@@ -97,9 +102,9 @@ std::string generateAutoindex(std::string filepath, std::string filename)
                 link += "/";
             }
 
-            html << "<li><a href=\"" << link << "\">"
-                 << display_name
-                 << "</a></li>";
+            //add baseuri before link
+            html << "<li><a href=\"" << baseUri  << link << "\">"
+                << display_name << "</a></li>";
         }
     }
     catch (const std::exception &e)
@@ -197,7 +202,7 @@ void    returnPage(Client& activeClient)
                         {
                             std::cout << "root: " << root << std::endl;
                             std::cout << "uriRequest: " << uriRequest << std::endl;
-                            autoindexbody = generateAutoindex(root, filename);
+                            autoindexbody = generateAutoindex(root, filename, uriRequest);
                             std::cout << "autoindex build" << std::endl;
                         }
                         else
