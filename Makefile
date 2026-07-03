@@ -1,7 +1,7 @@
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++20 -Iinclude -ggdb
+CXXFLAGS = -Wall -Wextra -Werror -std=c++20 -Iinclude
 
 SRC = \
 	src/main.cpp \
@@ -40,4 +40,5 @@ fclean: clean
 
 re: fclean all
 
+.SECONDARY: $(OBJ)
 .PHONY: all clean fclean re

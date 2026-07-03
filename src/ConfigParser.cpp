@@ -28,7 +28,11 @@ int validateBodySize(const std::map<std::string, std::string>& values)
     if (it == values.end() || it->second.empty())
         return 0;
 
-    std::string val = it->second;
+    std::string val;
+    if (!it->second.empty())
+        val = it->second;
+    else
+        val = "0";
 
     if (val.back() == 'M')
     {

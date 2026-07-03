@@ -71,37 +71,35 @@ static std::string html_escape(const std::string &s)
     }
     return out;
 }
-
-std::string generateAutoindex(std::string filepath, std::string uriRequest)
+std::string generateAutoindex(std::string filepath, std::string filename)
 {
     std::ostringstream html;
 
-    html << "<html><head><title>Index of " << uriRequest << "</title></head>";
-    html << "<body><h1>Index of " << uriRequest << "</h1><ul>";
-
+    html << "<html><head><title>Index of " << filepath + "/" + filename << "</title></head>";
+    html << "<body><h1>Index of " << filepath + "/" + filename << "</h1><ul>";
+    std::cout << "filepath = " << filepath << '\n';
+    std::cout << "filename = " << filename << '\n';
     try
     {
-        for (const auto &entry : std::filesystem::directory_iterator(filepath))
+        for (const auto &entry : std::filesystem::directory_iterator(filepath + "/" + filename))
         {
             std::string name = entry.path().filename().string();
 
-            // Optional: skip hidden files
             if (name == "." || name == "..")
                 continue;
 
             std::string display_name = html_escape(name);
-            std::string link = uriRequest;
-
-            if (link.back() != '/')
-                link += '/';
-
-            link += name;
+            std::string link = name;
 
             if (std::filesystem::is_directory(entry.path()))
+            {
                 display_name += "/";
+                link += "/";
+            }
 
             html << "<li><a href=\"" << link << "\">"
-                << display_name << "</a></li>";
+                 << display_name
+                 << "</a></li>";
         }
     }
     catch (const std::exception &e)
@@ -120,7 +118,7 @@ void    returnPage(Client& activeClient)
     std::string locationKey = activeClient.getRequest().getLocationKey();
     std::string uriRequest = activeClient.getRequest().getUri();
     std::string filename = activeClient.getRequest().getFilename();
-    
+
     const ServerConfig *config = activeClient.getConfig();
     std::string autoindexbody;
 
@@ -179,18 +177,27 @@ void    returnPage(Client& activeClient)
                 }
                 std::string root = rootIt->second.at(0);
 
-                if (filename.empty() || filename == "/")
+                std::cout << activeClient.getRequest().getAutoindex() << std::endl;
+                std::cout << root + "/" + filename << " " << std::filesystem::is_directory(root + "/" + filename) << std::endl;
+                if (std::filesystem::is_directory(root + "/" + filename) || filename.empty() || filename == "/")
                 {
                     // they want the directory. safely check if an 'index' rule exists!
                     std::unordered_map<std::string, std::vector<std::string> >::const_iterator it = route->vectorRoute.find("index");
 
-                    if (it != route->vectorRoute.end()) {
-                        filepath = root + "/" + it->second.at(0);
-                    } else 
+                    std::cout << "inside: " << std::endl;
+                    if (it != route->vectorRoute.end())
                     {
+                        std::cout << "normal: " << std::endl;
+                        filepath = root + "/" + it->second.at(0);
+                    } 
+                    else 
+                    {
+                        std::cout << "else: " << std::endl;
                         if (activeClient.getRequest().getAutoindex() == true)
                         {
-                            autoindexbody = generateAutoindex(root, uriRequest);
+                            std::cout << "root: " << root << std::endl;
+                            std::cout << "uriRequest: " << uriRequest << std::endl;
+                            autoindexbody = generateAutoindex(root, filename);
                             std::cout << "autoindex build" << std::endl;
                         }
                         else

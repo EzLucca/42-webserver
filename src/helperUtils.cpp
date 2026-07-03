@@ -76,6 +76,7 @@ size_t getBodyClient(Client &activeClient)
             bodyClientMax = size * 1024 * 1024;
             return (bodyClientMax);
         }
+        bodyClientMax = std::stoi(val);
     }
     return (bodyClientMax);
 }
